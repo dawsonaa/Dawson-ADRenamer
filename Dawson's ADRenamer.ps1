@@ -1,4 +1,4 @@
-<# test
+<#
 # Dawson's AD Computer Renamer 2.5.21
 # Author: Dawson Adams (dawsonaa@ksu.edu)
 # Version: 2.5.21
