@@ -1271,6 +1271,20 @@ $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
 
+# Customize form appearance
+$form.BackColor = [System.Drawing.Color]::FromArgb(255, 240, 240, 240) # Light grey background
+$form.ForeColor = [System.Drawing.Color]::FromArgb(255, 105, 105, 105) # Dark grey text
+$form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+
+# Set the icon for the form
+$iconPath = Join-Path $PSScriptRoot "icon.ico"
+if (Test-Path $iconPath) {
+    $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
+}
+else {
+    Write-Host "icon not found at path $iconPath"
+}
+
 # Initialize script-scope variables
 $script:checkedItems = @{}
 $script:invalidNamesList = @()
