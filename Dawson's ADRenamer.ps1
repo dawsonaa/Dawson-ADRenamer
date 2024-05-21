@@ -98,6 +98,9 @@
 # All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
 #>
 
+# IMPORTANT
+# $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
+# $true will run the application with imported AD modules and will request credentials to be used for actual AD device name manipulation
 $online = $false
 
 # Load required assemblies
