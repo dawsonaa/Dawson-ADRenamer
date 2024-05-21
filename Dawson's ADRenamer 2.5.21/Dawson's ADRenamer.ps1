@@ -354,7 +354,7 @@ function DuplicateScriptAndMoveLogs {
     $currentScriptName = Split-Path -Leaf $currentScriptPath
 
     # Define the target parent folder name
-    $targetParentFolderName = "Dawson's ADRenamer"
+    $targetParentFolderName = "Dawson's ADRenamer 2.5.21"
     $targetParentFolderPath = Join-Path -Path $currentScriptDir -ChildPath $targetParentFolderName
 
     # Check if the current script's parent folder is named as target
