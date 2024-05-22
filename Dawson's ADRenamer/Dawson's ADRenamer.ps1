@@ -110,18 +110,38 @@ Add-Type -AssemblyName System.Drawing
 if (-not $online) {
     # Dummy data for computers # OFFLINE
     # Dummy data for computers
-    $dummyComputers = @(
-        @{ Name = 'HL-CS-LOAN-1'; LastLogonDate = (Get-Date).AddDays(-10) },
-        @{ Name = 'HL-CS-LOAN-2'; LastLogonDate = (Get-Date).AddDays(-20) },
-        @{ Name = 'HL-CS-LOAN-3'; LastLogonDate = (Get-Date).AddDays(-30) },
-        @{ Name = 'HL-CS-LOAN-4'; LastLogonDate = (Get-Date).AddDays(-10) },
-        @{ Name = 'HL-CS-LOAN-5'; LastLogonDate = (Get-Date).AddDays(-20) },
-        @{ Name = 'HL-CS-LOAN-6'; LastLogonDate = (Get-Date).AddDays(-30) },
-        @{ Name = 'HL-CS-LOAN-7'; LastLogonDate = (Get-Date).AddDays(-10) },
-        @{ Name = 'HL-CS-LOAN-8'; LastLogonDate = (Get-Date).AddDays(-20) },
-        @{ Name = 'HL-CS-LOAN-9'; LastLogonDate = (Get-Date).AddDays(-30) },
-        @{ Name = 'HL-CS-LOAN-10'; LastLogonDate = (Get-Date).AddDays(-200) }  # This one should be filtered out
-    )
+    function Add-DummyComputers {
+        param (
+            [int]$numberOfDevices = 10
+        )
+    
+        # Function to generate a random date within the last year
+        function Get-RandomDate {
+            $randomDays = Get-Random -Minimum 1 -Maximum 200
+            return (Get-Date).AddDays(-$randomDays)
+        }
+    
+        # Generate dummy computers
+        $dummyComputers = @()
+        for ($i = 1; $i -le $numberOfDevices; $i++) {
+            $dummyComputers += @{
+                Name          = "HL-CS-LOAN-$i"
+                LastLogonDate = Get-RandomDate
+            }
+        }
+    
+        return $dummyComputers
+    }
+    
+    # Call the function with the desired number of devices
+    $numberOfDevices = 30
+    $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
+
+    # Add the generated dummy computers to the CheckedListBox
+    foreach ($computer in $dummyComputers) {
+        Write-Host "Adding $($computer.Name) to CheckedListBox" -Foreground Red
+        #$checkedListBox.Items.Add($computer.Name) | Out-Null
+    }
 
     # Dummy data for OUs # OFFLINE
     $dummyOUs = @(
@@ -956,6 +976,8 @@ function LoadAndFilterComputersOFFLINE {
         $computerCount = $script:filteredComputers.Count
         $filteredOutCount = $dummyComputers.Count - $script:filteredComputers.Count
 
+        $computerCheckedListBox.Items.Clear()
+
         # Populate the CheckedListBox with the filtered computer names
         $script:filteredComputers | ForEach-Object {
             $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
@@ -1192,7 +1214,7 @@ $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 
-# Handle the KeyDown event to detect Ctrl+A
+# Handle the KeyDown event to detect Ctrl+A # FIX
 $computerCheckedListBox.Add_KeyDown({
         param($s, $e)
     
@@ -1239,6 +1261,19 @@ $selectedCheckedListBox.Location = New-Object System.Drawing.Point(280, 40)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
+
+# Handle the KeyDown event to implement Ctrl+A select all
+$selectedCheckedListBox.add_KeyDown({
+        param($s, $e)
+    
+        # Check if Ctrl+A was pressed
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+            for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+                $selectedCheckedListBox.SetItemChecked($i, $true)
+            }
+            $e.Handled = $true
+        }
+    })
 
 
 # Handle the MeasureItem event to set the item height
