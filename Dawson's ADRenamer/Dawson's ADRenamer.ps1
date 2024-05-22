@@ -2825,12 +2825,18 @@ $applyRenameButton.Add_Click({
                 "Content-Type" = "application/json"
             }
 
-            # Send the HTTP POST request to trigger the flow
-            Invoke-RestMethod -Uri $flowUrl -Method Post -Headers $headers -Body $jsonBody
-
-            Write-Host "Triggered Power Automate flow to upload the log files to SharePoint" -ForegroundColor Yellow
-            Write-Host " "
-
+            if ($online) {
+                # Send the HTTP POST request to trigger the flow
+                Invoke-RestMethod -Uri $flowUrl -Method Post -Headers $headers -Body $jsonBody
+                Write-Host "Triggered Power Automate flow to upload the log files to SharePoint" -ForegroundColor Yellow
+                Write-Host " "
+            }
+            else {
+                # Send dummy write-host to emulate the real output
+                Write-Host "Triggered Power Automate flow to upload the log files to SharePoint (OFFLINE - IGNORED)" -ForegroundColor Yellow
+                Write-Host " "
+            }
+            
             # Print the list of logged on users
             if ($loggedOnUsers.Count -gt 0) {
                 Write-Host "Logged on users:" -ForegroundColor Yellow
