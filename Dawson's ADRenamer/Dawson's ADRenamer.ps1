@@ -1272,11 +1272,11 @@ $form.StartPosition = 'CenterScreen'
 
 if ($online) {
     $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in ONLINE mode. Please set the variable $online to $false for OFFLINE mode.' -ForegroundColor Yellow
+    Write-Host 'You have started this application in ONLINE mode. Set the variable $online to $false for OFFLINE mode. (Line 104)' -ForegroundColor Yellow
 }
 else {
     $form.Text = "OFFLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in OFFLINE mode. Please set the variable $online to $true for ONLINE mode.' -ForegroundColor Yellow
+    Write-Host 'You have started this application in OFFLINE mode. Set the variable $online to $true for ONLINE mode. (Line 104)' -ForegroundColor Yellow
 }
 
 # Customize form appearance
