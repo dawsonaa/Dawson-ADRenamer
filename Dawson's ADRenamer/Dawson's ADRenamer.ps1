@@ -1253,7 +1253,7 @@ function LoadAndFilterComputers {
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
-$form.Size = New-Object System.Drawing.Size(785, 520)
+$form.Size = New-Object System.Drawing.Size(830, 520) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
@@ -1374,7 +1374,7 @@ $form.Controls.Add($computerCheckedListBox)
 
 # Create a new checked list box for displaying selected computers
 $selectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
+$selectedCheckedListBox.Location = New-Object System.Drawing.Point(280, 40)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
 
 # Define the script-wide variable for selectedCheckedListBox
@@ -1849,7 +1849,7 @@ $selectedComputersListBox.ContextMenuStrip = $contextMenu
 
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object CustomListBox
-$newNamesListBox.Location = New-Object System.Drawing.Point(510, 40)
+$newNamesListBox.Location = New-Object System.Drawing.Point(550, 40)
 $newNamesListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 # Override the selection behavior to prevent selection
 $newNamesListBox.add_SelectedIndexChanged({
