@@ -1748,13 +1748,17 @@ $afterChangeLabel.Location = New-Object System.Drawing.Point(590, 15)
 $afterChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
 $form.Controls.Add($afterChangeLabel)
 
+$textBoxSize = New-Object System.Drawing.Size(150, 20)
+
 # Create input text box for part-0 name manipulation
 $part0Input = New-Object System.Windows.Forms.TextBox
 $part0Input.Location = New-Object System.Drawing.Point(30, 400)
-$part0Input.Size = New-Object System.Drawing.Size(100, 20)
+$part0Input.Size = $textBoxSize
 $part0Input.ForeColor = [System.Drawing.Color]::Gray
+$part0Input.BackColor = [System.Drawing.Color]::LightGray
 $part0Input.Text = "Change $part0Name"
-$part0Input.Enabled = $false # Initially disabled
+# $part0Input.Enabled = $false # Initially disabled
+$part0Input.ReadOnly = $true
 $part0Input.MaxLength = [Math]::Min(15, $part0Max)
 $part0Input.add_KeyDown({
         param($s, $e)
@@ -1765,27 +1769,43 @@ $part0Input.add_KeyDown({
         }
     })
 
+# Event handler for simulating enable/disable behavior
+$part0Input.add_Click({
+        if ($part0Input.ReadOnly) {
+            $part0Input.ReadOnly = $false
+            $part0Input.BackColor = [System.Drawing.Color]::White
+            $part0Input.ForeColor = [System.Drawing.Color]::Black
+            $part0Input.Focus()
+            if ($part0Input.Text -eq "Change $part0Name") {
+                $part0Input.Text = ''
+            }
+        }
+    })
+
 # Clear placeholder text when the text box gains focus
 $part0Input.Add_Enter({
         if ($this.Text -eq "Change $part0Name") {
             $this.Text = ''
+            $part0Input.BackColor = [System.Drawing.Color]::White
             $this.ForeColor = [System.Drawing.Color]::Black
         }
     })
 
 # Restore placeholder text when the text box loses focus and is empty
 $part0Input.Add_Leave({
-        if ($this.Text -eq '') {
-            $this.Text = "Change $part0Name"
-            $this.ForeColor = [System.Drawing.Color]::Gray
+        if ($part0Input.Text -eq '') {
+            $part0Input.Text = "Change $part0Name"
+            $part0Input.ForeColor = [System.Drawing.Color]::Gray
+            $part0Input.BackColor = [System.Drawing.Color]::LightGray
+            $part0Input.ReadOnly = $true
         }
     })
 $form.Controls.Add($part0Input)
 
 # Create input text box for part-1 name manipulation
 $part1Input = New-Object System.Windows.Forms.TextBox
-$part1Input.Location = New-Object System.Drawing.Point(160, 400)
-$part1Input.Size = New-Object System.Drawing.Size(100, 20)
+$part1Input.Location = New-Object System.Drawing.Point(200, 400) # 160, 400
+$part1Input.Size = $textBoxSize
 $part1Input.ForeColor = [System.Drawing.Color]::Gray
 $part1Input.Text = "Change $part1Name"
 $part1Input.Enabled = $false  # Initially disabled
@@ -1819,7 +1839,7 @@ $form.Controls.Add($part1Input)
 # Create input text box for part-2 name manipulation
 $part2Input = New-Object System.Windows.Forms.TextBox
 $part2Input.Location = New-Object System.Drawing.Point(290, 400)
-$part2Input.Size = New-Object System.Drawing.Size(100, 20)
+$part2Input.Size = $textBoxSize
 $part2Input.ForeColor = [System.Drawing.Color]::Gray
 $part2Input.Text = "Change $part2Name"
 $part2Input.MaxLength = 15
@@ -1853,7 +1873,7 @@ $form.Controls.Add($part2Input)
 # Create input text box for part-3 name manipulation
 $part3Input = New-Object System.Windows.Forms.TextBox
 $part3Input.Location = New-Object System.Drawing.Point(420, 400)
-$part3Input.Size = New-Object System.Drawing.Size(100, 20)
+$part3Input.Size = $textBoxSize
 $part3Input.ForeColor = [System.Drawing.Color]::Gray
 $part3Input.Text = "Change $part3Name"
 $part3Input.MaxLength = 15
@@ -1924,30 +1944,6 @@ $maxCharacterCheckBoxLabel.Text = "Set each part to a maximum of 15 characters"
 $maxCharacterCheckBoxLabel.Location = New-Object System.Drawing.Point(290, 430)
 $maxCharacterCheckBoxLabel.Size = New-Object System.Drawing.Size(200, 25)
 $form.Controls.Add($maxCharacterCheckBoxLabel)
-
-# Create checkbox to enable/disable part-0 name manipulation
-$part0CheckBox = New-Object System.Windows.Forms.CheckBox
-$part0CheckBox.Location = New-Object System.Drawing.Point(10, 400)
-$part0CheckBox.AutoSize = $true
-$part0CheckBox.Add_CheckedChanged({
-        $part0Input.Enabled = $part0CheckBox.Checked
-        
-        if ($part0CheckBox.Checked -or $part1CheckBox.Checked) {
-            $swapCheckBox.Enabled = $false
-        }
-        else {
-            $swapCheckBox.Enabled = $true
-        }
-
-        if ($part0CheckBox.Checked -eq $false) {
-            $part0Input.Text = "Change $part0Name"
-        }
-        else {
-            $part0Input.Text = ""
-            $part0Input.ForeColor = [System.Drawing.Color]::Black
-        }
-    })
-$form.Controls.Add($part0CheckBox)
 
 # Create checkbox to enable/disable part-1 name manipulation
 $part1CheckBox = New-Object System.Windows.Forms.CheckBox
