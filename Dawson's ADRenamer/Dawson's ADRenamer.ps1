@@ -134,7 +134,7 @@ if (-not $online) {
     }
     
     # Call the function with the desired number of devices
-    $numberOfDevices = 30
+    $numberOfDevices = 5
     $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
 
     # Add the generated dummy computers to the CheckedListBox
@@ -307,6 +307,7 @@ $colors = @(
     [System.Drawing.Color]::FromArgb(255, 220, 245, 220)  # Pale Green
 )
 
+# UpdateAllListBoxes function
 function UpdateAllListBoxes {
     Write-Host "UpdateAllListBoxes"
     Write-Host ""
@@ -438,32 +439,6 @@ function UpdateAllListBoxes {
         }
     }
 
-    # Populate the newNamesListBox with items from the newNamesList
-    foreach ($entry in $script:newNamesList) {
-        $customSuffix = if ($entry.Custom) { " - Custom" } else { "" }
-        $script:newNamesListBox.Items.Add($entry.NewName + $customSuffix) | Out-Null
-    }
-
-    # Populate the newNamesListBox with items from the changesList
-    $script:newNamesListBox.Items.Clear()
-    foreach ($change in $script:changesList) {
-        foreach ($computerName in $change.ComputerNames) {
-            $parts = $computerName -split '-'
-            $part0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
-            $part1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
-            $part2 = if ($change.Part2) { $change.Part2 } else { if ($parts.Count -ge 3) { $parts[2] } else { $null } }
-            $part3 = if ($change.Part3) { $change.Part3 } else { if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null } }
-
-            $newNameParts = @()
-            if ($part0) { $newNameParts += $part0 }
-            if ($part1) { $newNameParts += $part1 }
-            if ($part2) { $newNameParts += $part2 }
-            if ($part3) { $newNameParts += $part3 }
-            $newName = $newNameParts -join '-'
-            $script:newNamesListBox.Items.Add($newName) | Out-Null
-        }
-    }
-
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
@@ -477,7 +452,6 @@ function UpdateAllListBoxes {
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
-
 
 # Function for setting individual custom names
 function Show-InputBox {
@@ -1147,6 +1121,86 @@ $listBoxHeight = 350
 $script:checkedItems = @{}
 $script:selectedCheckedItems = @{}
 
+function UpdateNewNamesListBox {
+    Write-Host "Updating New Names ListBox" -ForegroundColor Cyan
+    $script:newNamesListBox.Items.Clear()
+    $sortedItems = New-Object System.Collections.ArrayList
+    $nonChangeItems = New-Object System.Collections.ArrayList
+
+    # Add items from changesList first, sorted alphanumerically within groups
+    Write-Host "Processing changesList..."
+    foreach ($change in $script:changesList) {
+        Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+        $sortedComputerNames = $change.ComputerNames | Sort-Object
+        foreach ($computerName in $sortedComputerNames) {
+            Write-Host "Adding $computerName to sortedItems from changesList"
+            $sortedItems.Add($computerName) | Out-Null
+        }
+    }
+
+    # Add items not in any changesList group
+    Write-Host "Processing checkedItems not in changesList..."
+    foreach ($item in $script:checkedItems.Keys) {
+        $isInChangeList = $false
+        foreach ($change in $script:changesList) {
+            if ($change.ComputerNames -contains $item) {
+                $isInChangeList = $true
+                break
+            }
+        }
+        if (-not $isInChangeList) {
+            Write-Host "Adding $item to nonChangeItems"
+            $nonChangeItems.Add($item) | Out-Null
+        }
+    }
+
+    # Sort the non-change items alphanumerically
+    Write-Host "Sorting non-change items..."
+    $sortedNonChangeItems = $nonChangeItems | Sort-Object
+
+    # Combine the sorted change items and sorted non-change items
+    Write-Host "Combining sorted change items and sorted non-change items..."
+    foreach ($item in $sortedNonChangeItems) {
+        Write-Host "Adding $item to sortedItems from nonChangeItems"
+        $sortedItems.Add($item) | Out-Null
+    }
+
+    # Update the newNamesListBox
+    Write-Host "Updating newNamesListBox..."
+    foreach ($item in $sortedItems) {
+        Write-Host "Looking for change for $item in changesList"
+        $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
+        if ($change) {
+            $parts = $item -split '-'
+            $newPart0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
+            $newPart1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
+            $newPart2 = if ($change.Part2) { $change.Part2 } else { if ($parts.Count -ge 3) { $parts[2] } else { $null } }
+            $newPart3 = if ($change.Part3) { $change.Part3 } else { if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null } }
+
+            $newNameParts = @()
+            if ($newPart0) { $newNameParts += $newPart0 }
+            if ($newPart1) { $newNameParts += $newPart1 }
+            if ($newPart2) { $newNameParts += $newPart2 }
+            if ($newPart3) { $newNameParts += $newPart3 }
+            $newName = $newNameParts -join '-'
+
+            Write-Host "Adding new name $newName for $item to newNamesListBox"
+            $script:newNamesListBox.Items.Add($newName) | Out-Null
+        }
+        else {
+            Write-Host "Adding unchanged name $item to newNamesListBox"
+            $script:newNamesListBox.Items.Add($item) | Out-Null
+        }
+    }
+
+    # Print the items in the newNamesListBox
+    Write-Host "`nNewNamesListBox Items in Order:"
+    foreach ($item in $script:newNamesListBox.Items) {
+        Write-Host $item
+    }
+}
+
+
 # Function to sync checked items to computerCheckedListBox
 function SyncCheckedItems {
     $computerCheckedListBox.Items.Clear()
@@ -1154,6 +1208,7 @@ function SyncCheckedItems {
         $computerCheckedListBox.Items.Add($item, $script:checkedItems.ContainsKey($item))
     }
 }
+
 # Function to sync selected checked items to selectedCheckedListBox
 function SyncSelectedCheckedItems {
     Write-Host "SYNCSELECTED" -ForegroundColor Green
@@ -1204,7 +1259,6 @@ function SyncSelectedCheckedItems {
         Write-Host $item
     }
 }
-
 
 # Ensure to call SyncSelectedCheckedItems wherever necessary in your script
 
@@ -2290,6 +2344,7 @@ $commitChangesButton.Add_Click({
         UpdateAllListBoxes
         UpdateSelectedCheckedListBox
         SyncSelectedCheckedItems
+        UpdateNewNamesListBox
     })
 $form.Controls.Add($commitChangesButton)
 
