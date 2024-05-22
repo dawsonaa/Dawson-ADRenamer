@@ -458,32 +458,57 @@ $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 # 8. Constructs new names and validates them based on length and uniqueness constraints.
 # 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
 # 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
+# Define a new array to store changes
+$script:changesList = @()
+$script:groupedChanges = @{}
+
+# Define a new array to store the new names
+if (-not $script:newNamesList) {
+    $script:newNamesList = @()
+}
+
 function UpdateAllListBoxes {
     Write-Host "UpdateAllListBoxes"
     Write-Host ""
-    <# foreach ($item in $selectedItems) { # FIX
-        #Write-Host $selectedItems
-    } #>
+
     # Check if any relevant checkboxes are checked
-    $anyCheckboxChecked = (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly) # -or (-not $swapInput.ReadOnly) # FIX
-    # Write-Host "anyCheckboxChecked status: $anyCheckboxChecked "
-    
-    # Clear existing items and lists
+    $anyCheckboxChecked = (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
+
+    # Clear existing items and lists except for the new names list
     $hashSet.Clear()
-    # $selectedCheckedListBox.Items.Clear()
-    $newNamesListBox.Items.Clear()
+    $script:newNamesListBox.Items.Clear()
     $script:validNamesList = @()
     $script:invalidNamesList = @()
-
+    $script:changesList = @()
+    $script:groupedChanges = @{}
 
     foreach ($computerName in $script:checkedItems.Keys) {
-        #$selectedCheckedListBox.Items.Add($computerName)
-        if ($script:selectedCheckedItems.ContainsKey($computername)) {
-            Write-Host "selected contains $computername"
+        $previousChange = $null
+        foreach ($newName in $script:groupedChanges.Keys) {
+            if ($script:groupedChanges[$newName] -contains $computerName) {
+                $previousChange = $newName
+                break
+            }
+        }
+
+        if ($script:selectedCheckedItems.ContainsKey($computerName) -or $previousChange) {
+            if ($script:selectedCheckedItems.ContainsKey($computerName)) {
+                Write-Host "selected contains $computerName"
+            }
+            else {
+                Write-Host "already has previous change $previousChange for $computerName"
+                # Use the previous change and skip further processing
+                $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $previousChange; "Custom" = $false }
+                $script:validNamesList += "$computerName -> $previousChange"
+                if (-not $script:groupedChanges.ContainsKey($previousChange)) {
+                    $script:groupedChanges[$previousChange] = @()
+                }
+                $script:groupedChanges[$previousChange] += $computerName
+                continue
+            }
         }
         else {
-            
-            Write-Host "selected does not contain $computername"
+            Write-Host "selected does not contain $computerName and no previous change"
             continue
         }
 
@@ -498,12 +523,17 @@ function UpdateAllListBoxes {
         if ($customName) {
             $newName = $customName
             if ($hashSet.Add($newName)) {
-                # Check if duplicate
                 $script:validNamesList += "$computerName -> $newName"
-                $newNamesListBox.Items.Add($newName + " - Custom") | Out-Null
+                if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
+                    $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $true }
+                }
+                $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
+                if (-not $script:groupedChanges.ContainsKey($newName)) {
+                    $script:groupedChanges[$newName] = @()
+                }
+                $script:groupedChanges[$newName] += $computerName
             }
             else {
-                $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)") | Out-Null
                 $script:invalidNamesList += $computerName
             }
             continue
@@ -514,7 +544,6 @@ function UpdateAllListBoxes {
         # Convert name into parts depending on how many there are
         if ($parts.Count -lt 2) {
             # Handle names with less than 3 parts
-            $newNamesListBox.Items.Add("$computerName - Invalid (2-part minimum)" ) | Out-Null
             $script:invalidNamesList += $computerName
             continue
         }
@@ -542,27 +571,11 @@ function UpdateAllListBoxes {
         }
 
         if (-not $part0Input.ReadOnly) {
-            #Write-Host "part0input.notreadonly"
             $part0 = $part0Input.Text
-        }
-        else {
-            #Write-Host "part0input.readonly"
         }
         if (-not $part1Input.ReadOnly) {
             $part1 = $part1Input.Text
-            #Write-Host "part1input.notreadonly"
         }
-        else {
-            #Write-Host "part1input.readonly"
-        }
-
-        <# Apply user-defined replacements for parts
-        if ($part0CheckBox.Checked) { # FIX
-            $part0 = $part0Input.Text
-        } 
-        if ($part1CheckBox.Checked) { # FIX
-            $part1 = $part1Input.Text
-        } #>
 
         if ($parts.Count -eq 3) {
             # Calculate remaining length for username based on total length limits
@@ -598,34 +611,6 @@ function UpdateAllListBoxes {
             }
         }
 
-        <# Swap the department and part1 if the swap checkbox is checked
-        if ($swapInput.ReadOnly) {
-            if ($parts.Count -eq 3) {
-                $newName = "$part1-$part0-$part2"
-            }
-            elseif ($parts.Count -ge 4) {
-                $newName = "$part1-$part0-$part2-$part3"
-            }
-            else {
-                $newName = "$part1-$part0"
-            }
-            $part0DisplayLength = $part1.Length  # Display limit for part0 when swapped
-            $part1DisplayLength = $part0.Length  # Display limit for part1 when swapped
-        }
-        else {
-            if ($parts.Count -eq 3) {
-                $newName = "$part0-$part1-$part2"
-            }
-            elseif ($parts.Count -ge 4) {
-                $newName = "$part0-$part1-$part2-$part3"
-            }
-            else {
-                $newName = "$part0-$part1"
-            }
-            $part0DisplayLength = $part0.Length
-            $part1DisplayLength = $part1.Length
-        } #>
-
         if ($parts.Count -eq 3) {
             $newName = "$part0-$part1-$part2"
         }
@@ -644,18 +629,23 @@ function UpdateAllListBoxes {
         if ($parts.Count -eq 3) {
             # Display character limits visually next to the new name
             $charLimitDisplay = " ($part0DisplayLength/" + $part0Input.MaxLength + ")-($part1DisplayLength/" + $part1Input.MaxLength + ")-($($part2.Length)/" + $totalLengthForpart2 + ")" 
-            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part0Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0) -and ($part2.Length -ge 1))) {
+            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0) -and ($part2.Length -ge 1))) {
                 if ($hashSet.Add($newName)) {
                     $script:validNamesList += "$computerName -> $newName"
-                    $newNamesListBox.Items.Add($newName + $charLimitDisplay) | Out-Null
+                    if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
+                        $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
+                    }
+                    $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
+                    if (-not $script:groupedChanges.ContainsKey($newName)) {
+                        $script:groupedChanges[$newName] = @()
+                    }
+                    $script:groupedChanges[$newName] += $computerName
                 }
                 else {
-                    $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)" + $charLimitDisplay) | Out-Null
                     $script:invalidNamesList += $computerName
                 }
             }
             else {
-                $newNamesListBox.Items.Add("$computerName - Invalid" + $charLimitDisplay) | Out-Null
                 $script:invalidNamesList += $computerName
             }
         }
@@ -665,15 +655,20 @@ function UpdateAllListBoxes {
             if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0) -and ($part2.Length -ge 1) -and ($part3.Length -ge 1))) {
                 if ($hashSet.Add($newName)) {
                     $script:validNamesList += "$computerName -> $newName"
-                    $newNamesListBox.Items.Add($newName + $charLimitDisplay) | Out-Null
+                    if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
+                        $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
+                    }
+                    $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
+                    if (-not $script:groupedChanges.ContainsKey($newName)) {
+                        $script:groupedChanges[$newName] = @()
+                    }
+                    $script:groupedChanges[$newName] += $computerName
                 }
                 else {
-                    $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)" + $charLimitDisplay) | Out-Null
                     $script:invalidNamesList += $computerName
                 }
             }
             else {
-                $newNamesListBox.Items.Add("$computerName - Invalid" + $charLimitDisplay) | Out-Null
                 $script:invalidNamesList += $computerName
             }
         }
@@ -683,23 +678,51 @@ function UpdateAllListBoxes {
             if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0))) {
                 if ($hashSet.Add($newName)) {   
                     $script:validNamesList += "$computerName -> $newName"
-                    $newNamesListBox.Items.Add($newName + $charLimitDisplay) | Out-Null
+                    if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
+                        $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
+                    }
+                    $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
+                    if (-not $script:groupedChanges.ContainsKey($newName)) {
+                        $script:groupedChanges[$newName] = @()
+                    }
+                    $script:groupedChanges[$newName] += $computerName
                 }
                 else {
-                    $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)" + $charLimitDisplay) | Out-Null
                     $script:invalidNamesList += $computerName
                 }
             }
             else {
-                $newNamesListBox.Items.Add("$computerName - Invalid" + $charLimitDisplay) | Out-Null
                 $script:invalidNamesList += $computerName
             }
         }
     }
 
+    # Populate the newNamesListBox with items from the newNamesList
+    foreach ($entry in $script:newNamesList) {
+        $customSuffix = if ($entry.Custom) { " - Custom" } else { "" }
+        $script:newNamesListBox.Items.Add($entry.NewName + $customSuffix) | Out-Null
+    }
+
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
+
+    # Print the changesList
+    Write-Host "`nChanges List:"
+    foreach ($change in $script:changesList) {
+        Write-Host "ComputerName: $($change.ComputerName), NewName: $($change.NewName)"
+    }
+
+    # Print the groupedChanges
+    Write-Host "`nGrouped Changes:"
+    foreach ($newName in $script:groupedChanges.Keys) {
+        Write-Host "NewName: $newName"
+        foreach ($computerName in $script:groupedChanges[$newName]) {
+            Write-Host " - ComputerName: $computerName"
+        }
+    }
 }
+
+
 
 # Function for setting individual custom names
 function Show-InputBox {
