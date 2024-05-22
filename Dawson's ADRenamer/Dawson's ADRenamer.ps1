@@ -1337,14 +1337,60 @@ function SyncCheckedItems {
         $computerCheckedListBox.Items.Add($item, $script:checkedItems.ContainsKey($item))
     }
 }
-
 # Function to sync selected checked items to selectedCheckedListBox
 function SyncSelectedCheckedItems {
-    $selectedCheckedListBox.Items.Clear()
+    Write-Host "SYNCSELECTED" -ForegroundColor Green
+    $sortedItems = New-Object System.Collections.ArrayList
+    $nonChangeItems = New-Object System.Collections.ArrayList
+
+    # Add items from changesList first, sorted alphanumerically within groups
+    foreach ($change in $script:changesList) {
+        $sortedComputerNames = $change.ComputerNames | Sort-Object
+        foreach ($computerName in $sortedComputerNames) {
+            $sortedItems.Add($computerName) | Out-Null
+        }
+    }
+
+    # Add items not in any changesList group
     foreach ($item in $script:checkedItems.Keys) {
-        $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item))
+        $isInChangeList = $false
+        foreach ($change in $script:changesList) {
+            if ($change.ComputerNames -contains $item) {
+                $isInChangeList = $true
+                break
+            }
+        }
+        if (-not $isInChangeList) {
+            $nonChangeItems.Add($item) | Out-Null
+        }
+    }
+
+    # Sort the non-change items alphanumerically
+    $sortedNonChangeItems = $nonChangeItems | Sort-Object
+
+    # Combine the sorted change items and sorted non-change items
+    foreach ($item in $sortedNonChangeItems) {
+        $sortedItems.Add($item) | Out-Null
+    }
+
+    # Update the CheckedListBox
+    $selectedCheckedListBox.BeginUpdate()
+    $selectedCheckedListBox.Items.Clear()
+    foreach ($item in $sortedItems) {
+        $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
+    }
+    $selectedCheckedListBox.EndUpdate()
+
+    # Print the items in the selectedCheckedListBox
+    Write-Host "`nSelectedCheckedListBox Items in Order:"
+    foreach ($item in $selectedCheckedListBox.Items) {
+        Write-Host $item
     }
 }
+
+
+# Ensure to call SyncSelectedCheckedItems wherever necessary in your script
+
 
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
@@ -1410,6 +1456,91 @@ function UpdateColors {
     $selectedCheckedListBox.Invalidate()
     $colorPanel.Invalidate()
 }
+function UpdateSelectedCheckedListBox {
+    Write-Host "UPDATESELECTED" -ForegroundColor Cyan
+    $sortedItems = New-Object System.Collections.ArrayList
+    $nonChangeItems = New-Object System.Collections.ArrayList
+
+    # Add items from changesList first, sorted alphanumerically within groups
+    foreach ($change in $script:changesList) {
+        $sortedComputerNames = $change.ComputerNames | Sort-Object
+        foreach ($computerName in $sortedComputerNames) {
+            $sortedItems.Add($computerName) | Out-Null
+        }
+    }
+
+    # Add items not in any changesList group
+    foreach ($item in $script:checkedItems.Keys) {
+        $isInChangeList = $false
+        foreach ($change in $script:changesList) {
+            if ($change.ComputerNames -contains $item) {
+                $isInChangeList = $true
+                break
+            }
+        }
+        if (-not $isInChangeList) {
+            Write-Host "Adding non-change item: $item" -ForegroundColor Yellow
+            $nonChangeItems.Add($item) | Out-Null
+        }
+        else {
+            Write-Host "Item in change list, skipping: $item" -ForegroundColor Green
+        }
+    }
+
+    # Sort the non-change items alphanumerically
+    $sortedNonChangeItems = $nonChangeItems | Sort-Object
+
+    # Debugging: Print non-change items before sorting
+    Write-Host "`nNon-change items before sorting:"
+    foreach ($item in $nonChangeItems) {
+        Write-Host $item
+    }
+
+    # Debugging: Print non-change items after sorting
+    Write-Host "`nNon-change items after sorting:"
+    foreach ($item in $sortedNonChangeItems) {
+        Write-Host $item
+    }
+
+    # Combine the sorted change items and sorted non-change items
+    if ($sortedNonChangeItems.Count -gt 0) {
+        $sortedItems.AddRange($sortedNonChangeItems)
+    }
+
+    # Preserve the checked state
+    $checkedItems = @{}
+    for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+        if ($selectedCheckedListBox.GetItemChecked($i)) {
+            $checkedItems[$selectedCheckedListBox.Items[$i]] = $true
+        }
+    }
+
+    # Update the CheckedListBox
+    $selectedCheckedListBox.BeginUpdate()
+    $selectedCheckedListBox.Items.Clear()
+    foreach ($item in $sortedItems) {
+        $selectedCheckedListBox.Items.Add($item) | Out-Null
+    }
+    $selectedCheckedListBox.EndUpdate()
+
+    # Restore the checked state
+    for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+        if ($checkedItems.ContainsKey($selectedCheckedListBox.Items[$i])) {
+            $selectedCheckedListBox.SetItemChecked($i, $true)
+        }
+    }
+
+    # Print the items in the selectedCheckedListBox
+    Write-Host "`nSelectedCheckedListBox Items in Order:"
+    foreach ($item in $selectedCheckedListBox.Items) {
+        Write-Host $item
+    }
+
+    SyncSelectedCheckedItems
+}
+
+
+
 
 # Handle the DrawItem event to customize item drawing
 $selectedCheckedListBox.add_DrawItem({
@@ -1441,7 +1572,6 @@ $yOffset = 0
 # Padding between color rectangles
 $padding = 0
 
-# Handle the Paint event for the color panel
 # Handle the Paint event for the color panel
 $colorPanel.add_Paint({
         param ($sender, $e)
@@ -2484,6 +2614,8 @@ $commitChangesButton = New-StyledButton -text "Commit Changes" -x 480 -y 430 -wi
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
         UpdateAllListBoxes
+        UpdateSelectedCheckedListBox
+        SyncSelectedCheckedItems
     })
 $form.Controls.Add($commitChangesButton)
 
