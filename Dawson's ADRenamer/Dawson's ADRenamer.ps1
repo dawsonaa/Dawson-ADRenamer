@@ -561,21 +561,32 @@ function UpdateAllListBoxes {
                 Write-Host "Part1: '$($change.Part1)' vs '$part1InputValue'"
                 Write-Host "Part2: '$($change.Part2)' vs '$part2InputValue'"
                 Write-Host "Part3: '$($change.Part3)' vs '$part3InputValue'"
-    
+
                 $part0Comparison = ($change.Part0 -eq $part0InputValue -or ([string]::IsNullOrEmpty($change.Part0) -and [string]::IsNullOrEmpty($part0InputValue)))
                 $part1Comparison = ($change.Part1 -eq $part1InputValue -or ([string]::IsNullOrEmpty($change.Part1) -and [string]::IsNullOrEmpty($part1InputValue)))
                 $part2Comparison = ($change.Part2 -eq $part2InputValue -or ([string]::IsNullOrEmpty($change.Part2) -and [string]::IsNullOrEmpty($part2InputValue)))
                 $part3Comparison = ($change.Part3 -eq $part3InputValue -or ([string]::IsNullOrEmpty($change.Part3) -and [string]::IsNullOrEmpty($part3InputValue)))
-    
+
                 Write-Host "Part0 Comparison: $part0Comparison"
                 Write-Host "Part1 Comparison: $part1Comparison"
                 Write-Host "Part2 Comparison: $part2Comparison"
                 Write-Host "Part3 Comparison: $part3Comparison"
-    
+
                 if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison) {
                     Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
                     $existingChange = $change
                     break
+                }
+            }
+
+            # Remove the computer name from any previous change entries if they exist
+            foreach ($change in $script:changesList) {
+                Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
+                Write-Host "does it contain: " ($change.ComputerNames -contains $computerName)
+                Write-Host "does change equal existing: " ($change -eq $existingChange)
+                if ($change -ne $existingChange -and $change.ComputerNames -contains $computerName) {
+                    Write-Host "Removing $computerName from previous change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+                    $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $computerName }
                 }
             }
 
@@ -588,6 +599,12 @@ function UpdateAllListBoxes {
                 $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue)
                 $script:changesList.Add($newChange) | Out-Null
             }
+
+        
+        
+        
+        
+        
         }
         else {
             $script:invalidNamesList += $computerName
