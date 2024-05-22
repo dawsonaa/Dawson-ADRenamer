@@ -1265,11 +1265,19 @@ function LoadAndFilterComputers {
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "Dawson's AD Computer Renamer $Version"
 $form.Size = New-Object System.Drawing.Size(785, 520)
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
+
+if ($online) {
+    $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
+    Write-Host 'You have started this application in ONLINE mode. Please set the variable $online to $false for OFFLINE mode.' -ForegroundColor Yellow
+}
+else {
+    $form.Text = "OFFLINE - Dawson's AD Computer Renamer $Version"
+    Write-Host 'You have started this application in OFFLINE mode. Please set the variable $online to $true for ONLINE mode.' -ForegroundColor Yellow
+}
 
 # Customize form appearance
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 240, 240, 240) # Light grey background
