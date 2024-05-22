@@ -458,14 +458,24 @@ $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 # 8. Constructs new names and validates them based on length and uniqueness constraints.
 # 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
 # 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
-# Define a new array to store changes
-$script:changesList = @()
-$script:groupedChanges = @{}
+class Change {
+    [string[]]$ComputerNames
+    [string]$Part0
+    [string]$Part1
+    [string]$Part2
+    [string]$Part3
 
-# Define a new array to store the new names
-if (-not $script:newNamesList) {
-    $script:newNamesList = @()
+    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3) {
+        $this.ComputerNames = $computerNames
+        $this.Part0 = $part0
+        $this.Part1 = $part1
+        $this.Part2 = $part2
+        $this.Part3 = $part3
+    }
 }
+
+$script:changesList = New-Object System.Collections.ArrayList
+$script:newNamesList = @()
 
 function UpdateAllListBoxes {
     Write-Host "UpdateAllListBoxes"
@@ -479,221 +489,108 @@ function UpdateAllListBoxes {
     $script:newNamesListBox.Items.Clear()
     $script:validNamesList = @()
     $script:invalidNamesList = @()
-    $script:changesList = @()
-    $script:groupedChanges = @{}
+    $newChangesList = New-Object System.Collections.ArrayList
 
-    foreach ($computerName in $script:checkedItems.Keys) {
-        $previousChange = $null
-        foreach ($newName in $script:groupedChanges.Keys) {
-            if ($script:groupedChanges[$newName] -contains $computerName) {
-                $previousChange = $newName
-                break
-            }
-        }
+    Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
 
-        if ($script:selectedCheckedItems.ContainsKey($computerName) -or $previousChange) {
-            if ($script:selectedCheckedItems.ContainsKey($computerName)) {
-                Write-Host "selected contains $computerName"
-            }
-            else {
-                Write-Host "already has previous change $previousChange for $computerName"
-                # Use the previous change and skip further processing
-                $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $previousChange; "Custom" = $false }
-                $script:validNamesList += "$computerName -> $previousChange"
-                if (-not $script:groupedChanges.ContainsKey($previousChange)) {
-                    $script:groupedChanges[$previousChange] = @()
-                }
-                $script:groupedChanges[$previousChange] += $computerName
-                continue
-            }
-        }
-        else {
-            Write-Host "selected does not contain $computerName and no previous change"
-            continue
-        }
-
-        # Check if a custom name is set
-        $customName = $null
-        foreach ($entry in $script:customNamesList) {
-            if ($entry -match "^$computerName -> (.*)$") {
-                $customName = $matches[1]
-                break
-            }
-        }
-        if ($customName) {
-            $newName = $customName
-            if ($hashSet.Add($newName)) {
-                $script:validNamesList += "$computerName -> $newName"
-                if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
-                    $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $true }
-                }
-                $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
-                if (-not $script:groupedChanges.ContainsKey($newName)) {
-                    $script:groupedChanges[$newName] = @()
-                }
-                $script:groupedChanges[$newName] += $computerName
-            }
-            else {
-                $script:invalidNamesList += $computerName
-            }
-            continue
-        }
-
+    # Process selected checked items
+    foreach ($computerName in $script:selectedCheckedItems.Keys) {
+        Write-Host "Processing computer: $computerName"
+        
         $parts = $computerName -split '-'
+        $part0 = $parts[0]
+        $part1 = $parts[1]
+        $part2 = if ($parts.Count -ge 3) { $parts[2] } else { $null }
+        $part3 = if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null }
 
-        # Convert name into parts depending on how many there are
-        if ($parts.Count -lt 2) {
-            # Handle names with less than 3 parts
-            $script:invalidNamesList += $computerName
-            continue
-        }
-        if ($parts.Count -eq 2 -and (-not $part2Input.ReadOnly)) {
-            $parts += ""  # Add an empty part for the part2
-            $part0 = $parts[0]
-            $part1 = $parts[1]
-            $part2 = $parts[2]
-        }
-        elseif ($parts.Count -eq 2 -and $part2Input.ReadOnly -eq $false) {
-            $part0 = $parts[0]
-            $part1 = $parts[1]
-        }
-        elseif ($parts.Count -eq 3) {
-            $part0 = $parts[0]
-            $part1 = $parts[1]
-            $part2 = $parts[2]
-        }
-        elseif ($parts.Count -ge 4) {
-            # Handle names with 4 or more parts
-            $part0 = $parts[0]
-            $part1 = $parts[1]
-            $part2 = $parts[2]
-            $part3 = $parts[3..($parts.Count - 1)] -join '-'
-        }
+        Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3"
 
-        if (-not $part0Input.ReadOnly) {
-            $part0 = $part0Input.Text
-        }
-        if (-not $part1Input.ReadOnly) {
-            $part1 = $part1Input.Text
-        }
+        $part0InputValue = if (-not $part0Input.ReadOnly) { $part0Input.Text } else { $null }
+        $part1InputValue = if (-not $part1Input.ReadOnly) { $part1Input.Text } else { $null }
+        $part2InputValue = if (-not $part2Input.ReadOnly) { $part2Input.Text } else { $null }
+        $part3InputValue = if (-not $part3Input.ReadOnly) { $part3Input.Text } else { $null }
 
-        if ($parts.Count -eq 3) {
-            # Calculate remaining length for username based on total length limits
+        Write-Host "Input values: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
+
+        if ($part0InputValue) { $part0 = $part0InputValue }
+        if ($part1InputValue) { $part1 = $part1InputValue }
+        if ($part2InputValue) {
             $totalLengthForpart2 = 15 - ($part0.Length + $part1.Length + ($parts.Count - 1))  # parts.count -1 is for hyphens
             if ($totalLengthForpart2 -gt 0) {
-                if (-not $part2Input.ReadOnly) {
-                    $part2 = $part2Input.Text.Substring(0, [Math]::Min($part2Input.Text.Length, $totalLengthForpart2))
-                }
-                else {
-                    $part2 = $part2.Substring(0, [Math]::Min($part2.Length, $totalLengthForpart2))
-                }
+                $part2 = $part2InputValue.Substring(0, [Math]::Min($part2InputValue.Length, $totalLengthForpart2))
             }
             else {
                 $part2 = ""
             }
         }
-        elseif ($parts.Count -ge 4) {
-            if (-not $part2Input.ReadOnly) {
-                $part2 = $part2Input.Text
-            }
-            $totalLengthForpart2 = 15
+        if ($part3InputValue) {
             $totalLengthForpart3 = 15 - ($part0.Length + $part1.Length + $part2.Length + ($parts.Count - 1))
             if ($totalLengthForpart3 -gt 0) {
-                if (-not $part3Input.ReadOnly) {
-                    $part3 = $part3Input.Text.Substring(0, [Math]::Min($part3Input.Text.Length, $totalLengthForpart3))
-                }
-                else {
-                    $part3 = $part3.Substring(0, [Math]::Min($part3.Length, $totalLengthForpart3))
-                }
+                $part3 = $part3InputValue.Substring(0, [Math]::Min($part3InputValue.Length, $totalLengthForpart3))
             }
             else {
                 $part3 = ""
             }
         }
 
-        if ($parts.Count -eq 3) {
-            $newName = "$part0-$part1-$part2"
-        }
-        elseif ($parts.Count -ge 4) {
+        Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3"
+
+        if ($part3) {
             $newName = "$part0-$part1-$part2-$part3"
+        }
+        elseif ($part2) {
+            $newName = "$part0-$part1-$part2"
         }
         else {
             $newName = "$part0-$part1"
         }
-        $part0DisplayLength = $part0.Length
-        $part1DisplayLength = $part1.Length
 
-        $part0Temp = $part0Input.MaxLength
-        $part1Temp = $part1Input.MaxLength
+        Write-Host "New name: $newName"
 
-        if ($parts.Count -eq 3) {
-            # Display character limits visually next to the new name
-            $charLimitDisplay = " ($part0DisplayLength/" + $part0Input.MaxLength + ")-($part1DisplayLength/" + $part1Input.MaxLength + ")-($($part2.Length)/" + $totalLengthForpart2 + ")" 
-            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0) -and ($part2.Length -ge 1))) {
-                if ($hashSet.Add($newName)) {
-                    $script:validNamesList += "$computerName -> $newName"
-                    if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
-                        $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
-                    }
-                    $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
-                    if (-not $script:groupedChanges.ContainsKey($newName)) {
-                        $script:groupedChanges[$newName] = @()
-                    }
-                    $script:groupedChanges[$newName] += $computerName
-                }
-                else {
-                    $script:invalidNamesList += $computerName
+        if ($hashSet.Add($newName)) {
+            $script:validNamesList += "$computerName -> $newName"
+            if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
+                $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
+            }
+
+            # Check if an existing change matches
+            $existingChange = $null
+            foreach ($change in $script:changesList) {
+                Write-Host "Comparing changes for $computerName..."
+                Write-Host "Part0: '$($change.Part0)' vs '$part0InputValue'"
+                Write-Host "Part1: '$($change.Part1)' vs '$part1InputValue'"
+                Write-Host "Part2: '$($change.Part2)' vs '$part2InputValue'"
+                Write-Host "Part3: '$($change.Part3)' vs '$part3InputValue'"
+    
+                $part0Comparison = ($change.Part0 -eq $part0InputValue -or ([string]::IsNullOrEmpty($change.Part0) -and [string]::IsNullOrEmpty($part0InputValue)))
+                $part1Comparison = ($change.Part1 -eq $part1InputValue -or ([string]::IsNullOrEmpty($change.Part1) -and [string]::IsNullOrEmpty($part1InputValue)))
+                $part2Comparison = ($change.Part2 -eq $part2InputValue -or ([string]::IsNullOrEmpty($change.Part2) -and [string]::IsNullOrEmpty($part2InputValue)))
+                $part3Comparison = ($change.Part3 -eq $part3InputValue -or ([string]::IsNullOrEmpty($change.Part3) -and [string]::IsNullOrEmpty($part3InputValue)))
+    
+                Write-Host "Part0 Comparison: $part0Comparison"
+                Write-Host "Part1 Comparison: $part1Comparison"
+                Write-Host "Part2 Comparison: $part2Comparison"
+                Write-Host "Part3 Comparison: $part3Comparison"
+    
+                if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison) {
+                    Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+                    $existingChange = $change
+                    break
                 }
             }
+
+            if ($existingChange) {
+                Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3)"
+                $existingChange.ComputerNames += $computerName
+            }
             else {
-                $script:invalidNamesList += $computerName
+                Write-Host "Creating new change entry for parts: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
+                $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue)
+                $script:changesList.Add($newChange) | Out-Null
             }
         }
-        elseif ($parts.Count -ge 4) {
-            # Display character limits visually next to the new name
-            $charLimitDisplay = " ($part0DisplayLength/" + $part0Input.MaxLength + ")-($part1DisplayLength/" + $part1Input.MaxLength + ")-($($part2.Length)/" + $totalLengthForpart2 + ")-($($part3.Length)/" + $part3Input.MaxLength + ")" 
-            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0) -and ($part2.Length -ge 1) -and ($part3.Length -ge 1))) {
-                if ($hashSet.Add($newName)) {
-                    $script:validNamesList += "$computerName -> $newName"
-                    if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
-                        $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
-                    }
-                    $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
-                    if (-not $script:groupedChanges.ContainsKey($newName)) {
-                        $script:groupedChanges[$newName] = @()
-                    }
-                    $script:groupedChanges[$newName] += $computerName
-                }
-                else {
-                    $script:invalidNamesList += $computerName
-                }
-            }
-            else {
-                $script:invalidNamesList += $computerName
-            }
-        }
-        elseif ($parts.Count -eq 2) {
-            # Display character limits visually next to the new name
-            $charLimitDisplay = " ($part0DisplayLength/" + $part0Input.MaxLength + ")-($part1DisplayLength/" + $part1Input.MaxLength + ")"
-            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0))) {
-                if ($hashSet.Add($newName)) {   
-                    $script:validNamesList += "$computerName -> $newName"
-                    if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
-                        $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
-                    }
-                    $script:changesList += @{"ComputerName" = $computerName; "NewName" = $newName }
-                    if (-not $script:groupedChanges.ContainsKey($newName)) {
-                        $script:groupedChanges[$newName] = @()
-                    }
-                    $script:groupedChanges[$newName] += $computerName
-                }
-                else {
-                    $script:invalidNamesList += $computerName
-                }
-            }
-            else {
-                $script:invalidNamesList += $computerName
-            }
+        else {
+            $script:invalidNamesList += $computerName
         }
     }
 
@@ -706,22 +603,13 @@ function UpdateAllListBoxes {
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
-    # Print the changesList
+    # Print the changesList for debugging
     Write-Host "`nChanges List:"
     foreach ($change in $script:changesList) {
-        Write-Host "ComputerName: $($change.ComputerName), NewName: $($change.NewName)"
-    }
-
-    # Print the groupedChanges
-    Write-Host "`nGrouped Changes:"
-    foreach ($newName in $script:groupedChanges.Keys) {
-        Write-Host "NewName: $newName"
-        foreach ($computerName in $script:groupedChanges[$newName]) {
-            Write-Host " - ComputerName: $computerName"
-        }
+        Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+        Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
     }
 }
-
 
 
 # Function for setting individual custom names
