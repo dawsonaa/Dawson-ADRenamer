@@ -599,12 +599,6 @@ function UpdateAllListBoxes {
                 $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue)
                 $script:changesList.Add($newChange) | Out-Null
             }
-
-        
-        
-        
-        
-        
         }
         else {
             $script:invalidNamesList += $computerName
@@ -616,6 +610,27 @@ function UpdateAllListBoxes {
         $customSuffix = if ($entry.Custom) { " - Custom" } else { "" }
         $script:newNamesListBox.Items.Add($entry.NewName + $customSuffix) | Out-Null
     }
+
+    # Populate the newNamesListBox with items from the changesList
+    $script:newNamesListBox.Items.Clear()
+    foreach ($change in $script:changesList) {
+        foreach ($computerName in $change.ComputerNames) {
+            $parts = $computerName -split '-'
+            $part0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
+            $part1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
+            $part2 = if ($change.Part2) { $change.Part2 } else { if ($parts.Count -ge 3) { $parts[2] } else { $null } }
+            $part3 = if ($change.Part3) { $change.Part3 } else { if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null } }
+
+            $newNameParts = @()
+            if ($part0) { $newNameParts += $part0 }
+            if ($part1) { $newNameParts += $part1 }
+            if ($part2) { $newNameParts += $part2 }
+            if ($part3) { $newNameParts += $part3 }
+            $newName = $newNameParts -join '-'
+            $script:newNamesListBox.Items.Add($newName) | Out-Null
+        }
+    }
+
 
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
