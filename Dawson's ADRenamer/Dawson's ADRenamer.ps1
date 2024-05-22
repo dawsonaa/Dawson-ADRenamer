@@ -562,7 +562,7 @@ function UpdateAllListBoxes {
         }
 
         Write-Host "New name: $newName"
-
+        if ($newName.Length -le 15){
         if ($hashSet.Add($newName)) {
             $script:validNamesList += "$computerName -> $newName"
             if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
@@ -618,6 +618,7 @@ function UpdateAllListBoxes {
                 $script:changesList.Add($newChange) | Out-Null
             }
         }
+    }
         else {
             $script:invalidNamesList += $computerName
         }
@@ -1448,13 +1449,14 @@ $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVar
 
 # Handle the MeasureItem event to set the item height
 $selectedCheckedListBox.add_MeasureItem({
-        param ($sender, $e)
+        param ($s, $e)
         $e.ItemHeight = 20
     })
 
 function UpdateColors {
     $selectedCheckedListBox.Invalidate()
     $colorPanel.Invalidate()
+    $colorPanel2.Invalidate()
 }
 function UpdateSelectedCheckedListBox {
     Write-Host "UPDATESELECTED" -ForegroundColor Cyan
@@ -1544,7 +1546,7 @@ function UpdateSelectedCheckedListBox {
 
 # Handle the DrawItem event to customize item drawing
 $selectedCheckedListBox.add_DrawItem({
-        param ($sender, $e)
+        param ($s, $e)
         $index = $e.Index
         if ($index -lt 0) { return }
 
@@ -1567,14 +1569,15 @@ $colorPanel.Location = New-Object System.Drawing.Point(260, 40)
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel.BackColor = [System.Drawing.Color]::White
 
-# Variable to set the starting y-offset for drawing
-$yOffset = 0
-# Padding between color rectangles
-$padding = 0
+# Create a Panel to show the colors next to the CheckedListBox
+$colorPanel2 = New-Object System.Windows.Forms.Panel
+$colorPanel2.Location = New-Object System.Drawing.Point(530, 40)
+$colorPanel2.Size = New-Object System.Drawing.Size(20, 350)
+$colorPanel2.BackColor = [System.Drawing.Color]::White
 
 # Handle the Paint event for the color panel
 $colorPanel.add_Paint({
-        param ($sender, $e)
+        param ($s, $e)
         $visibleItems = [Math]::Ceiling($selectedCheckedListBox.ClientRectangle.Height / $selectedCheckedListBox.ItemHeight)
         $firstVisibleIndex = [Math]::Ceiling($selectedCheckedListBox.TopIndex)
         $y = 0
@@ -1588,19 +1591,38 @@ $colorPanel.add_Paint({
         }
     })
 
+# Handle the Paint event for the color panel
+$colorPanel2.add_Paint({
+        param ($s, $e)
+        $visibleItems = [Math]::Ceiling($selectedCheckedListBox.ClientRectangle.Height / $selectedCheckedListBox.ItemHeight)
+        $firstVisibleIndex = [Math]::Ceiling($selectedCheckedListBox.TopIndex)
+        $y = 0
+        for ($i = $firstVisibleIndex; $i -lt ($firstVisibleIndex + $visibleItems); $i++) {
+            if ($i -ge $selectedCheckedListBox.Items.Count) { break }
+            $itemText = $selectedCheckedListBox.Items[$i]
+            $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
+            $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
+            $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel2.Width, $selectedCheckedListBox.ItemHeight)
+            $y += $selectedCheckedListBox.ItemHeight
+        }
+    })
+
 # Handle the MouseWheel event for the CheckedListBox to act as a scrollbar
 $selectedCheckedListBox.add_MouseWheel({
-        param ($sender, $e)
+        param ($s, $e)
         $selectedCheckedListBox.TopIndex += [math]::Sign($e.Delta) * -3
         $colorPanel.Invalidate()
+        $colorPanel2.Invalidate()
     })
 
 # Handle the SelectedIndexChanged event to update the panel colors
 $selectedCheckedListBox.add_SelectedIndexChanged({
-        param ($sender, $e)
+        param ($s, $e)
         $colorPanel.Invalidate()
+        $colorPanel2.Invalidate()
     })
 $form.Controls.Add($colorPanel)
+$form.Controls.Add($colorPanel2)
 
 # Define the script-wide variable for selectedCheckedListBox
 # $script:selectedCheckedItems = @{}
