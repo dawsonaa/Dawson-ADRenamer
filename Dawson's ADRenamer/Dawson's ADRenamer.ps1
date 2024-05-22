@@ -459,7 +459,8 @@ $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 # 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
 # 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
 function UpdateAllListBoxes {
-    # Write-Host "UpdateAllListBoxes"
+    Write-Host "UpdateAllListBoxes"
+    Write-Host ""
     <# foreach ($item in $selectedItems) { # FIX
         #Write-Host $selectedItems
     } #>
@@ -469,13 +470,22 @@ function UpdateAllListBoxes {
     
     # Clear existing items and lists
     $hashSet.Clear()
-    $computerSelectedCheckedListBox.Items.Clear()
+    # $selectedCheckedListBox.Items.Clear()
     $newNamesListBox.Items.Clear()
     $script:validNamesList = @()
     $script:invalidNamesList = @()
 
+
     foreach ($computerName in $script:checkedItems.Keys) {
-        $computerSelectedCheckedListBox.Items.Add($computerName)
+        #$selectedCheckedListBox.Items.Add($computerName)
+        if ($script:selectedCheckedItems.ContainsKey($computername)) {
+            Write-Host "selected contains $computername"
+        }
+        else {
+            
+            Write-Host "selected does not contain $computername"
+            continue
+        }
 
         # Check if a custom name is set
         $customName = $null
@@ -1191,6 +1201,8 @@ function LoadAndFilterComputersOFFLINE {
         # Populate the CheckedListBox with the filtered computer names
         $script:filteredComputers | ForEach-Object {
             $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
+            Write-Host "loaded:" $_.Name
+            Write-Host ""
             $loadedCount++
             $deviceTimer++
 
@@ -1269,7 +1281,8 @@ function LoadAndFilterComputers {
             $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
             $loadedCount++
             $deviceTimer++
-
+            Write-Host "loaded:" $_.Name
+            Write-Host ""
             # Update the progress bar every 150 devices
             if ($deviceTimer -ge $deviceRefresh) {
                 $deviceTimer = 0
@@ -1326,7 +1339,7 @@ else {
 }
 
 # Initialize script-scope variables
-$script:checkedItems = @{}
+# $script:checkedItems = @{}
 $script:invalidNamesList = @()
 $script:validNamesList = @()
 $script:customNamesList = @() 
@@ -1349,6 +1362,26 @@ $form.Controls.Add($authorLabel)
 # Define the size for the list boxes
 $listBoxWidth = 250
 $listBoxHeight = 350
+
+# Define the script-wide variables
+$script:checkedItems = @{}
+$script:selectedCheckedItems = @{}
+
+# Function to sync checked items to computerCheckedListBox
+function SyncCheckedItems {
+    $computerCheckedListBox.Items.Clear()
+    foreach ($item in $listBox.Items) {
+        $computerCheckedListBox.Items.Add($item, $script:checkedItems.ContainsKey($item))
+    }
+}
+
+# Function to sync selected checked items to selectedCheckedListBox
+function SyncSelectedCheckedItems {
+    $selectedCheckedListBox.Items.Clear()
+    foreach ($item in $script:checkedItems.Keys) {
+        $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item))
+    }
+}
 
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
@@ -1391,44 +1424,57 @@ $computerCheckedListBox.Add_KeyDown({
         }
     })
 
-# Define the ItemCheck event handler
-$OnItemCheck = {
-    param($s, $e)
-
-    # Action to perform on the UI thread
-    $action = {
-        # Ensure the index is valid
-        if ($e.Index -ge 0 -and $e.Index -lt $s.Items.Count) {
-            $currentItem = $s.Items[$e.Index]
-
-            # Update the hashtable based on the new checked state
-            if ($e.NewValue -eq 'Checked') {
-                $script:checkedItems[$currentItem] = $true
-            }
-            elseif ($script:checkedItems.ContainsKey($currentItem)) {
-                $script:checkedItems.Remove($currentItem)
-            }
-
-            UpdateAllListBoxes
-        }
-    }
-
-    # Invoke the action on the form's UI thread
-    $form.Invoke([Action]$action)
-}
 
 # Attach the event handler to the CheckedListBox
-$computerCheckedListBox.add_ItemCheck($OnItemCheck)
+
 $form.Controls.Add($computerCheckedListBox)
 
-# Script-wide variable to hold selected (checked) items
-$selectedItems = @()
-
 # Create a new checked list box for displaying selected computers
-$computerSelectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$computerSelectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
-$computerSelectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
-$form.Controls.Add($computerSelectedCheckedListBox)
+$selectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
+$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
+$selectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
+
+# Define the script-wide variable for selectedCheckedListBox
+# $script:selectedCheckedItems = @{}
+
+# Event handler for checking items in computerCheckedListBox
+$computerCheckedListBox_ItemCheck = {
+    param($s, $e)
+
+    $item = $s.Items[$e.Index]
+    if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
+        $script:checkedItems[$item] = $true
+    }
+    else {
+        $script:checkedItems.Remove($item)
+        $script:selectedCheckedItems.Remove($item)
+    }
+    SyncSelectedCheckedItems
+}
+
+# Event handler for checking items in selectedCheckedListBox
+$selectedCheckedListBox_ItemCheck = {
+    param($s, $e)
+
+    $item = $s.Items[$e.Index]
+    if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
+        $script:selectedCheckedItems[$item] = $true
+    }
+    else {
+        $script:selectedCheckedItems.Remove($item)
+        SyncSelectedCheckedItems
+    }
+}
+
+# Subscribe to the ItemCheck events
+$computerCheckedListBox.Add_ItemCheck($computerCheckedListBox_ItemCheck)
+$selectedCheckedListBox.Add_ItemCheck($selectedCheckedListBox_ItemCheck)
+
+# Initial sync
+SyncCheckedItems
+SyncSelectedCheckedItems
+
+
 
 # Create the context menu for right-click actions
 $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
@@ -1438,7 +1484,7 @@ $menuRemove = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemove.Text = "Remove selected device(s)"
 $menuRemove.Add_Click({
         # Update the script-wide variable with currently checked items
-        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $global:selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
 
         if (!($selectedItems.Count -gt 0)) {
             Write-Host "No devices selected"
@@ -1459,7 +1505,7 @@ $menuRemove.Add_Click({
         }
 
         Write-Host ""
-        UpdateAllListBoxes  # Call this function if it updates the UI based on changes
+        #UpdateAllListBoxes  # Call this function if it updates the UI based on changes
     })
 
 # Create menu context item for removing all devices within the selectedComputersListBox
@@ -1467,7 +1513,7 @@ $menuRemoveAll = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemoveAll.Text = "Remove all device(s)"
 $menuRemoveAll.Enabled = $false
 $menuRemoveAll.Add_Click({
-        $global:selectedItems = @($computerSelectedCheckedListBox.Items | ForEach-Object { $_ })
+        $global:selectedItems = @($selectedCheckedListBox.Items | ForEach-Object { $_ })
         $form.Enabled = $false
         Write-Host "Form disabled for remove all"
         $script:customNamesList = @()
@@ -1486,7 +1532,7 @@ $menuRemoveAll.Add_Click({
         Write-Host "Form enabled"
         Write-Host ""
 
-        UpdateAllListBoxes  # Call this function if it updates the UI based on changes
+        # UpdateAllListBoxes  # Call this function if it updates the UI based on changes
     })
 
 # Create context menu item for adding a custom name if one item in the selectedComputersListBox is selected
@@ -1494,7 +1540,7 @@ $menuAddCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuAddCustomName.Text = "Set/Change Custom rename"
 $menuAddCustomName.Enabled = $false
 $menuAddCustomName.Add_Click({
-        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $global:selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
         $tempList = $script:customNamesList
         $script:customNamesList = @()
 
@@ -1522,7 +1568,7 @@ $menuAddCustomName.Add_Click({
                 # Write-Host "$item -> $customItem" # for debugging
             }
         }
-        UpdateAllListBoxes
+        # UpdateAllListBoxes
     })
 
 # Create context menu item for removing the custom names attached to selected items within the selectedComputersListBox
@@ -1530,7 +1576,7 @@ $menuRemoveCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemoveCustomName.Text = "Remove Custom rename"
 $menuRemoveCustomName.Enabled = $false
 $menuRemoveCustomName.Add_Click({
-        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $global:selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
         $tempList = $script:customNamesList
         $script:customNamesList = @()
 
@@ -1546,14 +1592,14 @@ $menuRemoveCustomName.Add_Click({
                 $script:customNamesList += $tempItem
             }
         }
-        UpdateAllListBoxes
+        # UpdateAllListBoxes
     })
 
 # Event handler for when the context menu is opening
 $contextMenu.add_Opening({
         # Check if there are any items
-        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems)
-        $itemsInBox = @($computerSelectedCheckedListBox.Items)
+        $global:selectedItems = @($selectedCheckedListBox.CheckedItems)
+        $itemsInBox = @($selectedCheckedListBox.Items)
 
         if ($itemsInBox.Count -gt 0) {
             $menuRemoveAll.Enabled = $true
@@ -1597,17 +1643,17 @@ $contextMenu.add_Opening({
     })
 
 # Add the right click menu options to the context menu
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemove) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveAll) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuAddCustomName) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveCustomName) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuFindAndReplace) | Out-Null
+#$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemove) | Out-Null
+#$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveAll) | Out-Null
+#$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuAddCustomName) | Out-Null
+#$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveCustomName) | Out-Null
+#$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuFindAndReplace) | Out-Null
 
 # Attach the context menu to the CheckedListBox
-$computerSelectedCheckedListBox.ContextMenuStrip = $contextMenu
+# $selectedCheckedListBox.ContextMenuStrip = $contextMenu
 
 # Add the key down event handler to selectedComputersListBox
-$computerSelectedCheckedListBox.add_KeyDown({
+$selectedCheckedListBox.add_KeyDown({
         param ($s, $e)
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::F) {
             $menuFindAndReplace.PerformClick()
@@ -1615,7 +1661,7 @@ $computerSelectedCheckedListBox.add_KeyDown({
         }
     })
 
-
+$form.Controls.Add($selectedCheckedListBox)
 
 
 <# Create a new list box for displaying selected computers
@@ -1956,10 +2002,10 @@ $refreshButton.AutoSize = $true
 $refreshButton.Text = 'Refresh / Change OU'
 $refreshButton.Add_Click({
         $computerCheckedListBox.Items.Clear()
-        $computerSelectedCheckedListBox.Items.Clear()
+        $selectedCheckedListBox.Items.Clear()
         $newNamesListBox.Items.Clear()
         $script:checkedItems.Clear()
-        UpdateAllListBoxes
+        # UpdateAllListBoxes
 
         if ($online) {
             LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
@@ -1968,7 +2014,7 @@ $refreshButton.Add_Click({
             LoadAndFilterComputersOFFLINE -computerCheckedListBox $computerCheckedListBox
         }
 
-        UpdateAllListBoxes
+        # UpdateAllListBoxes
     })
 $form.Controls.Add($refreshButton)
 
@@ -2083,10 +2129,10 @@ $part3Input = New-CustomTextBox -name "part3Input" -defaultText "part3Name" -x (
 $form.Controls.Add($part3Input)
 
 # Part Input and CheckBox event triggers
-$part0Input.Add_TextChanged({ UpdateAllListBoxes })
-$part1Input.Add_TextChanged({ UpdateAllListBoxes })
-$part2Input.Add_TextChanged({ UpdateAllListBoxes })
-$part3Input.Add_TextChanged({ UpdateAllListBoxes })
+# $part0Input.Add_TextChanged({ UpdateAllListBoxes })
+# $part1Input.Add_TextChanged({ UpdateAllListBoxes })
+# $part2Input.Add_TextChanged({ UpdateAllListBoxes })
+# $part3Input.Add_TextChanged({ UpdateAllListBoxes })
 
 <# Create input text box for part-0 name manipulation
 $part0Input = New-Object System.Windows.Forms.TextBox
@@ -2395,8 +2441,16 @@ function New-StyledButton {
 
     return $button
 }
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x 480 -y 430 -width 100 -height 40 -enabled $true
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x 580 -y 430 -width 100 -height 35 -enabled $false
+# Event handler for clicking the Commit Changes button
+$commitChangesButton.Add_Click({
+        UpdateAllListBoxes
+    })
+$form.Controls.Add($commitChangesButton)
+
+
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 580 -y 430 -width 100 -height 40 -enabled $false
 
 <# Create and configure the 'Apply Rename' button
 $applyRenameButton = New-Object System.Windows.Forms.Button
@@ -2813,7 +2867,7 @@ $applyRenameButton.Add_Click({
         $loggedOnDevices = @() # Array to store offline devices and their users
         $totalTime = [System.TimeSpan]::Zero
 
-        UpdateAllListBoxes # Update all list boxes
+        # UpdateAllListBoxes # Update all list boxes
 
         #  If user confirms they want to proceed with renaming
         if ($userResponse -eq "Yes") {
@@ -3248,7 +3302,7 @@ $applyRenameButton.Add_Click({
                 }
                 $computerCheckedListBox.Items.Add($computer.Name, $isChecked)
             }
-            UpdateAllListBoxes
+            # UpdateAllListBoxes
             $form.Enabled = $true
             Write-Host "Form enabled"
             Write-Host " "
