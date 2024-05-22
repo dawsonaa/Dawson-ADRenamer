@@ -459,18 +459,23 @@ $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 # 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
 # 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
 function UpdateAllListBoxes {
+    # Write-Host "UpdateAllListBoxes"
+    <# foreach ($item in $selectedItems) { # FIX
+        #Write-Host $selectedItems
+    } #>
     # Check if any relevant checkboxes are checked
-    $anyCheckboxChecked = $part0CheckBox.Checked -or $part1CheckBox.Checked -or $part2CheckBox.Checked -or $part3CheckBox.Checked -or $swapCheckBox.Checked
-
+    $anyCheckboxChecked = (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly) # -or (-not $swapInput.ReadOnly) # FIX
+    # Write-Host "anyCheckboxChecked status: $anyCheckboxChecked "
+    
     # Clear existing items and lists
     $hashSet.Clear()
-    $selectedComputersListBox.Items.Clear()
+    $computerSelectedCheckedListBox.Items.Clear()
     $newNamesListBox.Items.Clear()
     $script:validNamesList = @()
     $script:invalidNamesList = @()
 
     foreach ($computerName in $script:checkedItems.Keys) {
-        $selectedComputersListBox.Items.Add($computerName)
+        $computerSelectedCheckedListBox.Items.Add($computerName)
 
         # Check if a custom name is set
         $customName = $null
@@ -503,13 +508,13 @@ function UpdateAllListBoxes {
             $script:invalidNamesList += $computerName
             continue
         }
-        if ($parts.Count -eq 2 -and $part2CheckBox.Checked) {
+        if ($parts.Count -eq 2 -and (-not $part2Input.ReadOnly)) {
             $parts += ""  # Add an empty part for the part2
             $part0 = $parts[0]
             $part1 = $parts[1]
             $part2 = $parts[2]
         }
-        elseif ($parts.Count -eq 2 -and $part2CheckBox.Checked -eq $false) {
+        elseif ($parts.Count -eq 2 -and $part2Input.ReadOnly -eq $false) {
             $part0 = $parts[0]
             $part1 = $parts[1]
         }
@@ -526,19 +531,34 @@ function UpdateAllListBoxes {
             $part3 = $parts[3..($parts.Count - 1)] -join '-'
         }
 
-        # Apply user-defined replacements for parts
-        if ($part0CheckBox.Checked) {
+        if (-not $part0Input.ReadOnly) {
+            #Write-Host "part0input.notreadonly"
+            $part0 = $part0Input.Text
+        }
+        else {
+            #Write-Host "part0input.readonly"
+        }
+        if (-not $part1Input.ReadOnly) {
+            $part1 = $part1Input.Text
+            #Write-Host "part1input.notreadonly"
+        }
+        else {
+            #Write-Host "part1input.readonly"
+        }
+
+        <# Apply user-defined replacements for parts
+        if ($part0CheckBox.Checked) { # FIX
             $part0 = $part0Input.Text
         } 
-        if ($part1CheckBox.Checked) {
+        if ($part1CheckBox.Checked) { # FIX
             $part1 = $part1Input.Text
-        }
+        } #>
 
         if ($parts.Count -eq 3) {
             # Calculate remaining length for username based on total length limits
             $totalLengthForpart2 = 15 - ($part0.Length + $part1.Length + ($parts.Count - 1))  # parts.count -1 is for hyphens
             if ($totalLengthForpart2 -gt 0) {
-                if ($part2CheckBox.Checked) {
+                if (-not $part2Input.ReadOnly) {
                     $part2 = $part2Input.Text.Substring(0, [Math]::Min($part2Input.Text.Length, $totalLengthForpart2))
                 }
                 else {
@@ -550,13 +570,13 @@ function UpdateAllListBoxes {
             }
         }
         elseif ($parts.Count -ge 4) {
-            if ($part2CheckBox.Checked) {
+            if (-not $part2Input.ReadOnly) {
                 $part2 = $part2Input.Text
             }
             $totalLengthForpart2 = 15
             $totalLengthForpart3 = 15 - ($part0.Length + $part1.Length + $part2.Length + ($parts.Count - 1))
             if ($totalLengthForpart3 -gt 0) {
-                if ($part3CheckBox.Checked) {
+                if (-not $part3Input.ReadOnly) {
                     $part3 = $part3Input.Text.Substring(0, [Math]::Min($part3Input.Text.Length, $totalLengthForpart3))
                 }
                 else {
@@ -568,8 +588,8 @@ function UpdateAllListBoxes {
             }
         }
 
-        # Swap the department and part1 if the swap checkbox is checked
-        if ($swapCheckBox.Checked) {
+        <# Swap the department and part1 if the swap checkbox is checked
+        if ($swapInput.ReadOnly) {
             if ($parts.Count -eq 3) {
                 $newName = "$part1-$part0-$part2"
             }
@@ -594,7 +614,19 @@ function UpdateAllListBoxes {
             }
             $part0DisplayLength = $part0.Length
             $part1DisplayLength = $part1.Length
+        } #>
+
+        if ($parts.Count -eq 3) {
+            $newName = "$part0-$part1-$part2"
         }
+        elseif ($parts.Count -ge 4) {
+            $newName = "$part0-$part1-$part2-$part3"
+        }
+        else {
+            $newName = "$part0-$part1"
+        }
+        $part0DisplayLength = $part0.Length
+        $part1DisplayLength = $part1.Length
 
         $part0Temp = $part0Input.MaxLength
         $part1Temp = $part1Input.MaxLength
@@ -1389,7 +1421,204 @@ $OnItemCheck = {
 $computerCheckedListBox.add_ItemCheck($OnItemCheck)
 $form.Controls.Add($computerCheckedListBox)
 
-# Create a new list box for displaying selected computers
+# Script-wide variable to hold selected (checked) items
+$selectedItems = @()
+
+# Create a new checked list box for displaying selected computers
+$computerSelectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
+$computerSelectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
+$computerSelectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
+$form.Controls.Add($computerSelectedCheckedListBox)
+
+# Create the context menu for right-click actions
+$contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+
+# Create menu context item for selecting specific devices to remove
+$menuRemove = [System.Windows.Forms.ToolStripMenuItem]::new()
+$menuRemove.Text = "Remove selected device(s)"
+$menuRemove.Add_Click({
+        # Update the script-wide variable with currently checked items
+        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+
+        if (!($selectedItems.Count -gt 0)) {
+            Write-Host "No devices selected"
+            return
+        }
+        Write-Host ""
+
+        foreach ($item in $selectedItems) {
+            $script:checkedItems.Remove($item)
+
+            # Try to uncheck the selected items from the computerCheckedListBox
+            $index = $computerCheckedListBox.Items.IndexOf($item)
+            if ($index -ge 0) {
+                $computerCheckedListBox.SetItemChecked($index, $false)
+            }
+
+            Write-Host "Selected device removed: $item"  # Outputs the names of selected devices to the console
+        }
+
+        Write-Host ""
+        UpdateAllListBoxes  # Call this function if it updates the UI based on changes
+    })
+
+# Create menu context item for removing all devices within the selectedComputersListBox
+$menuRemoveAll = [System.Windows.Forms.ToolStripMenuItem]::new()
+$menuRemoveAll.Text = "Remove all device(s)"
+$menuRemoveAll.Enabled = $false
+$menuRemoveAll.Add_Click({
+        $global:selectedItems = @($computerSelectedCheckedListBox.Items | ForEach-Object { $_ })
+        $form.Enabled = $false
+        Write-Host "Form disabled for remove all"
+        $script:customNamesList = @()
+        foreach ($item in $selectedItems) {
+            $script:checkedItems.Remove($item)
+
+            # Try to uncheck the selected items from the computerCheckedListBox
+            $index = $computerCheckedListBox.Items.IndexOf($item)
+            if ($index -ge 0) {
+                $computerCheckedListBox.SetItemChecked($index, $false)
+            }
+
+            #Write-Host "device removed: $item"  # Outputs the names of selected devices to the console
+        }
+        $form.Enabled = $true
+        Write-Host "Form enabled"
+        Write-Host ""
+
+        UpdateAllListBoxes  # Call this function if it updates the UI based on changes
+    })
+
+# Create context menu item for adding a custom name if one item in the selectedComputersListBox is selected
+$menuAddCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
+$menuAddCustomName.Text = "Set/Change Custom rename"
+$menuAddCustomName.Enabled = $false
+$menuAddCustomName.Add_Click({
+        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $tempList = $script:customNamesList
+        $script:customNamesList = @()
+
+        # Preserve existing items in customNamesList
+        foreach ($tempItem in $tempList) {
+            $isSelected = $false
+            foreach ($selectedItem in $selectedItems) {
+                if ($tempItem -match "^$selectedItem\s*->") {
+                    $isSelected = $true
+                    break
+                }
+            }
+            if (-not $isSelected) {
+                $script:customNamesList += $tempItem
+            }
+        }    
+
+        foreach ($item in $selectedItems) {
+            # Prompt for a custom name
+            $customItem = Show-InputBox -message "Enter custom name for $item :" -title "Custom Name" -defaultText $item
+    
+            if ($customItem -and $customItem -ne "") {
+                # Add the new custom name
+                $script:customNamesList += "$item -> $customItem"
+                # Write-Host "$item -> $customItem" # for debugging
+            }
+        }
+        UpdateAllListBoxes
+    })
+
+# Create context menu item for removing the custom names attached to selected items within the selectedComputersListBox
+$menuRemoveCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
+$menuRemoveCustomName.Text = "Remove Custom rename"
+$menuRemoveCustomName.Enabled = $false
+$menuRemoveCustomName.Add_Click({
+        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $tempList = $script:customNamesList
+        $script:customNamesList = @()
+
+        foreach ($tempItem in $tempList) {
+            $isSelected = $false
+            foreach ($selectedItem in $selectedItems) {
+                if ($tempItem -match "^$selectedItem\s*->") {
+                    $isSelected = $true
+                    break
+                }
+            }
+            if (-not $isSelected) {
+                $script:customNamesList += $tempItem
+            }
+        }
+        UpdateAllListBoxes
+    })
+
+# Event handler for when the context menu is opening
+$contextMenu.add_Opening({
+        # Check if there are any items
+        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems)
+        $itemsInBox = @($computerSelectedCheckedListBox.Items)
+
+        if ($itemsInBox.Count -gt 0) {
+            $menuRemoveAll.Enabled = $true
+            $menuFindAndReplace.Enabled = $true
+        }
+        else {
+            $menuRemoveAll.Enabled = $false
+            $menuFindAndReplace.Enabled = $false
+        }
+
+        if ($selectedItems.Count -gt 0) {
+            $menuRemove.Enabled = $true  # Enable the menu item if items are checked
+
+            # Check if all checked items are in customNamesList
+            $allInCustomNamesList = $true
+            foreach ($item in $selectedItems) {
+                if (-not ($script:customNamesList | Where-Object { $_ -match "^$item\s*->" })) {
+                    $allInCustomNamesList = $false
+                    break
+                }
+            }
+        
+            if ($allInCustomNamesList) {
+                $menuRemoveCustomName.Enabled = $true
+            }
+            else {
+                $menuRemoveCustomName.Enabled = $false
+            }
+
+            if ($selectedItems.Count -eq 1) {
+                $menuAddCustomName.Enabled = $true
+            }
+            else {
+                $menuAddCustomName.Enabled = $false
+            }         
+        }
+        else {
+            $menuRemove.Enabled = $false  # Disable the menu item if no items are checked
+            $menuRemoveCustomName.Enabled = $false
+        }
+    })
+
+# Add the right click menu options to the context menu
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemove) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveAll) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuAddCustomName) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveCustomName) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuFindAndReplace) | Out-Null
+
+# Attach the context menu to the CheckedListBox
+$computerSelectedCheckedListBox.ContextMenuStrip = $contextMenu
+
+# Add the key down event handler to selectedComputersListBox
+$computerSelectedCheckedListBox.add_KeyDown({
+        param ($s, $e)
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::F) {
+            $menuFindAndReplace.PerformClick()
+            $e.Handled = $true
+        }
+    })
+
+
+
+
+<# Create a new list box for displaying selected computers
 $selectedComputersListBox = New-Object CustomListBox
 $selectedComputersListBox.Location = New-Object System.Drawing.Point(260, 40)
 $selectedComputersListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
@@ -1627,6 +1856,7 @@ $contextMenu.Items.Add($menuFindAndReplace) | Out-Null
 
 # Attach the context menu to the ListBox
 $selectedComputersListBox.ContextMenuStrip = $contextMenu
+#>
 
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object CustomListBox
@@ -1638,14 +1868,14 @@ $newNamesListBox.add_SelectedIndexChanged({
     })
 $form.Controls.Add($newNamesListBox)
 
-# Create a label for the swapCheckBox
+<# Create a label for the swapCheckBox
 $swapCheckBoxLabel = New-Object System.Windows.Forms.Label
 $swapCheckBoxLabel.Text = "Swap $part0Name and $part1Name"
 $swapCheckBoxLabel.Location = New-Object System.Drawing.Point(30, 430)
 $swapCheckBoxLabel.Size = New-Object System.Drawing.Size(200, 25)
-$form.Controls.Add($swapCheckBoxLabel)
+$form.Controls.Add($swapCheckBoxLabel) #>
 
-# Synchronize the scrolling of the two list boxes
+<# Synchronize the scrolling of the two list boxes # FIX
 $selectedComputersListBox.add_Scroll({
         param($s, $e)
         $newNamesListBox.TopIndex = $selectedComputersListBox.TopIndex
@@ -1654,7 +1884,7 @@ $selectedComputersListBox.add_Scroll({
 $newNamesListBox.add_Scroll({
         param($s, $e)
         $selectedComputersListBox.TopIndex = $newNamesListBox.TopIndex
-    })
+    }) #>
 
 # Search Text Box with Enter Key Event
 $searchBox = New-Object System.Windows.Forms.TextBox
@@ -1726,7 +1956,7 @@ $refreshButton.AutoSize = $true
 $refreshButton.Text = 'Refresh / Change OU'
 $refreshButton.Add_Click({
         $computerCheckedListBox.Items.Clear()
-        $selectedComputersListBox.Items.Clear()
+        $computerSelectedCheckedListBox.Items.Clear()
         $newNamesListBox.Items.Clear()
         $script:checkedItems.Clear()
         UpdateAllListBoxes
@@ -1756,9 +1986,109 @@ $afterChangeLabel.Location = New-Object System.Drawing.Point(590, 15)
 $afterChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
 $form.Controls.Add($afterChangeLabel)
 
+function New-CustomTextBox {
+    param (
+        [string]$name,
+        [string]$defaultText,
+        [int]$x,
+        [int]$y,
+        [System.Drawing.Size]$size,
+        [int]$maxLength
+    )
+
+    $textBox = New-Object System.Windows.Forms.TextBox
+    $textBox.Name = $name
+    $textBox.Location = New-Object System.Drawing.Point($x, $y)
+    $textBox.Size = $size
+    $textBox.ForeColor = [System.Drawing.Color]::Gray
+    $textBox.BackColor = [System.Drawing.Color]::LightGray
+    $textBox.Text = "Change $defaultText"
+    $textBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
+    $textBox.ReadOnly = $true
+    $textBox.MaxLength = [Math]::Min(15, $maxLength)
+    $textBox.BorderStyle = [System.Windows.Forms.BorderStyle]::Fixed3D
+    $textBox.Tag = $defaultText  # Store the default text in the Tag property
+
+    $textBox.add_KeyDown({
+            param($s, $e)
+            if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+                $s.SelectAll()
+                $e.SuppressKeyPress = $true
+                $e.Handled = $true
+            }
+        })
+
+    # MouseDown handler
+    $textBox.add_MouseDown({
+            param($s, $e)
+            $defaultText = $s.Tag
+            if ($s.ReadOnly) {
+                $s.ReadOnly = $false
+                $s.BackColor = [System.Drawing.Color]::White
+                $s.ForeColor = [System.Drawing.Color]::Black
+                $s.Focus()
+                if ($s.Text -eq "Change $defaultText") {
+                    $s.Text = ''
+                }
+            }
+        })
+
+    # Enter handler
+    $textBox.Add_Enter({
+            param($s, $e)
+            $defaultText = $s.Tag
+            if ($s.Text -eq "Change $defaultText") {
+                $s.Text = ''
+                $s.BackColor = [System.Drawing.Color]::White
+                $s.ForeColor = [System.Drawing.Color]::Black
+            }
+        })
+
+    # Leave handler
+    $textBox.Add_Leave({
+            param($s, $e)
+            $defaultText = $s.Tag
+            if ($s.Text -eq '') {
+                $s.ReadOnly = $true
+                $s.Text = "Change $defaultText"
+                $s.ForeColor = [System.Drawing.Color]::Gray
+                $s.BackColor = [System.Drawing.Color]::LightGray
+            }
+        })
+
+    return $textBox
+}
+
 $textBoxSize = New-Object System.Drawing.Size(150, 20)
 
-# Create input text box for part-0 name manipulation
+$gap = 40
+
+# Calculate the total width occupied by the text boxes and their distances
+$totalWidth = (4 * $textBoxSize.Width) + (3 * $gap) # 3 gaps between 4 text boxes, each gap is 20 pixels
+
+# Determine the starting X-coordinate to center the group of text boxes
+$startX = [Math]::Max(($form.ClientSize.Width - $totalWidth) / 2, 0)
+
+# Create and add the text boxes, setting their X-coordinates based on the starting point
+$part0Input = New-CustomTextBox -name "part0Input" -defaultText "part0Name" -x $startX -y 400 -size $textBoxSize -maxLength 15
+$form.Controls.Add($part0Input)
+
+$part1Input = New-CustomTextBox -name "part1Input" -defaultText "part1Name" -x ($startX + $textBoxSize.Width + $gap) -y 400 -size $textBoxSize -maxLength 20
+$form.Controls.Add($part1Input)
+
+$part2Input = New-CustomTextBox -name "part2Input" -defaultText "part2Name" -x ($startX + 2 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
+$form.Controls.Add($part2Input)
+
+$part3Input = New-CustomTextBox -name "part3Input" -defaultText "part3Name" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
+$form.Controls.Add($part3Input)
+
+# Part Input and CheckBox event triggers
+$part0Input.Add_TextChanged({ UpdateAllListBoxes })
+$part1Input.Add_TextChanged({ UpdateAllListBoxes })
+$part2Input.Add_TextChanged({ UpdateAllListBoxes })
+$part3Input.Add_TextChanged({ UpdateAllListBoxes })
+
+<# Create input text box for part-0 name manipulation
 $part0Input = New-Object System.Windows.Forms.TextBox
 $part0Input.Location = New-Object System.Drawing.Point(30, 400)
 $part0Input.Size = $textBoxSize
@@ -1808,9 +2138,10 @@ $part0Input.Add_Leave({
             $part0Input.ReadOnly = $true
         }
     })
-$form.Controls.Add($part0Input)
+$form.Controls.Add($part0Input) #>
 
-# Create input text box for part-1 name manipulation
+
+<# Create input text box for part-1 name manipulation
 $part1Input = New-Object System.Windows.Forms.TextBox
 $part1Input.Location = New-Object System.Drawing.Point(200, 400) # 160, 400
 $part1Input.Size = $textBoxSize
@@ -1842,9 +2173,9 @@ $part1Input.Add_Leave({
             $this.ForeColor = [System.Drawing.Color]::Gray
         }
     })
-$form.Controls.Add($part1Input)
+$form.Controls.Add($part1Input) #>
 
-# Create input text box for part-2 name manipulation
+<# Create input text box for part-2 name manipulation
 $part2Input = New-Object System.Windows.Forms.TextBox
 $part2Input.Location = New-Object System.Drawing.Point(290, 400)
 $part2Input.Size = $textBoxSize
@@ -1852,6 +2183,7 @@ $part2Input.ForeColor = [System.Drawing.Color]::Gray
 $part2Input.Text = "Change $part2Name"
 $part2Input.MaxLength = 15
 $part2Input.Enabled = $false  # Initially disabled
+$part2Input.Visible = $false # FIX
 $part2Input.add_KeyDown({
         param($s, $e)
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
@@ -1876,9 +2208,9 @@ $part2Input.Add_Leave({
             $this.ForeColor = [System.Drawing.Color]::Gray
         }
     })
-$form.Controls.Add($part2Input)
+$form.Controls.Add($part2Input) #>
 
-# Create input text box for part-3 name manipulation
+<# Create input text box for part-3 name manipulation
 $part3Input = New-Object System.Windows.Forms.TextBox
 $part3Input.Location = New-Object System.Drawing.Point(420, 400)
 $part3Input.Size = $textBoxSize
@@ -1886,6 +2218,7 @@ $part3Input.ForeColor = [System.Drawing.Color]::Gray
 $part3Input.Text = "Change $part3Name"
 $part3Input.MaxLength = 15
 $part3Input.Enabled = $false  # Initially disabled
+$part3Input.Visible = $false # FIX
 $part3Input.add_KeyDown({
         param($s, $e)
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
@@ -1910,26 +2243,29 @@ $part3Input.Add_Leave({
             $this.ForeColor = [System.Drawing.Color]::Gray
         }
     })
-$form.Controls.Add($part3Input)
-
-# Create checkbox for swapping department and part1 names
+$form.Controls.Add($part3Input) #>
+<#
+<# Create checkbox for swapping department and part1 names
 $swapCheckBox = New-Object System.Windows.Forms.CheckBox
 $swapCheckBox.Location = New-Object System.Drawing.Point(10, 430)
 $swapCheckBox.AutoSize = $true
+$swapCheckBox.Visible = $false # HIDDEN
 $swapCheckBox.Add_CheckedChanged({
         if ($swapCheckBox.Checked) {
-            $part0CheckBox.Enabled = $false
-            $part1CheckBox.Enabled = $false
+            # FIX
+            # $part0CheckBox.Enabled = $false
+            # $part1CheckBox.Enabled = $false
         }
         else {
-            $part0CheckBox.Enabled = $true
-            $part1CheckBox.Enabled = $true
+            # FIX
+            # $part0CheckBox.Enabled = $true
+            # $part1CheckBox.Enabled = $true
         }
         UpdateAllListBoxes
     })
-$form.Controls.Add($swapCheckBox)
+$form.Controls.Add($swapCheckBox) #>
 
-# Create checkbox to enable/disable per-part 15 character limit
+<# Create checkbox to enable/disable per-part 15 character limit
 $maxCharacterCheckBox = New-Object System.Windows.Forms.CheckBox
 $maxCharacterCheckBox.Location = New-Object System.Drawing.Point(270, 430)
 $maxCharacterCheckBox.AutoSize = $true
@@ -1944,28 +2280,31 @@ $maxCharacterCheckBox.Add_CheckedChanged({
         }
         UpdateAllListBoxes
     })
-$form.Controls.Add($maxCharacterCheckBox)
+$form.Controls.Add($maxCharacterCheckBox) #>
 
-# Create label for maxCharacterCheckBox
+<# Create label for maxCharacterCheckBox
 $maxCharacterCheckBoxLabel = New-Object System.Windows.Forms.Label
 $maxCharacterCheckBoxLabel.Text = "Set each part to a maximum of 15 characters"
 $maxCharacterCheckBoxLabel.Location = New-Object System.Drawing.Point(290, 430)
 $maxCharacterCheckBoxLabel.Size = New-Object System.Drawing.Size(200, 25)
-$form.Controls.Add($maxCharacterCheckBoxLabel)
+$form.Controls.Add($maxCharacterCheckBoxLabel) #>
 
-# Create checkbox to enable/disable part-1 name manipulation
+<# Create checkbox to enable/disable part-1 name manipulation
 $part1CheckBox = New-Object System.Windows.Forms.CheckBox
 $part1CheckBox.Location = New-Object System.Drawing.Point(140, 400)
 $part1CheckBox.AutoSize = $true
+$part1CheckBox.Visible = $false # HIDDEN
 $part1CheckBox.Add_CheckedChanged({
         $part1Input.Enabled = $part1CheckBox.Checked
 
+        # FIX
         if ($part1CheckBox.Checked -or $part0CheckBox.Checked) {
             $swapCheckBox.Enabled = $false
         }
         else {
             $swapCheckBox.Enabled = $true
         }
+        
 
         if ($part1CheckBox.Checked -eq $false) {
             $part1Input.Text = "Change $part1Name"
@@ -1976,21 +2315,23 @@ $part1CheckBox.Add_CheckedChanged({
         }
 
     })
-$form.Controls.Add($part1CheckBox)
+$form.Controls.Add($part1CheckBox) #>
 
-# Create checkbox to enable/disable part-2 name manipulation
+<# Create checkbox to enable/disable part-2 name manipulation
 $part2CheckBox = New-Object System.Windows.Forms.CheckBox
 $part2CheckBox.Location = New-Object System.Drawing.Point(270, 400)
 $part2CheckBox.AutoSize = $true
+$part2CheckBox.Visible = $false # HIDDEN
 $part2CheckBox.Add_CheckedChanged({
         $part2Input.Enabled = $part2CheckBox.Checked
 
+        # FIX
         if ($part1CheckBox.Checked -or $part0CheckBox.Checked) {
             $swapCheckBox.Enabled = $false
         }
         else {
             $swapCheckBox.Enabled = $true
-        }
+        } 
 
         if ($part2CheckBox.Checked -eq $false) {
             $part2Input.Text = "Change $part2Name"
@@ -2001,12 +2342,13 @@ $part2CheckBox.Add_CheckedChanged({
         }
 
     })
-$form.Controls.Add($part2CheckBox)
+$form.Controls.Add($part2CheckBox) #>
 
-# Create checkbox to enable/disable part-3 name manipulation
+<# Create checkbox to enable/disable part-3 name manipulation
 $part3CheckBox = New-Object System.Windows.Forms.CheckBox
 $part3CheckBox.Location = New-Object System.Drawing.Point(400, 400)
 $part3CheckBox.AutoSize = $true
+$part3CheckBox.Visible = $false # HIDDEN
 $part3CheckBox.Add_CheckedChanged({
         $part3Input.Enabled = $part3CheckBox.Checked
 
@@ -2019,27 +2361,49 @@ $part3CheckBox.Add_CheckedChanged({
         }
 
     })
-$form.Controls.Add($part3CheckBox)
+$form.Controls.Add($part3CheckBox) #>
 
-# Part Input and CheckBox event triggers
+<# Part Input and CheckBox event triggers
 $part0Input.Add_TextChanged({ UpdateAllListBoxes })
 $part1Input.Add_TextChanged({ UpdateAllListBoxes })
 $part2Input.Add_TextChanged({ UpdateAllListBoxes })
 $part3Input.Add_TextChanged({ UpdateAllListBoxes })
 
-$part0CheckBox.Add_Click({ UpdateAllListBoxes })
+
 $part1CheckBox.Add_Click({ UpdateAllListBoxes })
 $part2CheckBox.Add_Click({ UpdateAllListBoxes })
 $part3CheckBox.Add_Click({ UpdateAllListBoxes })
 $swapCheckBox.Add_Click({ UpdateAllListBoxes })
-$maxCharacterCheckBox.Add_Click({ UpdateAllListBoxes })
+$maxCharacterCheckBox.Add_Click({ UpdateAllListBoxes }) #>
 
-# Create and configure the 'Apply Rename' button
+# Function to create styled buttons
+function New-StyledButton {
+    param (
+        [string]$text,
+        [int]$x,
+        [int]$y,
+        [int]$width = 100,
+        [int]$height = 35,
+        [bool]$enabled = $true
+    )
+
+    $button = New-Object System.Windows.Forms.Button
+    $button.Location = New-Object System.Drawing.Point($x, $y)
+    $button.Size = New-Object System.Drawing.Size($width, $height)
+    $button.Text = $text
+    $button.Enabled = $enabled
+
+    return $button
+}
+
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 580 -y 430 -width 100 -height 35 -enabled $false
+
+<# Create and configure the 'Apply Rename' button
 $applyRenameButton = New-Object System.Windows.Forms.Button
-$applyRenameButton.Location = New-Object System.Drawing.Point(580, 400)
+$applyRenameButton.Location = New-Object System.Drawing.Point(580, 430)
 $applyRenameButton.Size = New-Object System.Drawing.Size(100, 35)
 $applyRenameButton.Text = 'Apply Rename'
-$applyRenameButton.Enabled = $false
+$applyRenameButton.Enabled = $false #>
 
 <# ApplyRenameButton click event to start renaming process if user chooses
 $applyRenameButton.Add_Click({
@@ -2901,4 +3265,5 @@ else {
     LoadAndFilterComputersOFFLINE -computerCheckedListBox $computerCheckedListBox | Out-Null
 }
 # Show the form
+# $form.Add_Shown({ $form.Activate() })
 $form.ShowDialog()
