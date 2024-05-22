@@ -458,11 +458,8 @@ $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 # 8. Constructs new names and validates them based on length and uniqueness constraints.
 # 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
 # 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
+<#
 function UpdateAllListBoxes {
-    # Write-Host "UpdateAllListBoxes"
-    <# foreach ($item in $selectedItems) { # FIX
-        #Write-Host $selectedItems
-    } #>
     # Check if any relevant checkboxes are checked
     $anyCheckboxChecked = (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly) # -or (-not $swapInput.ReadOnly) # FIX
     # Write-Host "anyCheckboxChecked status: $anyCheckboxChecked "
@@ -546,13 +543,6 @@ function UpdateAllListBoxes {
             #Write-Host "part1input.readonly"
         }
 
-        <# Apply user-defined replacements for parts
-        if ($part0CheckBox.Checked) { # FIX
-            $part0 = $part0Input.Text
-        } 
-        if ($part1CheckBox.Checked) { # FIX
-            $part1 = $part1Input.Text
-        } #>
 
         if ($parts.Count -eq 3) {
             # Calculate remaining length for username based on total length limits
@@ -587,34 +577,6 @@ function UpdateAllListBoxes {
                 $part3 = ""
             }
         }
-
-        <# Swap the department and part1 if the swap checkbox is checked
-        if ($swapInput.ReadOnly) {
-            if ($parts.Count -eq 3) {
-                $newName = "$part1-$part0-$part2"
-            }
-            elseif ($parts.Count -ge 4) {
-                $newName = "$part1-$part0-$part2-$part3"
-            }
-            else {
-                $newName = "$part1-$part0"
-            }
-            $part0DisplayLength = $part1.Length  # Display limit for part0 when swapped
-            $part1DisplayLength = $part0.Length  # Display limit for part1 when swapped
-        }
-        else {
-            if ($parts.Count -eq 3) {
-                $newName = "$part0-$part1-$part2"
-            }
-            elseif ($parts.Count -ge 4) {
-                $newName = "$part0-$part1-$part2-$part3"
-            }
-            else {
-                $newName = "$part0-$part1"
-            }
-            $part0DisplayLength = $part0.Length
-            $part1DisplayLength = $part1.Length
-        } #>
 
         if ($parts.Count -eq 3) {
             $newName = "$part0-$part1-$part2"
@@ -688,8 +650,224 @@ function UpdateAllListBoxes {
     }
 
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
-    $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
-}
+    $applyChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
+    $previewChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
+} #>
+
+function UpdateAllListBoxes {
+    # Check if any relevant checkboxes are checked
+    $anyCheckboxChecked = (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly) # -or (-not $swapInput.ReadOnly) # FIX
+    # Write-Host "anyCheckboxChecked status: $anyCheckboxChecked "
+    
+    # Clear existing items and lists
+    $hashSet.Clear()
+    $computerSelectedCheckedListBox.Items.Clear()
+    $newNamesListBox.Items.Clear()
+    $script:validNamesList = @()
+    $script:invalidNamesList = @()
+
+    # Add items to the computerSelectedCheckedListBox and sync their checked state
+    foreach ($computerName in $script:checkedItems.Keys) {
+        $isChecked = $false
+        if ($script:selectedItems.ContainsKey($computerName)) {
+            $isChecked = $script:selectedItems[$computerName]
+            Write-Host $script:selectedItems[$computerName].Key
+        }
+        Write-Host "adding $computerName with $isChecked"
+        $computerSelectedCheckedListBox.Items.Add($computerName, $isChecked)
+    }
+
+    foreach ($computerName in $script:checkedItems.Keys) {
+        if ($script:selectedItems[$computerName] -eq $false) {
+            Write-Host "$computerName not selected"
+            continue
+        }
+        elseif ($script:selectedItems[$computerName] -eq $true) {
+            Write-Host "$computerName selected"
+        }
+        else {
+            Write-Host "$computername neither"
+        }
+
+        # Check if a custom name is set
+        $customName = $null
+        foreach ($entry in $script:customNamesList) {
+            if ($entry -match "^$computerName -> (.*)$") {
+                $customName = $matches[1]
+                break
+            }
+        }
+        if ($customName) {
+            $newName = $customName
+            if ($hashSet.Add($newName)) {
+                # Check if duplicate
+                $script:validNamesList += "$computerName -> $newName"
+                $newNamesListBox.Items.Add($newName + " - Custom") | Out-Null
+            }
+            else {
+                $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)") | Out-Null
+                $script:invalidNamesList += $computerName
+            }
+            continue
+        }
+
+        $parts = $computerName -split '-'
+
+        # Convert name into parts depending on how many there are
+        if ($parts.Count -lt 2) {
+            # Handle names with less than 3 parts
+            $newNamesListBox.Items.Add("$computerName - Invalid (2-part minimum)" ) | Out-Null
+            $script:invalidNamesList += $computerName
+            continue
+        }
+        if ($parts.Count -eq 2 -and (-not $part2Input.ReadOnly)) {
+            $parts += ""  # Add an empty part for the part2
+            $part0 = $parts[0]
+            $part1 = $parts[1]
+            $part2 = $parts[2]
+        }
+        elseif ($parts.Count -eq 2 -and $part2Input.ReadOnly -eq $false) {
+            $part0 = $parts[0]
+            $part1 = $parts[1]
+        }
+        elseif ($parts.Count -eq 3) {
+            $part0 = $parts[0]
+            $part1 = $parts[1]
+            $part2 = $parts[2]
+        }
+        elseif ($parts.Count -ge 4) {
+            # Handle names with 4 or more parts
+            $part0 = $parts[0]
+            $part1 = $parts[1]
+            $part2 = $parts[2]
+            $part3 = $parts[3..($parts.Count - 1)] -join '-'
+        }
+
+        if (-not $part0Input.ReadOnly) {
+            #Write-Host "part0input.notreadonly"
+            $part0 = $part0Input.Text
+        }
+        else {
+            #Write-Host "part0input.readonly"
+        }
+        if (-not $part1Input.ReadOnly) {
+            $part1 = $part1Input.Text
+            #Write-Host "part1input.notreadonly"
+        }
+        else {
+            #Write-Host "part1input.readonly"
+        }
+
+
+        if ($parts.Count -eq 3) {
+            # Calculate remaining length for username based on total length limits
+            $totalLengthForpart2 = 15 - ($part0.Length + $part1.Length + ($parts.Count - 1))  # parts.count -1 is for hyphens
+            if ($totalLengthForpart2 -gt 0) {
+                if (-not $part2Input.ReadOnly) {
+                    $part2 = $part2Input.Text.Substring(0, [Math]::Min($part2Input.Text.Length, $totalLengthForpart2))
+                }
+                else {
+                    $part2 = $part2.Substring(0, [Math]::Min($part2.Length, $totalLengthForpart2))
+                }
+            }
+            else {
+                $part2 = ""
+            }
+        }
+        elseif ($parts.Count -ge 4) {
+            if (-not $part2Input.ReadOnly) {
+                $part2 = $part2Input.Text
+            }
+            $totalLengthForpart2 = 15
+            $totalLengthForpart3 = 15 - ($part0.Length + $part1.Length + $part2.Length + ($parts.Count - 1))
+            if ($totalLengthForpart3 -gt 0) {
+                if (-not $part3Input.ReadOnly) {
+                    $part3 = $part3Input.Text.Substring(0, [Math]::Min($part3Input.Text.Length, $totalLengthForpart3))
+                }
+                else {
+                    $part3 = $part3.Substring(0, [Math]::Min($part3.Length, $totalLengthForpart3))
+                }
+            }
+            else {
+                $part3 = ""
+            }
+        }
+
+        if ($parts.Count -eq 3) {
+            $newName = "$part0-$part1-$part2"
+        }
+        elseif ($parts.Count -ge 4) {
+            $newName = "$part0-$part1-$part2-$part3"
+        }
+        else {
+            $newName = "$part0-$part1"
+        }
+        $part0DisplayLength = $part0.Length
+        $part1DisplayLength = $part1.Length
+
+        $part0Temp = $part0Input.MaxLength
+        $part1Temp = $part1Input.MaxLength
+
+        if ($parts.Count -eq 3) {
+            # Display character limits visually next to the new name
+            $charLimitDisplay = " ($part0DisplayLength/" + $part0Input.MaxLength + ")-($part1DisplayLength/" + $part1Input.MaxLength + ")-($($part2.Length)/" + $totalLengthForpart2 + ")" 
+            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part0Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0) -and ($part2.Length -ge 1))) {
+                if ($hashSet.Add($newName)) {
+                    $script:validNamesList += "$computerName -> $newName"
+                    $newNamesListBox.Items.Add($newName + $charLimitDisplay) | Out-Null
+                }
+                else {
+                    $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)" + $charLimitDisplay) | Out-Null
+                    $script:invalidNamesList += $computerName
+                }
+            }
+            else {
+                $newNamesListBox.Items.Add("$computerName - Invalid" + $charLimitDisplay) | Out-Null
+                $script:invalidNamesList += $computerName
+            }
+        }
+        elseif ($parts.Count -ge 4) {
+            # Display character limits visually next to the new name
+            $charLimitDisplay = " ($part0DisplayLength/" + $part0Input.MaxLength + ")-($part1DisplayLength/" + $part1Input.MaxLength + ")-($($part2.Length)/" + $totalLengthForpart2 + ")-($($part3.Length)/" + $part3Input.MaxLength + ")" 
+            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0) -and ($part2.Length -ge 1) -and ($part3.Length -ge 1))) {
+                if ($hashSet.Add($newName)) {
+                    $script:validNamesList += "$computerName -> $newName"
+                    $newNamesListBox.Items.Add($newName + $charLimitDisplay) | Out-Null
+                }
+                else {
+                    $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)" + $charLimitDisplay) | Out-Null
+                    $script:invalidNamesList += $computerName
+                }
+            }
+            else {
+                $newNamesListBox.Items.Add("$computerName - Invalid" + $charLimitDisplay) | Out-Null
+                $script:invalidNamesList += $computerName
+            }
+        }
+        elseif ($parts.Count -eq 2) {
+            # Display character limits visually next to the new name
+            $charLimitDisplay = " ($part0DisplayLength/" + $part0Input.MaxLength + ")-($part1DisplayLength/" + $part1Input.MaxLength + ")"
+            if ($newName.Length -le 15 -and (($part0DisplayLength -le $part0Temp) -and ($part1DisplayLength -le $part1Temp) -and ($part0DisplayLength -gt 0) -and ($part1DisplayLength -gt 0))) {
+                if ($hashSet.Add($newName)) {   
+                    $script:validNamesList += "$computerName -> $newName"
+                    $newNamesListBox.Items.Add($newName + $charLimitDisplay) | Out-Null
+                }
+                else {
+                    $newNamesListBox.Items.Add("$newName - Invalid (Duplicate)" + $charLimitDisplay) | Out-Null
+                    $script:invalidNamesList += $computerName
+                }
+            }
+            else {
+                $newNamesListBox.Items.Add("$computerName - Invalid" + $charLimitDisplay) | Out-Null
+                $script:invalidNamesList += $computerName
+            }
+        }
+    }
+
+    # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
+    $applyChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
+    $previewChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
+} 
 
 # Function for setting individual custom names
 function Show-InputBox {
@@ -1327,6 +1505,7 @@ else {
 
 # Initialize script-scope variables
 $script:checkedItems = @{}
+$script:selectedItems = @{}
 $script:invalidNamesList = @()
 $script:validNamesList = @()
 $script:customNamesList = @() 
@@ -1421,14 +1600,40 @@ $OnItemCheck = {
 $computerCheckedListBox.add_ItemCheck($OnItemCheck)
 $form.Controls.Add($computerCheckedListBox)
 
-# Script-wide variable to hold selected (checked) items
-$selectedItems = @()
-
 # Create a new checked list box for displaying selected computers
 $computerSelectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerSelectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
 $computerSelectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
 $form.Controls.Add($computerSelectedCheckedListBox)
+
+# Define the ItemCheck event handler
+$OnItemCheck = {
+    param($s, $e)
+
+    # Action to perform on the UI thread
+    $action = {
+        # Ensure the index is valid
+        if ($e.Index -ge 0 -and $e.Index -lt $s.Items.Count) {
+            $currentItem = $s.Items[$e.Index]
+
+            # Update the dictionary based on the new checked state
+            if ($e.NewValue -eq 'Checked') {
+                $script:selectedItems[$currentItem] = $true
+                Write-Host "TEST: $script:selectedItems[$currentItem]"
+            }
+            elseif ($script:selectedItems.ContainsKey($currentItem)) {
+                $script:selectedItems.Remove($currentItem)
+            }
+
+            UpdateAllListBoxes
+        }
+        Write-Host "OnItemCheck"
+    }
+
+    # Invoke the action on the form's UI thread
+    $form.Invoke([Action]$action)
+}
+$computerSelectedCheckedListBox.add_ItemCheck($OnItemCheck)
 
 # Create the context menu for right-click actions
 $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
@@ -1438,7 +1643,7 @@ $menuRemove = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemove.Text = "Remove selected device(s)"
 $menuRemove.Add_Click({
         # Update the script-wide variable with currently checked items
-        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
 
         if (!($selectedItems.Count -gt 0)) {
             Write-Host "No devices selected"
@@ -1467,7 +1672,7 @@ $menuRemoveAll = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemoveAll.Text = "Remove all device(s)"
 $menuRemoveAll.Enabled = $false
 $menuRemoveAll.Add_Click({
-        $global:selectedItems = @($computerSelectedCheckedListBox.Items | ForEach-Object { $_ })
+        $selectedItems = @($computerSelectedCheckedListBox.Items | ForEach-Object { $_ })
         $form.Enabled = $false
         Write-Host "Form disabled for remove all"
         $script:customNamesList = @()
@@ -1494,7 +1699,7 @@ $menuAddCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuAddCustomName.Text = "Set/Change Custom rename"
 $menuAddCustomName.Enabled = $false
 $menuAddCustomName.Add_Click({
-        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $selectedItems = @($computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
         $tempList = $script:customNamesList
         $script:customNamesList = @()
 
@@ -1552,7 +1757,7 @@ $menuRemoveCustomName.Add_Click({
 # Event handler for when the context menu is opening
 $contextMenu.add_Opening({
         # Check if there are any items
-        $global:selectedItems = @($computerSelectedCheckedListBox.CheckedItems)
+        $selectedItems = @($computerSelectedCheckedListBox.CheckedItems)
         $itemsInBox = @($computerSelectedCheckedListBox.Items)
 
         if ($itemsInBox.Count -gt 0) {
@@ -2396,398 +2601,36 @@ function New-StyledButton {
     return $button
 }
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x 580 -y 430 -width 100 -height 35 -enabled $false
+$previewChangesButton = New-StyledButton -text "Preview Changes" -x 480 -y 430 -width 100 -height 40 -enabled $false
+$form.Controls.Add($previewChangesButton)
 
-<# Create and configure the 'Apply Rename' button
-$applyRenameButton = New-Object System.Windows.Forms.Button
-$applyRenameButton.Location = New-Object System.Drawing.Point(580, 430)
-$applyRenameButton.Size = New-Object System.Drawing.Size(100, 35)
-$applyRenameButton.Text = 'Apply Rename'
-$applyRenameButton.Enabled = $false #>
+# Add Click event for the 'Preview Changes' button
+$previewChangesButton.Add_Click({
+        # Create a new form to display the checked items
+        $previewForm = New-Object System.Windows.Forms.Form
+        $previewForm.Text = "Preview Changes"
+        $previewForm.Size = New-Object System.Drawing.Size(400, 300)
+        $previewForm.StartPosition = 'CenterParent'
 
-<# ApplyRenameButton click event to start renaming process if user chooses
-$applyRenameButton.Add_Click({
-        # Create a string from the invalid names list
-        if ($script:invalidNamesList.Count -gt 0) {
-            $url = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
-            $message = "The below invalid renames will be ignored:`n" + ($script:invalidNamesList -join "`n") + "`n`nDo you want to review the guidelines?" + "`n`n'Yes' = open guidelines, 'No' = continue, 'Cancel' = cancel rename"
-            $result = [System.Windows.Forms.MessageBox]::Show($message, "Invalid Renaming schemes found", [System.Windows.Forms.MessageBoxButtons]::YesNoCancel)
-            if ($result -eq 'Yes') {
-                Start-Process $url  # Open the guidelines URL
-            }
-            elseif ($result -eq 'Cancel') {
-                return  # Exit if the user cancels
-            }
-        }
+        # Create a ListBox to display the checked items
+        $checkedItemsListBox = New-Object System.Windows.Forms.ListBox
+        $checkedItemsListBox.Location = New-Object System.Drawing.Point(10, 10)
+        $checkedItemsListBox.Size = New-Object System.Drawing.Size(360, 220)
 
-        # Prompt the user to confirm if they want to proceed with renaming
-        $userResponse = [System.Windows.Forms.MessageBox]::Show(("`nDo you want to proceed with renaming? `n`n"), "Apply Rename", [System.Windows.Forms.MessageBoxButtons]::YesNo)
+        # Add checked items to the ListBox
+        $computerSelectedCheckedListBox.CheckedItems | ForEach-Object { $checkedItemsListBox.Items.Add($_) }
 
-        # Initialize variables
-        $successfulRenames = @()
-        $failedRenames = @()
-        $successfulRestarts = @()
-        $failedRestarts = @()
-        $loggedOnUsers = @()
-        $loggedOnDevices = @() # Array to store offline devices and their users
-        $totalTime = [System.TimeSpan]::Zero
+        # Add the ListBox to the preview form
+        $previewForm.Controls.Add($checkedItemsListBox)
 
-        UpdateAllListBoxes # Update all list boxes
-
-        #  If user confirms they want to proceed with renaming
-        if ($userResponse -eq "Yes") {
-            # Initialize the log variable
-            $logContent = ""
-
-            # Redefine Write-Host to also capture log content
-            function Write-Host {
-                param (
-                    [Parameter(Mandatory = $true, Position = 0)]
-                    [string] $Object,
-                    [ConsoleColor] $ForegroundColor,
-                    [ConsoleColor] $BackgroundColor
-                )
-                $script:logContent += $Object + "`n"
-                if ($PSBoundParameters.ContainsKey('ForegroundColor') -and $PSBoundParameters.ContainsKey('BackgroundColor')) {
-                    Microsoft.PowerShell.Utility\Write-Host -Object $Object -ForegroundColor $ForegroundColor -BackgroundColor $BackgroundColor
-                }
-                elseif ($PSBoundParameters.ContainsKey('ForegroundColor')) {
-                    Microsoft.PowerShell.Utility\Write-Host -Object $Object -ForegroundColor $ForegroundColor
-                }
-                elseif ($PSBoundParameters.ContainsKey('BackgroundColor')) {
-                    Microsoft.PowerShell.Utility\Write-Host -Object $Object -BackgroundColor $BackgroundColor
-                }
-                else {
-                    Microsoft.PowerShell.Utility\Write-Host -Object $Object
-                }
-            }
-        
-            $form.Enabled = $false
-            Write-Host "Form disabled for rename operation, loading..."
-            Write-Host " "
-            Write-Host "Starting rename operation..."
-            Write-Host " "
-
-            # Iterate through the valid names list and perform renaming operations
-            foreach ( $computerName in $script:invalidNamesList) {
-                Write-Host "$computerName has been ignored due to invalid naming scheme" -ForegroundColor Red
-            }
-
-            # Check if new name is the same as old name
-            foreach ($renameEntry in $script:validNamesList) {
-                $individualTime = [System.TimeSpan]::Zero
-
-                $oldName, $newName = $renameEntry -split ' -> '
-
-                # Check if new name is the same as old name
-                if ($oldName -eq $newName) {
-                    Write-Host "New name for $oldName is the same as the old one. Ignoring this device." -ForegroundColor Yellow
-                    Write-Host " "
-                    continue
-                }
-
-                $checkOfflineTime = Measure-Command {
-                    # Simulate checking if the computer is online
-                    Write-Host "Checking if $oldName is online..."
-                    $onlineStatus = Get-RandomOutcome -outcomes $onlineStatuses
-                    if ($onlineStatus -eq "Offline") {
-                        Write-Host "Computer $oldName is offline. Skipping rename." -ForegroundColor Red
-                        Write-Host " "
-                        $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                        continue
-                    }
-                    Write-Host "Computer $oldName is online." -ForegroundColor Green
-                }
-
-                # Output the time taken to check if computer is online
-                Write-Host "Time taken to check if $oldName was online: $($checkOfflineTime.TotalSeconds) seconds" -ForegroundColor Blue
-                $individualTime = $individualTime.Add($checkOfflineTime)
-
-                Write-Host "Checking if $oldName was renamed successfully..."
-
-                # Start timing rename operation
-                $checkRenameTime = Measure-Command {
-                    try {
-                        $renameResult = Get-RandomOutcome -outcomes $renameOutcomes 
-                        if ($renameResult.ReturnValue -ne 0) {
-                            throw "Failed to rename the computer $oldName. Error code: $($renameResult.ReturnValue)"
-                        }
-                    }
-                    catch {
-                        Write-Host "Error during rename operation: $_" -ForegroundColor Red
-                        $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                        continue # Skip to the next iteration of the loop
-                    }
-                }
-            
-                # Check if computer was successfully renamed
-                if ($renameResult.ReturnValue -eq 0) {
-                    Write-Host "Computer $oldName successfully renamed to $newName." -ForegroundColor Green
-
-                    # Output the time taken to rename
-                    Write-Host "Time taken to rename $oldName`: $($checkRenameTime.TotalSeconds) seconds" -ForegroundColor Blue
-                
-                    $individualTime = $individualTime.Add($checkRenameTime)
-                    $successfulRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-
-
-                    #$loggedOnUserss = @("User1", "User2")
-
-                    # Start timing $loggedOnUser operation
-                    $checkLoginTime = Measure-Command {
-                        Write-Host "Checking if $oldName has a user logged on..."
-                        $loggedOnUser = Get-RandomOutcome -outcomes $loggedOnUserss
-                        #$loggedOnUser = ""
-                    }
-
-                    if ($loggedOnUser -eq "none") {
-                        $loggedOnUser = $null
-                    }
-
-                    # Start timing restart operation
-                    $checkRestartTime = Measure-Command {
-                        if (-not $loggedOnUser) {
-                            try {
-                                Write-Host "Computer $oldName ($newName) has no users logged on." -ForegroundColor Green
-
-                                # Output the time taken to check if user was logged on
-                                Write-Host "Time taken to check $oldName for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
-                                $individualTime = $individualTime.Add($checkLoginTime)
-
-                                Write-Host "Checking if $oldName restarted successfully..."
-                                $restartOutcome = Get-RandomOutcome -outcomes $restartOutcomes
-                                if ($restartOutcome -eq "Success") {
-                                    Write-Host "Computer $oldName ($newName) successfully restarted." -ForegroundColor Green
-                                    $successfulRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                                }
-                                else {
-                                    throw "Manual restart required."
-                                }
-                            }
-                            catch {
-                                Write-Host "Computer $oldName ($newName) attempted to restart and failed. Manual restart required." -ForegroundColor Red
-                                $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                            }
-                        }
-                        else {
-                            Write-Host "Computer $oldName ($newName) has $loggedOnUser logged in. Manual restart required." -ForegroundColor Yellow
-                        
-                            # Output the time taken to check if user was logged on
-                            Write-Host "Time taken to check $oldName ($newName) for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
-                            $individualTime = $individualTime.Add($checkLoginTime)
-                        
-                            $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                            $loggedOnUsers += "$oldName`: $loggedOnUser"
-
-                            # Collect offline device information
-                            $loggedOnDevices += [PSCustomObject]@{
-                                OldName  = $oldName
-                                NewName  = $newName
-                                UserName = $loggedOnUser
-                            }
-                        }
-                    }
-                    # Output the time taken to send restart
-                    Write-Host "Time taken to send restart to $oldName`: $($checkRestartTime.TotalSeconds) seconds" -ForegroundColor Blue
-                    $individualTime = $individualTime.Add($checkRestartTime)
-                }
-                else {
-                    # Output the time taken to rename
-                    Write-Host "Time taken to rename $oldName to $newName`: $($checkRenameTime.TotalSeconds) seconds" -ForegroundColor Blue
-                    $individualTime = $individualTime.Add($checkRenameTime)
-
-                    Write-Host "Failed to rename the computer $oldName to $newName. Error code: $($renameResult.ReturnValue)" -ForegroundColor Red
-                    Write-Host " "
-                    $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                }
-
-                $totalTime = $totalTime.Add($individualTime)
-                Write-Host ("Total time taken for $oldName to be renamed: {0:F2} seconds" -f $individualTime.TotalSeconds) -ForegroundColor Blue
-                Write-Host " "
-            }
-        
-            Write-Host "Rename operation completed." 
-
-            # Output the total time taken for all operations in the appropriate format
-            if ($totalTime.TotalMinutes -lt 1) {
-                Write-Host ("Total time taken for all rename operations: {0:F2} seconds" -f $totalTime.TotalSeconds) -ForegroundColor Blue
-            }
-            elseif ($totalTime.TotalHours -lt 1) {
-                Write-Host ("Total time taken for all rename operations: {0:F2} minutes" -f $totalTime.TotalMinutes) -ForegroundColor Blue
-            }
-            else {
-                Write-Host ("Total time taken for all rename operations: {0:F2} hours" -f $totalTime.TotalHours) -ForegroundColor Blue
-            }
-            Write-Host " "
-
-            # Determine the script directory
-            $scriptDir = Split-Path -Parent $PSCommandPath
-
-            # Define the RESULTS and LOGS folder paths
-            $resultsFolderPath = Join-Path -Path $scriptDir -ChildPath "RESULTS"
-            $logsFolderPath = Join-Path -Path $scriptDir -ChildPath "LOGS"
-
-            # Create the RESULTS folder if it doesn't exist
-            if (-not (Test-Path -Path $resultsFolderPath)) {
-                New-Item -Path $resultsFolderPath -ItemType Directory | Out-Null
-            }
-
-            # Create the LOGS folder if it doesn't exist
-            if (-not (Test-Path -Path $logsFolderPath)) {
-                New-Item -Path $logsFolderPath -ItemType Directory | Out-Null
-            }
- 
-            # Create the CSV file
-            $csvData = @()
-
-            # Determine the maximum count manually
-            $maxCount = $successfulRenames.Count
-            if ($successfulRestarts.Count -gt $maxCount) { $maxCount = $successfulRestarts.Count }
-            if ($failedRenames.Count -gt $maxCount) { $maxCount = $failedRenames.Count }
-            if ($failedRestarts.Count -gt $maxCount) { $maxCount = $failedRestarts.Count }
-            if ($loggedOnUsers.Count -gt $maxCount) { $maxCount = $loggedOnUsers.Count }
-
-            # Initialize CSV data as a string
-            $csvData = ""
-
-            # Add main headers and sub-headers row as a string
-            $headers = @(
-                "Successful Renames,,Successful Restarts,,Failed Renames,,Failed Restarts,,Logged On Users,,,"
-                "New Names,Old Names,New Names,Old Names,New Names,Old Names,New Names,Old Names,New Names,Old Names,Logged On User"
-            ) -join "`r`n"
-
-            # Add data rows
-            for ($i = 0; $i -lt $maxCount; $i++) {
-                $successfulRenameNew = if ($i -lt $successfulRenames.Count) { $successfulRenames[$i].NewName } else { "" }
-                $successfulRenameOld = if ($i -lt $successfulRenames.Count) { $successfulRenames[$i].OldName } else { "" }
-                $successfulRestartNew = if ($i -lt $successfulRestarts.Count) { $successfulRestarts[$i].NewName } else { "" }
-                $successfulRestartOld = if ($i -lt $successfulRestarts.Count) { $successfulRestarts[$i].OldName } else { "" }
-                $failedRenameNew = if ($i -lt $failedRenames.Count) { $failedRenames[$i].NewName } else { "" }
-                $failedRenameOld = if ($i -lt $failedRenames.Count) { $failedRenames[$i].OldName } else { "" }
-                $failedRestartNew = if ($i -lt $failedRestarts.Count) { $failedRestarts[$i].NewName } else { "" }
-                $failedRestartOld = if ($i -lt $failedRestarts.Count) { $failedRestarts[$i].OldName } else { "" }
-                $loggedOnUserNew = if ($i -lt $loggedOnDevices.Count) { $loggedOnDevices[$i].NewName } else { "" }
-                $loggedOnUserOld = if ($i -lt $loggedOnDevices.Count) { $loggedOnDevices[$i].OldName } else { "" }
-                $loggedOnUser = if ($i -lt $loggedOnDevices.Count) { $loggedOnDevices[$i].UserName } else { "" }
-
-                $csvData += "$successfulRenameNew,$successfulRenameOld,$successfulRestartNew,$successfulRestartOld,$failedRenameNew,$failedRenameOld,$failedRestartNew,$failedRestartOld,$loggedOnUserNew,$loggedOnUserOld,$loggedOnUser`r`n"
-            }
-
-            # Combine headers and data
-            $csvOutput = "$headers`r`n$csvData"
-
-            # Get the current date and time in the desired format
-            $dateTimeString = (Get-Date).ToString("yy-MM-dd_HH-mmtt")
-
-            # Create the CSV file path with the date and time appended
-            $csvFileName = "ADRenamer_Results_$dateTimeString"
-            $csvFilePath = Join-Path -Path $resultsFolderPath -ChildPath "$csvFileName.csv"
-
-            # Write the combined output to the CSV file
-            $csvOutput | Out-File -FilePath $csvFilePath -Encoding utf8
-
-            Write-Host "RESULTS CSV file created at $csvFilePath" -ForegroundColor Yellow
-            Write-Host " "
-
-            # Save the log content to a .txt file
-            $logFileName = "ADRenamer_Log_$dateTimeString"
-            $logFilePath = Join-Path -Path $logsFolderPath -ChildPath "$logFileName.txt"
-            $script:logContent | Out-File -FilePath $logFilePath -Encoding utf8
-
-            Write-Host "LOGS TXT file created at $logFilePath" -ForegroundColor Yellow
-            Write-Host " "
-
-            # Convert the CSV file content to Base64
-            # $fileContent = [System.IO.File]::ReadAllBytes($csvFilePath)
-            # $base64Content = [Convert]::ToBase64String($fileContent)
-
-            # Convert the CSV file content to Base64
-            $csvFileContent = [System.IO.File]::ReadAllBytes($csvFilePath)
-            $csvBase64Content = [Convert]::ToBase64String($csvFileContent)
-
-            # Convert the log file content to Base64
-            $logFileContent = [System.IO.File]::ReadAllBytes($logFilePath)
-            $logBase64Content = [Convert]::ToBase64String($logFileContent)
-
-            # Define the HTTP trigger URL for the Power Automate flow
-            $flowUrl = "https://prod-166.westus.logic.azure.com:443/workflows/5e172f6d92d24c6a995023362c53472f/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=7-7I6wW8ga9i3hSfzjP7-O_AFLNFmE-_cxCGt6g3f9A"
-
-            # Prepare the body of the request
-            $body = @{
-                csvFileName    = "$csvFileName`-$username.csv"
-                csvFileContent = $csvBase64Content
-                logFileName    = "$logFileName`-$username.txt"
-                logFileContent = $logBase64Content
-            }
-
-            # Convert the body to JSON
-            $jsonBody = $body | ConvertTo-Json -Depth 3
-
-            # Set the headers
-            $headers = @{
-                "Content-Type" = "application/json"
-            }
-
-            # Send the HTTP POST request to trigger the flow
-            Invoke-RestMethod -Uri $flowUrl -Method Post -Headers $headers -Body $jsonBody
-
-            Write-Host "Triggered Power Automate flow to upload the log files to SharePoint" -ForegroundColor Yellow
-            Write-Host " "
-
-            # Print the list of logged on users
-            if ($loggedOnUsers.Count -gt 0) {
-                Write-Host "Logged on users:" -ForegroundColor Yellow
-                $loggedOnUsers | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
-                Show-EmailDrafts -loggedOnDevices $loggedOnDevices | Out-Null
-            }
-            else {
-                Write-Host "No users were logged on to the renamed computers." -ForegroundColor Green
-            }
-            Write-Host " "
-
-            # Remove successfully renamed computers from the list of computers
-            foreach ($renameEntry in $script:validNamesList) {
-                $oldName, $newName = $renameEntry -split ' -> '
-                $script:checkedItems.Remove($oldName)
-    
-                # Remove the old name from the filteredComputers
-                $script:filteredComputers = $script:filteredComputers | Where-Object { $_.Name -ne $oldName }
-    
-                # Try to remove the old name from the computerCheckedListBox
-                $index = $computerCheckedListBox.Items.IndexOf($oldName)
-                if ($index -ge 0) {
-                    $computerCheckedListBox.Items.RemoveAt($index)
-                }
-            }
-    
-            # Refresh the checked list box based on current search term
-            $searchTerm = $searchBox.Text
-            $filteredList = $script:filteredComputers | Where-Object { $_.Name -like "*$searchTerm*" }
-    
-            # Clear and repopulate the checked list box with filtered computers and restore their checked state
-            $computerCheckedListBox.Items.Clear()
-            foreach ($computer in $filteredList) {
-                $isChecked = $false
-                if ($script:checkedItems.ContainsKey($computer.Name)) {
-                    $isChecked = $script:checkedItems[$computer.Name]
-                }
-                $computerCheckedListBox.Items.Add($computer.Name, $isChecked)
-            }
-            UpdateAllListBoxes
-            $form.Enabled = $true
-            Write-Host "Form enabled"
-            Write-Host " "
-
-        }
+        # Show the preview form as a modal dialog
+        $previewForm.ShowDialog()
     })
-$form.Controls.Add($applyRenameButton)
-#>
 
-    
-
+$applyChangesButton = New-StyledButton -text "Apply Changes" -x 580 -y 430 -width 100 -height 40 -enabled $false
 
 # ApplyRenameButton click event to start renaming process if user chooses # ONLINE
-$applyRenameButton.Add_Click({
+$applyChangesButton.Add_Click({
         # Create a string from the invalid names list
         if ($script:invalidNamesList.Count -gt 0) {
             $url = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
@@ -3255,7 +3098,7 @@ $applyRenameButton.Add_Click({
 
         }
     })
-$form.Controls.Add($applyRenameButton) 
+$form.Controls.Add($applyChangesButton) 
 
 # Call the function to load and filter computers
 if ($online) {
