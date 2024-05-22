@@ -134,7 +134,7 @@ if (-not $online) {
     }
     
     # Call the function with the desired number of devices
-    $numberOfDevices = 5
+    $numberOfDevices = 50
     $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
 
     # Add the generated dummy computers to the CheckedListBox
@@ -334,7 +334,7 @@ function UpdateAllListBoxes {
         $part2 = if ($parts.Count -ge 3) { $parts[2] } else { $null }
         $part3 = if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null }
 
-        Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3"
+        Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkBlue
 
         $part0InputValue = if (-not $part0Input.ReadOnly) { $part0Input.Text } else { $null }
         $part1InputValue = if (-not $part1Input.ReadOnly) { $part1Input.Text } else { $null }
@@ -364,7 +364,7 @@ function UpdateAllListBoxes {
             }
         }
 
-        Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3"
+        Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
 
         if ($part3) {
             $newName = "$part0-$part1-$part2-$part3"
@@ -412,18 +412,30 @@ function UpdateAllListBoxes {
 
                 # Remove the computer name from any previous change entries if they exist
                 foreach ($change in $script:changesList) {
-                    Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
+                    <#Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
                     Write-Host "does it contain: " ($change.ComputerNames -contains $computerName)
-                    Write-Host "does change equal existing: " ($change -eq $existingChange)
+                    Write-Host "does change equal existing: " ($change -eq $existingChange)#>
                     if ($change -ne $existingChange -and $change.ComputerNames -contains $computerName) {
                         Write-Host "Removing $computerName from previous change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
                         $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $computerName }
+                   
+                        # Remove the change if no computer names are left
+                        if ($change.ComputerNames.Count -eq 0) {
+                            Write-Host "Removing empty change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+                            $script:changesList.Remove($change)
+                        }
                     }
                 }
 
                 if ($existingChange) {
                     Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3)"
-                    $existingChange.ComputerNames += $computerName
+                    if (-not ($existingChange.ComputerNames -contains $computerName)) {
+                        $existingChange.ComputerNames += $computerName
+                    }
+                    else {
+                        Write-Host "$computerName is already in this change"
+                    }
+
                 }
                 else {
                     # Assign a unique color to the new change
@@ -452,6 +464,7 @@ function UpdateAllListBoxes {
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
+
 
 # Function for setting individual custom names
 function Show-InputBox {
@@ -770,27 +783,6 @@ function Show-EmailDrafts {
     # Show the form
     $emailForm.ShowDialog()
 }
-
-# Function to create dummy devices
-function New-DummyDevices {
-    param (
-        [int]$count = 10  # Default to create 10 dummy devices
-    )
-
-    $dummyDevices = @()
-    for ($i = 0; $i -lt $count; $i++) {
-        $device = [PSCustomObject]@{
-            OldName  = "HL-CS-old$i"
-            NewName  = "HL-CS3-new$i"
-            UserName = "USERS\user$i"
-        }
-        $dummyDevices += $device
-    }
-    return $dummyDevices
-}
-# Example usage: create 20 dummy devices
-# $dummyDevices = New-DummyDevices -count 20
-# Show-EmailDrafts -loggedOnDevices $dummyDevices | Out-Null
 
 # Function to display a form with a TreeView control for selecting an Organizational Unit (OU)
 function Select-OU {
@@ -1803,7 +1795,7 @@ $selectedCheckedListBox.ContextMenuStrip = $contextMenu
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object CustomListBox
 $newNamesListBox.Location = New-Object System.Drawing.Point(550, 40)
-$newNamesListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
+$newNamesListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight + 8))
 # Override the selection behavior to prevent selection
 $newNamesListBox.add_SelectedIndexChanged({
         $newNamesListBox.ClearSelected()
