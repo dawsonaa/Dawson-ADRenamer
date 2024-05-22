@@ -1214,7 +1214,7 @@ $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 
-# Handle the KeyDown event to detect Ctrl+A # FIX
+# Handle the KeyDown event to detect Ctrl+A #
 $computerCheckedListBox.Add_KeyDown({
         param($s, $e)
     
@@ -1265,7 +1265,7 @@ $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVar
 # Handle the KeyDown event to implement Ctrl+A select all
 $selectedCheckedListBox.add_KeyDown({
         param($s, $e)
-    
+
         # Check if Ctrl+A was pressed
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
             for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
