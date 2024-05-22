@@ -464,18 +464,34 @@ class Change {
     [string]$Part1
     [string]$Part2
     [string]$Part3
+    [System.Drawing.Color]$GroupColor
 
-    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3) {
+    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [System.Drawing.Color]$groupColor) {
         $this.ComputerNames = $computerNames
         $this.Part0 = $part0
         $this.Part1 = $part1
         $this.Part2 = $part2
         $this.Part3 = $part3
+        $this.GroupColor = $groupColor
     }
 }
 
 $script:changesList = New-Object System.Collections.ArrayList
 $script:newNamesList = @()
+
+# Define a list of unique colors for the items
+$colors = @(
+    [System.Drawing.Color]::FromArgb(255, 242, 204, 204), # Soft Red
+    [System.Drawing.Color]::FromArgb(255, 252, 229, 205), # Peach
+    [System.Drawing.Color]::FromArgb(255, 255, 250, 205), # Light Yellow
+    [System.Drawing.Color]::FromArgb(255, 220, 245, 255), # Light Blue
+    [System.Drawing.Color]::FromArgb(255, 204, 229, 255), # Sky Blue
+    [System.Drawing.Color]::FromArgb(255, 204, 255, 229), # Mint Green
+    [System.Drawing.Color]::FromArgb(255, 153, 102, 204), # Dark Lavender
+    [System.Drawing.Color]::FromArgb(255, 255, 204, 229), # Pink
+    [System.Drawing.Color]::FromArgb(255, 255, 215, 204), # Apricot
+    [System.Drawing.Color]::FromArgb(255, 220, 245, 220)  # Pale Green
+)
 
 function UpdateAllListBoxes {
     Write-Host "UpdateAllListBoxes"
@@ -595,8 +611,10 @@ function UpdateAllListBoxes {
                 $existingChange.ComputerNames += $computerName
             }
             else {
-                Write-Host "Creating new change entry for parts: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
-                $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue)
+                # Assign a unique color to the new change
+                $groupColor = $colors[$script:changesList.Count % $colors.Count]
+                Write-Host "Assigning color $groupColor to new change entry"
+                $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor)
                 $script:changesList.Add($newChange) | Out-Null
             }
         }
@@ -631,7 +649,6 @@ function UpdateAllListBoxes {
         }
     }
 
-
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
@@ -641,6 +658,9 @@ function UpdateAllListBoxes {
         Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
     }
+
+    # Update the colors in the selectedCheckedListBox and colorPanel
+    UpdateColors
 }
 
 
@@ -1376,6 +1396,81 @@ $form.Controls.Add($computerCheckedListBox)
 $selectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $selectedCheckedListBox.Location = New-Object System.Drawing.Point(280, 40)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
+$selectedCheckedListBox.IntegralHeight = $false
+$selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
+
+
+# Handle the MeasureItem event to set the item height
+$selectedCheckedListBox.add_MeasureItem({
+        param ($sender, $e)
+        $e.ItemHeight = 20
+    })
+
+function UpdateColors {
+    $selectedCheckedListBox.Invalidate()
+    $colorPanel.Invalidate()
+}
+
+# Handle the DrawItem event to customize item drawing
+$selectedCheckedListBox.add_DrawItem({
+        param ($sender, $e)
+        $index = $e.Index
+        if ($index -lt 0) { return }
+
+        $itemText = $selectedCheckedListBox.Items[$index]
+        $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
+        $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
+
+        $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), $e.Bounds)
+        $layoutRectangle = [System.Drawing.RectangleF]::new($e.Bounds.X, $e.Bounds.Y, $e.Bounds.Width, $e.Bounds.Height)
+        $e.Graphics.DrawString($itemText, $e.Font, [System.Drawing.SystemBrushes]::WindowText, $layoutRectangle)
+
+        if (($e.State -band [System.Windows.Forms.DrawItemState]::Selected) -ne 0) {
+            $e.DrawFocusRectangle()
+        }
+    })
+
+# Create a Panel to show the colors next to the CheckedListBox
+$colorPanel = New-Object System.Windows.Forms.Panel
+$colorPanel.Location = New-Object System.Drawing.Point(260, 40)
+$colorPanel.Size = New-Object System.Drawing.Size(20, 350)
+$colorPanel.BackColor = [System.Drawing.Color]::White
+
+# Variable to set the starting y-offset for drawing
+$yOffset = 0
+# Padding between color rectangles
+$padding = 0
+
+# Handle the Paint event for the color panel
+# Handle the Paint event for the color panel
+$colorPanel.add_Paint({
+        param ($sender, $e)
+        $visibleItems = [Math]::Ceiling($selectedCheckedListBox.ClientRectangle.Height / $selectedCheckedListBox.ItemHeight)
+        $firstVisibleIndex = [Math]::Ceiling($selectedCheckedListBox.TopIndex)
+        $y = 0
+        for ($i = $firstVisibleIndex; $i -lt ($firstVisibleIndex + $visibleItems); $i++) {
+            if ($i -ge $selectedCheckedListBox.Items.Count) { break }
+            $itemText = $selectedCheckedListBox.Items[$i]
+            $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
+            $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
+            $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel.Width, $selectedCheckedListBox.ItemHeight)
+            $y += $selectedCheckedListBox.ItemHeight
+        }
+    })
+
+# Handle the MouseWheel event for the CheckedListBox to act as a scrollbar
+$selectedCheckedListBox.add_MouseWheel({
+        param ($sender, $e)
+        $selectedCheckedListBox.TopIndex += [math]::Sign($e.Delta) * -3
+        $colorPanel.Invalidate()
+    })
+
+# Handle the SelectedIndexChanged event to update the panel colors
+$selectedCheckedListBox.add_SelectedIndexChanged({
+        param ($sender, $e)
+        $colorPanel.Invalidate()
+    })
+$form.Controls.Add($colorPanel)
 
 # Define the script-wide variable for selectedCheckedListBox
 # $script:selectedCheckedItems = @{}
