@@ -320,7 +320,6 @@ function UpdateAllListBoxes {
     $script:newNamesListBox.Items.Clear()
     $script:validNamesList = @()
     $script:invalidNamesList = @()
-    $newChangesList = New-Object System.Collections.ArrayList
 
     Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
 
@@ -457,7 +456,7 @@ function UpdateAllListBoxes {
 
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     # $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
-    $commitChangesButton.Enabled = $true
+    $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
     # Print the changesList for debugging
     Write-Host "`nChanges List:" -ForeGroundColor red
@@ -1240,13 +1239,9 @@ function UpdateAndSyncListBoxes {
             Write-Host "Generated new name: $newName" -ForegroundColor Yellow
 
             # Check if the new name is invalid and mark it for removal
-            if ($script:invalidNamesList -contains $item) {
-                Write-Host "Item $item is in invalidNamesList" -ForegroundColor Red
-                $itemsToRemove.Add($item) | Out-Null
-            }
-            elseif ($script:invalidNamesList -contains $newName) {
+            if ($script:invalidNamesList -contains $newName) {
                 Write-Host "New name $newName is in invalidNamesList" -ForegroundColor Red
-                $itemsToRemove.Add($item) | Out-Null
+                $itemsToRemove.Add($newName) | Out-Null
             }
             else {
                 if (-not $processedNewNames.Contains($newName)) {
@@ -1292,12 +1287,6 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
-
-
-
-
-
-
 
 # Function to sync checked items to computerCheckedListBox
 function SyncCheckedItems {
