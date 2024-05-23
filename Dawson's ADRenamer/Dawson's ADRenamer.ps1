@@ -134,14 +134,8 @@ if (-not $online) {
     }
     
     # Call the function with the desired number of devices
-    $numberOfDevices = 100
+    $numberOfDevices = 5
     $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
-
-    # Add the generated dummy computers to the CheckedListBox
-    foreach ($computer in $dummyComputers) {
-        Write-Host "Adding $($computer.Name) to CheckedListBox" -Foreground Red
-        #$checkedListBox.Items.Add($computer.Name) | Out-Null
-    }
 
     # Dummy data for OUs # OFFLINE
     $dummyOUs = @(
@@ -992,8 +986,8 @@ function LoadAndFilterComputersOFFLINE {
         # Populate the CheckedListBox with the filtered computer names
         $script:filteredComputers | ForEach-Object {
             $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
-            Write-Host "loaded:" $_.Name
-            Write-Host ""
+            # Write-Host "loaded:" $_.Name
+            # Write-Host ""
             $loadedCount++
             $deviceTimer++
 
@@ -1229,14 +1223,14 @@ function UpdateAndSyncListBoxes {
     $processedItems = New-Object System.Collections.ArrayList
     foreach ($invalidItem in $script:invalidNamesList) {
         if (-not $processedItems.Contains($invalidItem)) {
-            Write-Host "Adding $invalidItem to selectedCheckedListBox" -ForegroundColor Red
+            # Write-Host "Adding $invalidItem to selectedCheckedListBox" -ForegroundColor Red
             $selectedCheckedListBox.Items.Add($invalidItem) | Out-Null
             $processedItems.Add($invalidItem) | Out-Null
         }
     }
     foreach ($item in $sortedItems) {
         if (-not $processedItems.Contains($item)) {
-            Write-Host "Adding $item to selectedCheckedListBox" -ForegroundColor Yellow
+            # Write-Host "Adding $item to selectedCheckedListBox" -ForegroundColor Yellow
             $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
             $processedItems.Add($item) | Out-Null
         }
