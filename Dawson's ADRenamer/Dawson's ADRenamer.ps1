@@ -1551,14 +1551,9 @@ $script:globalTopIndex = 0
 # Function to update list boxes based on the global TopIndex
 function Update-ListBoxes {
     param ($topIndex)
-    #Write-Host "Updating ListBoxes to TopIndex: $topIndex" -ForegroundColor Green
     if ($topIndex -ge 0 -and $topIndex -lt $selectedCheckedListBox.Items.Count) {
         $selectedCheckedListBox.TopIndex = $topIndex
         $newNamesListBox.TopIndex = $topIndex
-        #Write-Host "Updated SelectedCheckedListBox and NewNamesListBox to TopIndex: $topIndex" -ForegroundColor Green
-    }
-    else {
-        #Write-Host "Error: TopIndex: $topIndex out of range" -ForegroundColor Red
     }
 }
 
@@ -1577,19 +1572,13 @@ $newNamesListBox.add_MouseWheel({
 $selectedCheckedListBox.add_MouseWheel({
         param ($s, $e)
         $delta = [math]::Sign($e.Delta)
-        #Write-Host "GloablTopIndex Value prior to scroll change: " $script:globalTopIndex -ForegroundColor Magenta
         if ($delta -eq 1) {
             $script:globalTopIndex -= 1
-            #Write-Host "GLOBAL TOP DECREMENT" -ForegroundColor Blue
         }
         elseif ($delta -eq -1) {
             $script:globalTopIndex += 1
-            #Write-Host "GLOBAL TOP increment" -ForegroundColor Blue
         }
-        #Write-Host "GLOBALTOP BEFORE: " $script:globalTopIndex -ForegroundColor Blue
-        #Write-Host "ITEMS COUTN: " $selectedCheckedListBox.Items.Count -ForegroundColor Magenta
         $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $selectedCheckedListBox.Items.Count - 18))
-        #Write-Host "MouseWheel detected on SelectedCheckedListBox, New Global TopIndex: $script:globalTopIndex" -ForegroundColor Yellow
         Update-ListBoxes -topIndex $script:globalTopIndex
     })
 
@@ -1603,7 +1592,6 @@ $newNamesListBox.add_MouseWheel({
             $script:globalTopIndex += 1
         }
         $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $newNamesListBox.Items.Count - 1))
-        #Write-Host "MouseWheel detected on NewNamesListBox, New Global TopIndex: $script:globalTopIndex" -ForegroundColor Yellow
         Update-ListBoxes -topIndex $script:globalTopIndex
     })
 
@@ -1619,11 +1607,6 @@ $selectedCheckedListBox.add_SelectedIndexChanged({
         $colorPanel.Invalidate()
         $colorPanel2.Invalidate()
     })
-# $form.Controls.Add($colorPanel)
-# $form.Controls.Add($colorPanel2)
-
-# Define the script-wide variable for selectedCheckedListBox
-# $script:selectedCheckedItems = @{}
 
 # Event handler for checking items in computerCheckedListBox
 $computerCheckedListBox_ItemCheck = {
