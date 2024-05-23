@@ -1039,21 +1039,34 @@ function LoadAndFilterComputers {
     )
 
     try {
-        # Show the OU selection form
-        Select-OU | Out-Null
-        if (-not $script:ouPath) {
-            Write-Host "No OU selected, using DC=users,DC=campus"
-            $script:ouPath = 'DC=users,DC=campus'
-            return
-        }
-        #example# $OUpath = 'OU=Workstations,OU=KSUL,OU=Dept,DC=users,DC=campus'
 
+        if ($online) {
+            # Show the OU selection form
+            Select-OU | Out-Null
+            if (-not $script:ouPath) {
+                Write-Host "No OU selected, using DC=users,DC=campus"
+                $script:ouPath = 'DC=users,DC=campus'
+                return
+            }
+        }
+        else {
+            $script:ouPath = 'OU=Workstations,OU=KSUL,OU=Dept,DC=users,DC=campus'
+        }
+
+
+        #example# $OUpath = 'OU=Workstations,OU=KSUL,OU=Dept,DC=users,DC=campus'
         Write-Host "Selected OU Path: $script:ouPath"  # Debug message
 
         # Disable the form while loading data to prevent user interaction
         $form.Enabled = $false
         Write-Host "Form disabled for loading..."
-        Write-Host "Loading AD endpoints..."
+
+        if ($online) {
+            Write-Host "Loading AD endpoints..."
+        }
+        else {
+            Write-Host "Loaded 'endpoints'... OFFLINE"
+        }
 
         # Initialize counters and timers for progress tracking
         $loadedCount = 0
@@ -1063,29 +1076,57 @@ function LoadAndFilterComputers {
         # Define the cutoff date for filtering computers based on their last logon date
         $cutoffDate = (Get-Date).AddDays(-180)
 
-        # Query Active Directory for computers within the selected OU and retrieve their last logon date
-        $computers = Get-ADComputer -Filter * -Properties LastLogonDate -SearchBase $script:ouPath
 
-        # Populate the CheckedListBox with the filtered computer names
-        $script:filteredComputers = $computers | Where-Object {
-            $_.LastLogonDate -and
-            [DateTime]::Parse($_.LastLogonDate) -ge $cutoffDate
+
+        if ($online) {
+            # Query Active Directory for computers within the selected OU and retrieve their last logon date
+            $computers = Get-ADComputer -Filter * -Properties LastLogonDate -SearchBase $script:ouPath
+
+            # Populate the CheckedListBox with the filtered computer names
+            $script:filteredComputers = $computers | Where-Object {
+                $_.LastLogonDate -and
+                [DateTime]::Parse($_.LastLogonDate) -ge $cutoffDate
+            }
+
+            $computerCount = $script:filteredComputers.Count
+            $filteredOutCount = $computers.Count - $script:filteredComputers.Count
+
+            $computerCheckedListBox.Items.Clear()
+
+            $script:filteredComputers | ForEach-Object {
+                $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
+                $loadedCount++
+                $deviceTimer++
+                Write-Host "loaded:" $_.Name
+                Write-Host ""
+                # Update the progress bar every 150 devices
+                if ($deviceTimer -ge $deviceRefresh) {
+                    $deviceTimer = 0
+                    $progress = [math]::Round(($loadedCount / $computerCount) * 100)
+                    Write-Progress -Activity "Loading endpoints from AD..." -Status "$progress% Complete:" -PercentComplete $progress
+                }
+            }
         }
+        else {
+            $computerCount = $script:filteredComputers.Count
+            $filteredOutCount = $dummyComputers.Count - $script:filteredComputers.Count
+    
+            $computerCheckedListBox.Items.Clear()
 
-        $computerCount = $script:filteredComputers.Count
-        $filteredOutCount = $computers.Count - $script:filteredComputers.Count
+            # Populate the CheckedListBox with the filtered computer names
+            $script:filteredComputers | ForEach-Object {
+                $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
+                # Write-Host "loaded:" $_.Name
+                # Write-Host ""
+                $loadedCount++
+                $deviceTimer++
 
-        $script:filteredComputers | ForEach-Object {
-            $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
-            $loadedCount++
-            $deviceTimer++
-            Write-Host "loaded:" $_.Name
-            Write-Host ""
-            # Update the progress bar every 150 devices
-            if ($deviceTimer -ge $deviceRefresh) {
-                $deviceTimer = 0
-                $progress = [math]::Round(($loadedCount / $computerCount) * 100)
-                Write-Progress -Activity "Loading endpoints from AD..." -Status "$progress% Complete:" -PercentComplete $progress
+                # Update the progress bar every 150 devices
+                if ($deviceTimer -ge $deviceRefresh) {
+                    $deviceTimer = 0
+                    $progress = [math]::Round(($loadedCount / $computerCount) * 100)
+                    Write-Progress -Activity "Loading endpoints from AD (offline mode)..." -Status "$progress% Complete:" -PercentComplete $progress
+                }
             }
         }
 
@@ -1412,6 +1453,37 @@ $computerCheckedListBox.Add_KeyDown({
         }
     })
 
+# Handle the ItemCheck event to update script:checkedItems
+$computerCheckedListBox.add_ItemCheck({
+        param($s, $e)
+
+        $item = $computerCheckedListBox.Items[$e.Index]
+    
+        if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
+            # Add the item to script:checkedItems if checked
+            if (-not $script:checkedItems.ContainsKey($item)) {
+                $script:checkedItems[$item] = $true
+                Write-Host "Item added: $item" -ForegroundColor Green
+            }
+        }
+        elseif ($e.NewValue -eq [System.Windows.Forms.CheckState]::Unchecked) {
+            # Remove the item from script:checkedItems if unchecked
+            if ($script:checkedItems.ContainsKey($item)) {
+                $script:checkedItems.Remove($item)
+                Write-Host "Item removed: $item" -ForegroundColor Red
+            }
+        }
+
+        # Update the selectedCheckedListBox with sorted items
+        $selectedCheckedListBox.BeginUpdate()
+        $selectedCheckedListBox.Items.Clear()
+        $sortedCheckedItems = $script:checkedItems.Keys | Sort-Object
+        foreach ($checkedItem in $sortedCheckedItems) {
+            $selectedCheckedListBox.Items.Add($checkedItem, $script:checkedItems[$checkedItem]) | Out-Null
+        }
+        $selectedCheckedListBox.EndUpdate()
+    })
+
 
 # Attach the event handler to the CheckedListBox
 
@@ -1425,16 +1497,49 @@ $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $selectedCheckedListBox.BackColor = $catLightYellow
 
+$selectedCtrlA = 0
+
 # Handle the KeyDown event to implement Ctrl+A select all
 $selectedCheckedListBox.add_KeyDown({
         param($s, $e)
 
         # Check if Ctrl+A was pressed
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
-            for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
-                $selectedCheckedListBox.SetItemChecked($i, $true)
+            if ($selectedCtrlA -eq 0) {
+                for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+                    $selectedCheckedListBox.SetItemChecked($i, $true)
+                }
+                $selectedCtrlA = 1
+            }
+            else {
+                for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+                    $selectedCheckedListBox.SetItemChecked($i, $false)
+                }
+                $selectedCtrlA = 0
             }
             $e.Handled = $true
+        }
+    })
+
+# Handle the ItemCheck event to update selectedCheckedItems
+$selectedCheckedListBox.add_ItemCheck({
+        param($s, $e)
+
+        $item = $selectedCheckedListBox.Items[$e.Index]
+    
+        if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
+            # Add the item to script:selectedCheckedItems if checked
+            if (-not $script:selectedCheckedItems.ContainsKey($item)) {
+                $script:selectedCheckedItems[$item] = $true
+                Write-Host "Item added: $item" -ForegroundColor Green
+            }
+        }
+        elseif ($e.NewValue -eq [System.Windows.Forms.CheckState]::Unchecked) {
+            # Remove the item from script:selectedCheckedItems if unchecked
+            if ($script:selectedCheckedItems.ContainsKey($item)) {
+                $script:selectedCheckedItems.Remove($item)
+                Write-Host "Item removed: $item" -ForegroundColor Red
+            }
         }
     })
 
@@ -2275,16 +2380,8 @@ $refreshButton.Add_Click({
         $newNamesListBox.Items.Clear()
         $script:checkedItems.Clear()
         $script:selectedItems.Clear()
-        # UpdateAllListBoxes
 
-        if ($online) {
-            LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
-        }
-        else {
-            LoadAndFilterComputersOFFLINE -computerCheckedListBox $computerCheckedListBox
-        }
-
-        # UpdateAllListBoxes
+        LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
     })
 $form.Controls.Add($refreshButton)
 
@@ -2766,12 +2863,8 @@ $applyRenameButton.Add_Click({
 $form.Controls.Add($applyRenameButton) 
 
 # Call the function to load and filter computers
-if ($online) {
-    LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
-}
-else {
-    LoadAndFilterComputersOFFLINE -computerCheckedListBox $computerCheckedListBox | Out-Null
-}
+LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
+    
 # Show the form
 # $form.Add_Shown({ $form.Activate() })
 $form.ShowDialog()
