@@ -298,16 +298,12 @@ $script:newNamesList = @()
 
 # Define a list of unique colors for the items
 $colors = @(
-    [System.Drawing.Color]::FromArgb(255, 242, 204, 204), # Soft Red
-    [System.Drawing.Color]::FromArgb(255, 252, 229, 205), # Peach
-    [System.Drawing.Color]::FromArgb(255, 255, 250, 205), # Light Yellow
-    [System.Drawing.Color]::FromArgb(255, 220, 245, 255), # Light Blue
-    [System.Drawing.Color]::FromArgb(255, 204, 229, 255), # Sky Blue
-    [System.Drawing.Color]::FromArgb(255, 204, 255, 229), # Mint Green
-    [System.Drawing.Color]::FromArgb(255, 153, 102, 204), # Dark Lavender
-    [System.Drawing.Color]::FromArgb(255, 255, 204, 229), # Pink
-    [System.Drawing.Color]::FromArgb(255, 255, 215, 204), # Apricot
-    [System.Drawing.Color]::FromArgb(255, 220, 245, 220)  # Pale Green
+    [System.Drawing.Color]::FromArgb(255, 243, 12, 122), # Vibrant Pink
+    [System.Drawing.Color]::FromArgb(255, 253, 175, 5), # Vibrant Orange
+    [System.Drawing.Color]::FromArgb(255, 255, 223, 0), # Bright Yellow
+    [System.Drawing.Color]::FromArgb(255, 76, 175, 80), # Light Green
+    [System.Drawing.Color]::FromArgb(255, 0, 188, 212), # Cyan
+    [System.Drawing.Color]::FromArgb(255, 103, 58, 183)   # Deep Purple
 )
 
 # UpdateAllListBoxes function
