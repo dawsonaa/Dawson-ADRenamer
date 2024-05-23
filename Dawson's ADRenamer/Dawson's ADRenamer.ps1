@@ -248,8 +248,13 @@ if ($online) {
         }
     }
 }
-Write-Host "Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
 
+if ($online) {
+    Write-Host "ONLINE MODE - Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
+}
+else {
+    Write-Host "OFFLINE MODE - No credentials are needed." -ForegroundColor Green
+}
 # Initialize a new hash set to store unique strings.
 # This hash set will be used to ensure that new computer names are unique.
 $hashSet = [System.Collections.Generic.HashSet[string]]::new()
