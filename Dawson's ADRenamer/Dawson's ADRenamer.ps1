@@ -134,7 +134,7 @@ if (-not $online) {
     }
     
     # Call the function with the desired number of devices
-    $numberOfDevices = 50
+    $numberOfDevices = 10
     $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
 
     # Add the generated dummy computers to the CheckedListBox
@@ -411,6 +411,8 @@ function UpdateAllListBoxes {
                     }
                 } 
 
+                $temp = $script:changesList
+
                 # Remove the computer name from any previous change entries if they exist
                 foreach ($change in $script:changesList) {
                     Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
@@ -423,10 +425,11 @@ function UpdateAllListBoxes {
                         # Remove the change if no computer names are left
                         if ($change.ComputerNames.Count -eq 0) {
                             Write-Host "Removing empty change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"-ForegroundColor DarkRed
-                            $script:changesList.Remove($change)
+                            $temp.Remove($change)
                         }
                     }
                 }
+                $script:changesList = $temp
 
                 if ($existingChange) {
                     Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3)" -ForegroundColor DarkRed
@@ -1209,11 +1212,12 @@ function UpdateAndSyncListBoxes {
         }
     }
 
-    # Add valid items from sortedItems
+    # Process valid items and remove associated valid names if they are in the invalid list
     foreach ($item in $sortedItems) {
         $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
         if ($change) {
-            # Remove the associated valid name item if it exists
+            Write-Host "CHANGE" -ForegroundColor Yellow
+            # Generate new name from change parts
             $parts = $item -split '-'
             $newPart0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
             $newPart1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
@@ -1229,16 +1233,20 @@ function UpdateAndSyncListBoxes {
 
             # Check if the new name is invalid and mark it for removal
             if ($script:invalidNamesList -contains $item) {
-                Write-Host "Marking $item for removal as it became invalid"
+                Write-Host "Marking $item for removal as it became invalid" -ForegroundColor Yellow
                 $itemsToRemove.Add($item) | Out-Null
             }
-            elseif (-not $processedNewNames.Contains($newName)) {
-                $script:newNamesListBox.Items.Add($newName) | Out-Null
-                $processedNewNames.Add($newName) | Out-Null
+            else {
+                if (-not $processedNewNames.Contains($newName)) {
+                    $script:newNamesListBox.Items.Add($newName) | Out-Null
+                    $processedNewNames.Add($newName) | Out-Null
+                }
             }
         }
         else {
+            Write-Host "ELSE" -ForegroundColor Yellow
             if (-not $processedNewNames.Contains($item)) {
+                Write-Host "IF" -ForegroundColor Yellow
                 $script:newNamesListBox.Items.Add($item) | Out-Null
                 $processedNewNames.Add($item) | Out-Null
             }
@@ -1247,7 +1255,7 @@ function UpdateAndSyncListBoxes {
 
     # Remove items marked for removal
     foreach ($item in $itemsToRemove) {
-        $sortedItems.Remove($item)
+        $script:newNamesListBox.Items.Remove($item)
     }
 
     $script:newNamesListBox.EndUpdate()
@@ -1265,11 +1273,6 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
-
-
-
-
-
 
 
 # Function to sync checked items to computerCheckedListBox
