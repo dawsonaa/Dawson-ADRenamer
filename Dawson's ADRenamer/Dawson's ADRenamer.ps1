@@ -1614,24 +1614,26 @@ $selectedCheckedListBox.add_DrawItem({
         }
     })
 
+$colorPanelBack = $catDark
+
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel3 = New-Object System.Windows.Forms.Panel
 $colorPanel3.Location = New-Object System.Drawing.Point(240, 40) # 530, 40
 $colorPanel3.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel3.AutoScroll = $true
-$colorPanel3.BackColor = [System.Drawing.Color]::White
+$colorPanel3.BackColor = $colorPanelBack
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel = New-Object System.Windows.Forms.Panel
 $colorPanel.Location = New-Object System.Drawing.Point(510, 40) # 260, 40
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
-$colorPanel.BackColor = [System.Drawing.Color]::White
+$colorPanel.BackColor = $colorPanelBack
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel2 = New-Object System.Windows.Forms.Panel
 $colorPanel2.Location = New-Object System.Drawing.Point(780, 40) # 530, 40
 $colorPanel2.Size = New-Object System.Drawing.Size(20, 350)
-$colorPanel2.BackColor = [System.Drawing.Color]::White
+$colorPanel2.BackColor = $colorPanelBack
 
 # Handle the Paint event for the color panel
 $colorPanel.add_Paint({
@@ -1643,7 +1645,7 @@ $colorPanel.add_Paint({
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
             $itemText = $selectedCheckedListBox.Items[$i]
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
-            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { [System.Drawing.Color]::White }
+            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { $colorPanelBack }
             $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel.Width, $selectedCheckedListBox.ItemHeight)
             $y += $selectedCheckedListBox.ItemHeight
         }
@@ -1659,7 +1661,7 @@ $colorPanel2.add_Paint({
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
             $itemText = $selectedCheckedListBox.Items[$i]
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
-            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { [System.Drawing.Color]::White }
+            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { $colorPanelBack }
             $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel2.Width, $selectedCheckedListBox.ItemHeight)
             $y += $selectedCheckedListBox.ItemHeight
         }
@@ -1675,7 +1677,7 @@ $colorPanel3.add_Paint({
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
             $itemText = $selectedCheckedListBox.Items[$i]
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
-            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { [System.Drawing.Color]::White }
+            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { $colorPanelBack }
             $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel3.Width, $selectedCheckedListBox.ItemHeight)
             $y += $selectedCheckedListBox.ItemHeight
         }
@@ -1767,7 +1769,7 @@ $selectedCheckedListBox.add_MouseWheel({
         elseif ($delta -eq -1) {
             $script:globalTopIndex += 1
         }
-        $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $selectedCheckedListBox.Items.Count - 18))
+        $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $selectedCheckedListBox.Items.Count - 19))
         Update-ListBoxes -topIndex $script:globalTopIndex
         $colorPanel3.Invalidate()
         $colorPanel.Invalidate()
@@ -1783,7 +1785,7 @@ $newNamesListBox.add_MouseWheel({
         elseif ($delta -eq -1) {
             $script:globalTopIndex += 1
         }
-        $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $newNamesListBox.Items.Count - 1))
+        $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $newNamesListBox.Items.Count - 19))
         Update-ListBoxes -topIndex $script:globalTopIndex
         $colorPanel3.Invalidate()
         $colorPanel.Invalidate()
@@ -2245,6 +2247,9 @@ $form.add_MouseDown({
                 $textbox.Enabled = $true
             }
         }
+
+        $searchBox.Enabled = $false
+        $searchBox.Enabled = $true
 
         # Check each part#Input TextBox
         SetReadOnlyIfNotFocused $part0Input
