@@ -961,9 +961,6 @@ function Select-OU {
     }
 }
 
-# Function to load and filter computer objects from Active Directory based on the selected Organizational Unit (OU)
-# This function populates the provided CheckedListBox with computer names that have logged on within the last 180 days
-# It filters out computers that have not logged in within the past 180 days.
 function LoadAndFilterComputers {
     param (
         [System.Windows.Forms.CheckedListBox]$computerCheckedListBox
@@ -984,8 +981,6 @@ function LoadAndFilterComputers {
             $script:ouPath = 'OU=Workstations,OU=KSUL,OU=Dept,DC=users,DC=campus'
         }
 
-
-        #example# $OUpath = 'OU=Workstations,OU=KSUL,OU=Dept,DC=users,DC=campus'
         Write-Host "Selected OU Path: $script:ouPath"  # Debug message
 
         # Disable the form while loading data to prevent user interaction
@@ -1007,17 +1002,15 @@ function LoadAndFilterComputers {
         # Define the cutoff date for filtering computers based on their last logon date
         $cutoffDate = (Get-Date).AddDays(-180)
 
-
-
         if ($online) {
             # Query Active Directory for computers within the selected OU and retrieve their last logon date
             $computers = Get-ADComputer -Filter * -Properties LastLogonDate -SearchBase $script:ouPath
 
-            # Populate the CheckedListBox with the filtered computer names
+            # Filter and sort the computers alphanumerically
             $script:filteredComputers = $computers | Where-Object {
                 $_.LastLogonDate -and
                 [DateTime]::Parse($_.LastLogonDate) -ge $cutoffDate
-            }
+            } | Sort-Object -Property Name
 
             $computerCount = $script:filteredComputers.Count
             $filteredOutCount = $computers.Count - $script:filteredComputers.Count
@@ -1039,16 +1032,20 @@ function LoadAndFilterComputers {
             }
         }
         else {
+            # Simulate offline data
+            $script:filteredComputers = $dummyComputers | Where-Object {
+                $_.LastLogonDate -and
+                [DateTime]::Parse($_.LastLogonDate) -ge $cutoffDate
+            } | Sort-Object -Property Name
+
             $computerCount = $script:filteredComputers.Count
             $filteredOutCount = $dummyComputers.Count - $script:filteredComputers.Count
-    
+
             $computerCheckedListBox.Items.Clear()
 
-            # Populate the CheckedListBox with the filtered computer names
+            # Populate the CheckedListBox with the filtered and sorted computer names
             $script:filteredComputers | ForEach-Object {
                 $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
-                # Write-Host "loaded:" $_.Name
-                # Write-Host ""
                 $loadedCount++
                 $deviceTimer++
 
@@ -1075,9 +1072,11 @@ function LoadAndFilterComputers {
         Write-Host "Error loading AD endpoints: $_" -ForegroundColor Red
         Write-Host ""
         Read-Host "Press Enter to close the window..."
+        exit
     }
 }
-# Set the back color to Visual Studio blue
+
+# COLOR PALETTE
 $visualStudioBlue = [System.Drawing.Color]::FromArgb(78, 102, 221) # RGB values for Visual Studio blue
 $kstateDarkPurple = [System.Drawing.Color]::FromArgb(64, 1, 111)
 $kstateLightPurple = [System.Drawing.Color]::FromArgb(115, 25, 184) 
@@ -1339,7 +1338,9 @@ $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $li
 $computerCheckedListBox.IntegralHeight = $false
 $computerCheckedListBox.BackColor = $catLightYellow
 
-# Handle the KeyDown event to detect Ctrl+A #
+$script:computerCtrlA = 1
+
+# Handle the KeyDown event to detect Ctrl+A
 $computerCheckedListBox.Add_KeyDown({
         param($s, $e)
 
@@ -1347,21 +1348,39 @@ $computerCheckedListBox.Add_KeyDown({
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
             # Disable the form and controls to prevent interactions
             $form.Enabled = $false
-            Write-Host "Ctrl+A pressed, starting mass selection, Form disabled for loading..."
+            Write-Host "Ctrl+A pressed, toggling selection state, Form disabled for loading..."
 
-            # Limit the number of items to select to 500
+            # Limit the number of items to select/unselect to 500
             $maxItemsToCheck = 500
-            $itemsChecked = 0
+            $itemsProcessed = 0
 
-            # Check all items in the CheckedListBox up to the limit
-            for ($i = 0; $i -lt $computerCheckedListBox.Items.Count; $i++) {
-                if ($itemsChecked -ge $maxItemsToCheck) {
-                    break
+            if ($script:computerCtrlA -eq 1) {
+                # Select all items up to the limit
+                for ($i = 0; $i -lt $computerCheckedListBox.Items.Count; $i++) {
+                    if ($itemsProcessed -ge $maxItemsToCheck) {
+                        break
+                    }
+                    $computerCheckedListBox.SetItemChecked($i, $true)
+                    $currentItem = $computerCheckedListBox.Items[$i]
+                    $script:checkedItems[$currentItem] = $true
+                    $itemsProcessed++
                 }
-                $computerCheckedListBox.SetItemChecked($i, $true)
-                $currentItem = $computerCheckedListBox.Items[$i]
-                $script:checkedItems[$currentItem] = $true
-                $itemsChecked++
+                $script:computerCtrlA = 0  # Set to unselect next time
+                Write-Host "All items selected"
+            }
+            else {
+                # Unselect all items up to the limit
+                for ($i = 0; $i -lt $computerCheckedListBox.Items.Count; $i++) {
+                    if ($itemsProcessed -ge $maxItemsToCheck) {
+                        break
+                    }
+                    $computerCheckedListBox.SetItemChecked($i, $false)
+                    $currentItem = $computerCheckedListBox.Items[$i]
+                    $script:checkedItems.Remove($currentItem)
+                    $itemsProcessed++
+                }
+                $script:computerCtrlA = 1  # Set to select next time
+                Write-Host "All items unselected"
             }
 
             # Update the selectedCheckedListBox with sorted items
@@ -1394,14 +1413,14 @@ $computerCheckedListBox.add_ItemCheck({
             # Add the item to script:checkedItems if checked
             if (-not $script:checkedItems.ContainsKey($item)) {
                 $script:checkedItems[$item] = $true
-                Write-Host "Item added: $item" -ForegroundColor Green
+                # Write-Host "Item added: $item" -ForegroundColor Green
             }
         }
         elseif ($e.NewValue -eq [System.Windows.Forms.CheckState]::Unchecked) {
             # Remove the item from script:checkedItems if unchecked
             if ($script:checkedItems.ContainsKey($item)) {
                 $script:checkedItems.Remove($item)
-                Write-Host "Item removed: $item" -ForegroundColor Red
+                # Write-Host "Item removed: $item" -ForegroundColor Red
             }
         }
 
@@ -1428,25 +1447,24 @@ $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $selectedCheckedListBox.BackColor = $catLightYellow
 
-$selectedCtrlA = 0
+$script:selectedCtrlA = 1
 
 # Handle the KeyDown event to implement Ctrl+A select all
 $selectedCheckedListBox.add_KeyDown({
         param($s, $e)
-
         # Check if Ctrl+A was pressed
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
-            if ($selectedCtrlA -eq 0) {
+            if ($script:selectedCtrlA -eq 0) {
                 for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
                     $selectedCheckedListBox.SetItemChecked($i, $true)
                 }
-                $selectedCtrlA = 1
+                $script:selectedCtrlA = 1
             }
             else {
                 for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
                     $selectedCheckedListBox.SetItemChecked($i, $false)
                 }
-                $selectedCtrlA = 0
+                $script:selectedCtrlA = 0
             }
             $e.Handled = $true
         }
@@ -1462,14 +1480,14 @@ $selectedCheckedListBox.add_ItemCheck({
             # Add the item to script:selectedCheckedItems if checked
             if (-not $script:selectedCheckedItems.ContainsKey($item)) {
                 $script:selectedCheckedItems[$item] = $true
-                Write-Host "Item added: $item" -ForegroundColor Green
+                # Write-Host "Item added: $item" -ForegroundColor Green
             }
         }
         elseif ($e.NewValue -eq [System.Windows.Forms.CheckState]::Unchecked) {
             # Remove the item from script:selectedCheckedItems if unchecked
             if ($script:selectedCheckedItems.ContainsKey($item)) {
                 $script:selectedCheckedItems.Remove($item)
-                Write-Host "Item removed: $item" -ForegroundColor Red
+                # Write-Host "Item removed: $item" -ForegroundColor Red
             }
         }
     })
