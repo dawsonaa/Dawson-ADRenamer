@@ -2352,11 +2352,25 @@ $commitChangesButton.Add_Click({
         $script:selectedItems.Clear()
         $script:selectedCtrlA = 1
         UpdateAllListBoxes
-
         UpdateAndSyncListBoxes
 
-        $form.Enabled = $true
+        # Reset part#Input TextBoxes to default text and ReadOnly status
+        function ResetTextBox($textBox) {
+            $textBox.Text = "Change $($textBox.Tag)"
+            $textBox.ForeColor = [System.Drawing.Color]::Gray
+            $textBox.BackColor = [System.Drawing.Color]::LightGray
+            $textBox.ReadOnly = $true
+        }
+
+        ResetTextBox $part0Input
+        ResetTextBox $part1Input
+        ResetTextBox $part2Input
+        ResetTextBox $part3Input
+
+        $commitChangesButton.Enabled = $false
         $ApplyRenameButton.Enabled = $true
+        $form.Enabled = $true
+
     })
 $form.Controls.Add($commitChangesButton)
 
