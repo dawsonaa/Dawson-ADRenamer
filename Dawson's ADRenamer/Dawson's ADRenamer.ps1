@@ -1241,7 +1241,11 @@ function UpdateAndSyncListBoxes {
 
             # Check if the new name is invalid and mark it for removal
             if ($script:invalidNamesList -contains $item) {
-                Write-Host "Marking $item for removal as it became invalid" -ForegroundColor Red
+                Write-Host "Item $item is in invalidNamesList" -ForegroundColor Red
+                $itemsToRemove.Add($item) | Out-Null
+            }
+            elseif ($script:invalidNamesList -contains $newName) {
+                Write-Host "New name $newName is in invalidNamesList" -ForegroundColor Red
                 $itemsToRemove.Add($item) | Out-Null
             }
             else {
@@ -1267,9 +1271,9 @@ function UpdateAndSyncListBoxes {
     foreach ($item in $itemsToRemove) {
         Write-Host "Removing $item from newNamesListBox" -ForegroundColor Red
         $validItemToRemove = $script:newNamesListBox.Items | Where-Object { $_ -eq $item }
-        if ($validItemToRemove) {
-            Write-Host "Found and removing valid item $validItemToRemove from newNamesListBox" -ForegroundColor Red
-            $script:newNamesListBox.Items.Remove($validItemToRemove)
+        foreach ($validItem in $validItemToRemove) {
+            Write-Host "Found and removing valid item $validItem from newNamesListBox" -ForegroundColor Red
+            $script:newNamesListBox.Items.Remove($validItem)
         }
     }
 
@@ -1288,6 +1292,9 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
+
+
+
 
 
 
