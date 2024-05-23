@@ -278,10 +278,10 @@ class Change {
     [string]$Part2
     [string]$Part3
     [CustomColor]$GroupColor
-    [bool]$Valid
+    [bool[]]$Valid
     [string[]]$AttemptedNames
 
-    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [CustomColor]$groupColor, [bool]$valid, [string[]]$attemptedNames) {
+    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [CustomColor]$groupColor, [bool[]]$valid, [string[]]$attemptedNames) {
         $this.ComputerNames = $computerNames
         $this.Part0 = $part0
         $this.Part1 = $part1
@@ -292,6 +292,7 @@ class Change {
         $this.AttemptedNames = $attemptedNames
     }
 }
+
 
 
 
@@ -478,12 +479,13 @@ function UpdateAllListBoxes {
             }
             # Add the new attempted name to the existing change
             $existingChange.AttemptedNames += $newName
+            $existingChange.Valid += $isValid
         }
         else {
             # Assign a unique color to the new change
             $groupColor = if (-not $isValid) { [CustomColor]::new(255, 0, 0) } else { $colors[$script:changesList.Count % $colors.Count] }
             Write-Host "Assigning color $groupColor to new change entry"
-            $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, $isValid, $attemptedNames)
+            $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, @($isValid), $attemptedNames)
             $script:changesList.Add($newChange) | Out-Null
         }
     }
