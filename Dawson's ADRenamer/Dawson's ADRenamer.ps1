@@ -490,6 +490,10 @@ function Show-InputBox {
     $inputBoxForm.MaximizeBox = $false
     $inputBoxForm.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
 
+    $inputBoxForm.BackColor = $catDark
+    $inputBoxForm.ForeColor = $white
+    $inputBoxForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+
     # Create the label
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $message
@@ -621,6 +625,10 @@ function Show-EmailDrafts {
     $emailForm.MaximizeBox = $false
     $emailForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $emailForm.StartPosition = "CenterScreen"
+
+    $emailForm.BackColor = $catDark
+    $emailForm.ForeColor = $white
+    $emailForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
     
     # Create labels for each ListBox
     $labelOldName = New-Object System.Windows.Forms.Label
@@ -800,6 +808,10 @@ function Select-OU {
     $ouForm.MaximizeBox = $false
     $ouForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $ouForm.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+
+    $ouForm.BackColor = $catDark
+    $ouForm.ForeColor = $white
+    $ouForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
     # Add a handler for the FormClosing event to exit the script if the form is closed using the red X button
     $ouForm.Add_FormClosing({
@@ -1086,10 +1098,9 @@ $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.borde
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
+
 $form.BackColor = $catDark
 $form.ForeColor = $white
-
-
 $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 if ($online) {
@@ -1352,7 +1363,6 @@ $computerCheckedListBox.Add_KeyDown({
             $e.Handled = $true
         }
     })
-
 
 
 # Attach the event handler to the CheckedListBox
