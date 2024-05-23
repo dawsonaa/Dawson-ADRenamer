@@ -1398,6 +1398,7 @@ function UpdateColors {
     $colorPanel.Invalidate()
     $colorPanel2.Invalidate()
 }
+
 function UpdateSelectedCheckedListBox {
     Write-Host "UPDATESELECTED" -ForegroundColor Cyan
     $sortedItems = New-Object System.Collections.ArrayList
