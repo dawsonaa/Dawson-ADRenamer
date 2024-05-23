@@ -1259,6 +1259,7 @@ function SyncSelectedCheckedItems {
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
+$computerCheckedListBox.IntegralHeight = $false
 
 # Handle the KeyDown event to detect Ctrl+A #
 $computerCheckedListBox.Add_KeyDown({
@@ -1793,9 +1794,52 @@ $selectedCheckedListBox.ContextMenuStrip = $contextMenu
 #>
 
 # Create a list box for displaying proposed new names
-$newNamesListBox = New-Object CustomListBox
+$newNamesListBox = New-Object System.Windows.Forms.ListBox
+$newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $newNamesListBox.Location = New-Object System.Drawing.Point(550, 40)
-$newNamesListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight + 8))
+$newNamesListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
+$newNamesListBox.IntegralHeight = $false
+#$newNamesListBox.ItemHeight = 80
+
+# Define the MeasureItem event handler
+$measureItemHandler = {
+    param (
+        [object]$s,
+        [System.Windows.Forms.MeasureItemEventArgs]$e
+    )
+    # Set the item height to a custom value (e.g., 30 pixels)
+    $e.ItemHeight = 20
+}
+
+# Define the DrawItem event handler
+$drawItemHandler = {
+    param (
+        [object]$s,
+        [System.Windows.Forms.DrawItemEventArgs]$e
+    )
+
+    # Ensure the index is valid
+    if ($e.Index -ge 0) {
+        # Get the item text
+        $itemText = $s.Items[$e.Index]
+
+        # Draw the background
+        $e.DrawBackground()
+
+        # Draw the item text
+        $textBrush = [System.Drawing.SolidBrush]::new($e.ForeColor)
+        $pointF = [System.Drawing.PointF]::new($e.Bounds.X, $e.Bounds.Y)
+        $e.Graphics.DrawString($itemText, $e.Font, $textBrush, $pointF)
+
+        # Draw the focus rectangle if the ListBox has focus
+        $e.DrawFocusRectangle()
+    }
+}
+
+# Attach the event handlers
+$newNamesListBox.add_MeasureItem($measureItemHandler)
+$newNamesListBox.add_DrawItem($drawItemHandler)
+
 # Override the selection behavior to prevent selection
 $newNamesListBox.add_SelectedIndexChanged({
         $newNamesListBox.ClearSelected()
