@@ -134,7 +134,7 @@ if (-not $online) {
     }
     
     # Call the function with the desired number of devices
-    $numberOfDevices = 10
+    $numberOfDevices = 20
     $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
 
     # Add the generated dummy computers to the CheckedListBox
@@ -1311,7 +1311,7 @@ $computerCheckedListBox.BackColor = $catLightYellow
 # Handle the KeyDown event to detect Ctrl+A #
 $computerCheckedListBox.Add_KeyDown({
         param($s, $e)
-    
+
         # Check if Ctrl+A is pressed
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
             # Disable the form and controls to prevent interactions
@@ -1333,7 +1333,16 @@ $computerCheckedListBox.Add_KeyDown({
                 $itemsChecked++
             }
 
-            # Disable the form and controls to prevent interactions
+            # Update the selectedCheckedListBox with sorted items
+            $selectedCheckedListBox.BeginUpdate()
+            $selectedCheckedListBox.Items.Clear()
+            $sortedCheckedItems = $script:checkedItems.Keys | Sort-Object
+            foreach ($item in $sortedCheckedItems) {
+                $selectedCheckedListBox.Items.Add($item, $script:checkedItems[$item]) | Out-Null
+            }
+            $selectedCheckedListBox.EndUpdate()
+
+            # Enable the form and controls
             $form.Enabled = $true
             Write-Host "Form enabled"
             Write-Host ""
@@ -1343,6 +1352,7 @@ $computerCheckedListBox.Add_KeyDown({
             $e.Handled = $true
         }
     })
+
 
 
 # Attach the event handler to the CheckedListBox
