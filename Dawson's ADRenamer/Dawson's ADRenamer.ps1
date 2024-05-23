@@ -1266,7 +1266,11 @@ function UpdateAndSyncListBoxes {
     Write-Host "Removing items marked for removal..." -ForegroundColor Red
     foreach ($item in $itemsToRemove) {
         Write-Host "Removing $item from newNamesListBox" -ForegroundColor Red
-        $script:newNamesListBox.Items.Remove($item)
+        $validItemToRemove = $script:newNamesListBox.Items | Where-Object { $_ -eq $item }
+        if ($validItemToRemove) {
+            Write-Host "Found and removing valid item $validItemToRemove from newNamesListBox" -ForegroundColor Red
+            $script:newNamesListBox.Items.Remove($validItemToRemove)
+        }
     }
 
     $script:newNamesListBox.EndUpdate()
@@ -1284,6 +1288,7 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
+
 
 
 
