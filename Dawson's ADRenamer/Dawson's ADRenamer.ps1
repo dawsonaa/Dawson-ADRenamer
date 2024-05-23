@@ -452,7 +452,8 @@ function UpdateAllListBoxes {
     }
 
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
-    $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
+    # $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
+    $commitChangesButton.Enabled = $true
 
     # Print the changesList for debugging
     Write-Host "`nChanges List:"
@@ -1053,13 +1054,37 @@ function LoadAndFilterComputers {
         Read-Host "Press Enter to close the window..."
     }
 }
+# Set the back color to Visual Studio blue
+$visualStudioBlue = [System.Drawing.Color]::FromArgb(78, 102, 221) # RGB values for Visual Studio blue
+$kstateDarkPurple = [System.Drawing.Color]::FromArgb(64, 1, 111)
+$kstateLightPurple = [System.Drawing.Color]::FromArgb(115, 25, 184) 
+$white = [System.Drawing.Color]::FromArgb(255, 255, 255)
+$black = [System.Drawing.Color]::FromArgb(0, 0, 0)
+$red = [System.Drawing.Color]::FromArgb(218, 25, 25)
+$lightGray = [System.Drawing.Color]::FromArgb(45, 45, 45)
+$grayBlue = [System.Drawing.Color]::FromArgb(75, 75, 140)
+
+$catBlue = [System.Drawing.Color]::FromArgb(3, 106, 199)
+$catPurple = [System.Drawing.Color]::FromArgb(170, 13, 206)
+$catRed = [System.Drawing.Color]::FromArgb(255, 27, 82)
+$catYellow = [System.Drawing.Color]::FromArgb(254, 162, 2)
+$catLightYellow = [System.Drawing.Color]::FromArgb(255, 249, 227)
+$catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
+
+
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
-$form.Size = New-Object System.Drawing.Size(830, 520) # 785, 520
+$form.Size = New-Object System.Drawing.Size(830, 530) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+$form.borde
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
+$form.BackColor = $catDark
+$form.ForeColor = $white
+
+
+$form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 if ($online) {
     $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
@@ -1070,10 +1095,6 @@ else {
     Write-Host 'You have started this application in OFFLINE mode. Set the variable $online to $true for ONLINE mode. (Line 104)' -ForegroundColor Yellow
 }
 
-# Customize form appearance
-$form.BackColor = [System.Drawing.Color]::FromArgb(255, 240, 240, 240) # Light grey background
-$form.ForeColor = [System.Drawing.Color]::FromArgb(255, 105, 105, 105) # Dark grey text
-$form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 # Set the icon for the form
 $iconPath = Join-Path $PSScriptRoot "icon.ico"
@@ -1094,14 +1115,14 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(690, 460)
+$versionLabel.Location = New-Object System.Drawing.Point(690, 470)
 $versionLabel.AutoSize = $true
 $form.Controls.Add($versionLabel)
 
 # Create label to display author information
 $authorLabel = New-Object System.Windows.Forms.Label
 $authorLabel.Text = "Author: Dawson Adams (dawsonaa@ksu.edu)"
-$authorLabel.Location = New-Object System.Drawing.Point(10, 460)
+$authorLabel.Location = New-Object System.Drawing.Point(10, 470)
 $authorLabel.AutoSize = $true
 $form.Controls.Add($authorLabel)
 
@@ -1260,6 +1281,7 @@ $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 $computerCheckedListBox.IntegralHeight = $false
+$computerCheckedListBox.BackColor = $catLightYellow
 
 # Handle the KeyDown event to detect Ctrl+A #
 $computerCheckedListBox.Add_KeyDown({
@@ -1308,6 +1330,7 @@ $selectedCheckedListBox.Location = New-Object System.Drawing.Point(280, 40)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
+$selectedCheckedListBox.BackColor = $catLightYellow
 
 # Handle the KeyDown event to implement Ctrl+A select all
 $selectedCheckedListBox.add_KeyDown({
@@ -1750,7 +1773,7 @@ $menuFindAndReplace.Add_Click({
         $replaceString = Show-InputBox -message "Enter the string to replace with (max 15 chars):" -title "Find and Replace"
         if (-not $replaceString) { return }
 
-        $listBoxItems = @($selectedCheckedListBox.Items | ForEach-Object { $_ })
+        $listBoxItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
         $tempList = $script:customNamesList
         $script:customNamesList = @()
 
@@ -1791,7 +1814,6 @@ $menuFindAndReplace.Add_Click({
 
 # Attach the context menu to the ListBox
 $selectedCheckedListBox.ContextMenuStrip = $contextMenu
-#>
 
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object System.Windows.Forms.ListBox
@@ -1799,7 +1821,7 @@ $newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $newNamesListBox.Location = New-Object System.Drawing.Point(550, 40)
 $newNamesListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
-#$newNamesListBox.ItemHeight = 80
+$newNamesListBox.BackColor = $catLightYellow
 
 # Define the MeasureItem event handler
 $measureItemHandler = {
@@ -1928,15 +1950,15 @@ $searchBox.Add_KeyDown({
 $form.Controls.Add($searchBox)
 
 # Add button to refresh or select a new OU to manage
-$refreshButton = New-Object System.Windows.Forms.Button
-$refreshButton.Location = New-Object System.Drawing.Point(195, 5)
-$refreshButton.AutoSize = $true
-$refreshButton.Text = 'Refresh / Change OU'
+$refreshButton = New-StyledButton -text "Refresh OU" -x 195 -y 10 -width 88 -height 25 -enabled $true
+$refreshButton.BackColor = $catBlue
+
 $refreshButton.Add_Click({
         $computerCheckedListBox.Items.Clear()
         $selectedCheckedListBox.Items.Clear()
         $newNamesListBox.Items.Clear()
         $script:checkedItems.Clear()
+        $script::selectedItems.Clear()
         # UpdateAllListBoxes
 
         if ($online) {
@@ -2039,7 +2061,7 @@ function New-CustomTextBox {
 
 $textBoxSize = New-Object System.Drawing.Size(150, 20)
 
-$gap = 40
+$gap = 30
 
 # Calculate the total width occupied by the text boxes and their distances
 $totalWidth = (4 * $textBoxSize.Width) + (3 * $gap) # 3 gaps between 4 text boxes, each gap is 20 pixels
@@ -2059,6 +2081,44 @@ $form.Controls.Add($part2Input)
 
 $part3Input = New-CustomTextBox -name "part3Input" -defaultText "part3Name" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
 $form.Controls.Add($part3Input)
+
+$part0Input.Add_TextChanged({
+        if ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) {
+            $commitChangesButton.Enabled = $true
+        }
+        else {
+            $commitChangesButton.Enabled = $false
+        }
+    })
+
+$part1Input.Add_TextChanged({
+        if ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) {
+            $commitChangesButton.Enabled = $true
+        }
+        else {
+            $commitChangesButton.Enabled = $false
+        }
+    })
+
+$part2Input.Add_TextChanged({
+        if ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) {
+            $commitChangesButton.Enabled = $true
+        }
+        else {
+            $commitChangesButton.Enabled = $false
+        }
+    })
+
+$part3Input.Add_TextChanged({
+        if ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) {
+            $commitChangesButton.Enabled = $true
+        }
+        else {
+            $commitChangesButton.Enabled = $false
+        }
+    })
+
+
 
 # Part Input and CheckBox event triggers
 # $part0Input.Add_TextChanged({ UpdateAllListBoxes })
@@ -2373,7 +2433,10 @@ function New-StyledButton {
 
     return $button
 }
-$commitChangesButton = New-StyledButton -text "Commit Changes" -x 480 -y 430 -width 100 -height 40 -enabled $true
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x $startX -y 430 -width 150 -height 30 -enabled $false
+
+
+$commitChangesButton.BackColor = $catPurple
 
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
@@ -2381,11 +2444,16 @@ $commitChangesButton.Add_Click({
         UpdateSelectedCheckedListBox
         SyncSelectedCheckedItems
         UpdateNewNamesListBox
+
+        $ApplyRenameButton.Enabled = $true
     })
 $form.Controls.Add($commitChangesButton)
 
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x 580 -y 430 -width 100 -height 40 -enabled $false
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 430 -width 150 -height 30 -enabled $false
+$applyRenameButton.BackColor = $catRed
+$applyRenameButton.ForeColor = $white
+
 
 <# Create and configure the 'Apply Rename' button
 $applyRenameButton = New-Object System.Windows.Forms.Button
@@ -2777,6 +2845,8 @@ $form.Controls.Add($applyRenameButton)
 
 # ApplyRenameButton click event to start renaming process if user chooses # ONLINE
 $applyRenameButton.Add_Click({
+        $applyRenameButton.Enabled = $false
+
         # Create a string from the invalid names list
         if ($script:invalidNamesList.Count -gt 0) {
             $url = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
