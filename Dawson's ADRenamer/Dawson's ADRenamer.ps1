@@ -1191,6 +1191,10 @@ function UpdateAndSyncListBoxes {
     $nonChangeItems = New-Object System.Collections.ArrayList
     $itemsToRemove = New-Object System.Collections.ArrayList
 
+    # Clear script:selectedItems
+    $script:selectedCheckedItems.Clear()
+    Write-Host "Cleared script:selectedCheckedItems" -ForegroundColor Cyan
+
     # Add items from changesList first, sorted alphanumerically within groups
     Write-Host "Processing changesList..." -ForegroundColor Green
     foreach ($change in $script:changesList) {
@@ -1234,16 +1238,21 @@ function UpdateAndSyncListBoxes {
     $selectedCheckedListBox.BeginUpdate()
     $selectedCheckedListBox.Items.Clear()
     $processedItems = New-Object System.Collections.ArrayList
+
+    # Clear the checked status of all items in selectedCheckedListBox
+    for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+        $selectedCheckedListBox.SetItemChecked($i, $false)
+    }
+    Write-Host "Cleared checked status of all items in selectedCheckedListBox" -ForegroundColor Yellow
+
     foreach ($invalidItem in $script:invalidNamesList) {
         if (-not $processedItems.Contains($invalidItem)) {
-            # Write-Host "Adding $invalidItem to selectedCheckedListBox" -ForegroundColor Red
             $selectedCheckedListBox.Items.Add($invalidItem) | Out-Null
             $processedItems.Add($invalidItem) | Out-Null
         }
     }
     foreach ($item in $sortedItems) {
         if (-not $processedItems.Contains($item)) {
-            # Write-Host "Adding $item to selectedCheckedListBox" -ForegroundColor Yellow
             $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
             $processedItems.Add($item) | Out-Null
         }
