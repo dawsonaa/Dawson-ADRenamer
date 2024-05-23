@@ -1395,6 +1395,7 @@ $selectedCheckedListBox.add_MeasureItem({
 
 function UpdateColors {
     $selectedCheckedListBox.Invalidate()
+    $colorPanel3.Invalidate()
     $colorPanel.Invalidate()
     $colorPanel2.Invalidate()
 }
@@ -1502,6 +1503,12 @@ $selectedCheckedListBox.add_DrawItem({
     })
 
 # Create a Panel to show the colors next to the CheckedListBox
+$colorPanel3 = New-Object System.Windows.Forms.Panel
+$colorPanel3.Location = New-Object System.Drawing.Point(240, 40) # 530, 40
+$colorPanel3.Size = New-Object System.Drawing.Size(20, 350)
+$colorPanel3.BackColor = [System.Drawing.Color]::White
+
+# Create a Panel to show the colors next to the CheckedListBox
 $colorPanel = New-Object System.Windows.Forms.Panel
 $colorPanel.Location = New-Object System.Drawing.Point(510, 40) # 260, 40
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
@@ -1541,6 +1548,22 @@ $colorPanel2.add_Paint({
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
             $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
             $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel2.Width, $selectedCheckedListBox.ItemHeight)
+            $y += $selectedCheckedListBox.ItemHeight
+        }
+    })
+
+# Handle the Paint event for the color panel
+$colorPanel3.add_Paint({
+        param ($s, $e)
+        $visibleItems = [Math]::Ceiling($selectedCheckedListBox.ClientRectangle.Height / $selectedCheckedListBox.ItemHeight)
+        $firstVisibleIndex = [Math]::Ceiling($selectedCheckedListBox.TopIndex)
+        $y = 0
+        for ($i = $firstVisibleIndex; $i -lt ($firstVisibleIndex + $visibleItems); $i++) {
+            if ($i -ge $selectedCheckedListBox.Items.Count) { break }
+            $itemText = $selectedCheckedListBox.Items[$i]
+            $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
+            $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
+            $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel3.Width, $selectedCheckedListBox.ItemHeight)
             $y += $selectedCheckedListBox.ItemHeight
         }
     })
@@ -1595,17 +1618,12 @@ $newNamesListBox.add_MouseWheel({
         Update-ListBoxes -topIndex $script:globalTopIndex
     })
 
-# Disable default scrolling for the list boxes
-$selectedCheckedListBox.HorizontalScroll.Maximum = 0
-$selectedCheckedListBox.VerticalScroll.Maximum = 0
-$newNamesListBox.HorizontalScroll.Maximum = 0
-$newNamesListBox.VerticalScroll.Maximum = 0
-
 # Handle the SelectedIndexChanged event to update the panel colors
 $selectedCheckedListBox.add_SelectedIndexChanged({
         param ($s, $e)
         $colorPanel.Invalidate()
         $colorPanel2.Invalidate()
+        $colorPanel3.Invalidate()
     })
 
 # Event handler for checking items in computerCheckedListBox
@@ -1939,9 +1957,11 @@ $newNamesListBox.add_SelectedIndexChanged({
     })
 $form.Controls.Add($newNamesListBox)
 
+$form.Controls.Add($colorPanel3)
 $form.Controls.Add($colorPanel)
 $form.Controls.Add($colorPanel2)
 
+$colorPanel3.BringToFront()
 $colorPanel.BringToFront()
 $colorPanel2.BringToFront()
 
