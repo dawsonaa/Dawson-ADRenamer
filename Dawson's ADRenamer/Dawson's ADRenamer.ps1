@@ -134,7 +134,7 @@ if (-not $online) {
     }
     
     # Call the function with the desired number of devices
-    $numberOfDevices = 5
+    $numberOfDevices = 200
     $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
 
     # Dummy data for OUs # OFFLINE
@@ -1255,13 +1255,21 @@ function UpdateAndSyncListBoxes {
     $script:newNamesListBox.BeginUpdate()
     $processedNewNames = New-Object System.Collections.ArrayList
 
-    # Add invalid items with "-invalid" suffix
-    foreach ($invalidItem in $script:invalidNamesList) {
-        $invalidNewName = "$invalidItem-invalid"
-        Write-Host "Adding invalid item $invalidNewName to newNamesListBox" -ForegroundColor Red
-        if (-not $processedNewNames.Contains($invalidNewName)) {
-            $script:newNamesListBox.Items.Add($invalidNewName) | Out-Null
-            $processedNewNames.Add($invalidNewName) | Out-Null
+    # Add invalid items with "- Invalid" suffix
+    foreach ($change in $script:changesList) {
+        $sortedComputerNames = $change.ComputerNames | Sort-Object
+        foreach ($computerName in $sortedComputerNames) {
+            $index = [array]::IndexOf($change.ComputerNames, $computerName)
+            $isValid = $change.Valid[$index]
+
+            if (-not $isValid) {
+                $newName = "$computerName - Invalid"
+                Write-Host "Adding invalid item $newName to newNamesListBox" -ForegroundColor Red
+                if (-not $processedNewNames.Contains($newName)) {
+                    $script:newNamesListBox.Items.Add($newName) | Out-Null
+                    $processedNewNames.Add($newName) | Out-Null
+                }
+            }
         }
     }
 
@@ -1270,28 +1278,26 @@ function UpdateAndSyncListBoxes {
         $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
         if ($change) {
             Write-Host "Processing change for $item" -ForegroundColor Yellow
-            # Generate new name from change parts
-            $parts = $item -split '-'
-            $newPart0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
-            $newPart1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
-            $newPart2 = if ($change.Part2) { $change.Part2 } else { if ($parts.Count -ge 3) { $parts[2] } else { $null } }
-            $newPart3 = if ($change.Part3) { $change.Part3 } else { if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null } }
+            $index = [array]::IndexOf($change.ComputerNames, $item)
+            $isValid = $change.Valid[$index]
 
-            $newNameParts = @()
-            if ($newPart0) { $newNameParts += $newPart0 }
-            if ($newPart1) { $newNameParts += $newPart1 }
-            if ($newPart2) { $newNameParts += $newPart2 }
-            if ($newPart3) { $newNameParts += $newPart3 }
-            $newName = $newNameParts -join '-'
+            if ($isValid) {
+                # Generate new name from change parts
+                $parts = $item -split '-'
+                $newPart0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
+                $newPart1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
+                $newPart2 = if ($change.Part2) { $change.Part2 } else { if ($parts.Count -ge 3) { $parts[2] } else { $null } }
+                $newPart3 = if ($change.Part3) { $change.Part3 } else { if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null } }
 
-            Write-Host "Generated new name: $newName" -ForegroundColor Yellow
+                $newNameParts = @()
+                if ($newPart0) { $newNameParts += $newPart0 }
+                if ($newPart1) { $newNameParts += $newPart1 }
+                if ($newPart2) { $newNameParts += $newPart2 }
+                if ($newPart3) { $newNameParts += $newPart3 }
+                $newName = $newNameParts -join '-'
 
-            # Check if the new name is invalid and mark it for removal
-            if ($change.Valid -eq $false) {
-                Write-Host "New name $newName is invalid" -ForegroundColor Red
-                $itemsToRemove.Add($item) | Out-Null
-            }
-            else {
+                Write-Host "Generated new name: $newName" -ForegroundColor Yellow
+
                 if (-not $processedNewNames.Contains($newName)) {
                     Write-Host "Adding valid new name $newName to newNamesListBox" -ForegroundColor Yellow
                     $script:newNamesListBox.Items.Add($newName) | Out-Null
@@ -2240,6 +2246,8 @@ $commitChangesButton.BackColor = $catPurple
 
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
+
+        $script:selectedItems.Clear()
         UpdateAllListBoxes
 
         UpdateAndSyncListBoxes
@@ -2257,7 +2265,7 @@ $refreshButton.Add_Click({
         $selectedCheckedListBox.Items.Clear()
         $newNamesListBox.Items.Clear()
         $script:checkedItems.Clear()
-        $script::selectedItems.Clear()
+        $script:selectedItems.Clear()
         # UpdateAllListBoxes
 
         if ($online) {
