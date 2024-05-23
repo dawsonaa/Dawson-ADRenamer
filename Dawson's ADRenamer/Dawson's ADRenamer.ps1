@@ -1145,17 +1145,18 @@ function UpdateAndSyncListBoxes {
     $itemsToRemove = New-Object System.Collections.ArrayList
 
     # Add items from changesList first, sorted alphanumerically within groups
-    Write-Host "Processing changesList..."
+    Write-Host "Processing changesList..." -ForegroundColor Green
     foreach ($change in $script:changesList) {
-        Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+        Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor Green
         $sortedComputerNames = $change.ComputerNames | Sort-Object
         foreach ($computerName in $sortedComputerNames) {
+            Write-Host "Adding $computerName to sortedItems from changesList" -ForegroundColor Green
             $sortedItems.Add($computerName) | Out-Null
         }
     }
 
     # Add items not in any changesList group
-    Write-Host "Processing checkedItems not in changesList..."
+    Write-Host "Processing checkedItems not in changesList..." -ForegroundColor Blue
     foreach ($item in $script:checkedItems.Keys) {
         $isInChangeList = $false
         foreach ($change in $script:changesList) {
@@ -1165,33 +1166,37 @@ function UpdateAndSyncListBoxes {
             }
         }
         if (-not $isInChangeList) {
+            Write-Host "Adding $item to nonChangeItems" -ForegroundColor Blue
             $nonChangeItems.Add($item) | Out-Null
         }
     }
 
     # Sort the non-change items alphanumerically
-    Write-Host "Sorting non-change items..."
+    Write-Host "Sorting non-change items..." -ForegroundColor Magenta
     $sortedNonChangeItems = $nonChangeItems | Sort-Object
 
     # Combine the sorted change items and sorted non-change items
-    Write-Host "Combining sorted change items and sorted non-change items..."
+    Write-Host "Combining sorted change items and sorted non-change items..." -ForegroundColor Cyan
     foreach ($item in $sortedNonChangeItems) {
+        Write-Host "Adding $item to sortedItems from nonChangeItems" -ForegroundColor Cyan
         $sortedItems.Add($item) | Out-Null
     }
 
     # Update the CheckedListBox
-    Write-Host "Updating selectedCheckedListBox..."
+    Write-Host "Updating selectedCheckedListBox..." -ForegroundColor Yellow
     $selectedCheckedListBox.BeginUpdate()
     $selectedCheckedListBox.Items.Clear()
     $processedItems = New-Object System.Collections.ArrayList
     foreach ($invalidItem in $script:invalidNamesList) {
         if (-not $processedItems.Contains($invalidItem)) {
+            Write-Host "Adding $invalidItem to selectedCheckedListBox" -ForegroundColor Red
             $selectedCheckedListBox.Items.Add($invalidItem) | Out-Null
             $processedItems.Add($invalidItem) | Out-Null
         }
     }
     foreach ($item in $sortedItems) {
         if (-not $processedItems.Contains($item)) {
+            Write-Host "Adding $item to selectedCheckedListBox" -ForegroundColor Yellow
             $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
             $processedItems.Add($item) | Out-Null
         }
@@ -1199,13 +1204,14 @@ function UpdateAndSyncListBoxes {
     $selectedCheckedListBox.EndUpdate()
 
     # Update the newNamesListBox
-    Write-Host "Updating newNamesListBox..."
+    Write-Host "Updating newNamesListBox..." -ForegroundColor Yellow
     $script:newNamesListBox.BeginUpdate()
     $processedNewNames = New-Object System.Collections.ArrayList
 
     # Add invalid items with "-invalid" suffix
     foreach ($invalidItem in $script:invalidNamesList) {
         $invalidNewName = "$invalidItem-invalid"
+        Write-Host "Adding invalid item $invalidNewName to newNamesListBox" -ForegroundColor Red
         if (-not $processedNewNames.Contains($invalidNewName)) {
             $script:newNamesListBox.Items.Add($invalidNewName) | Out-Null
             $processedNewNames.Add($invalidNewName) | Out-Null
@@ -1216,7 +1222,7 @@ function UpdateAndSyncListBoxes {
     foreach ($item in $sortedItems) {
         $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
         if ($change) {
-            Write-Host "CHANGE" -ForegroundColor Yellow
+            Write-Host "Processing change for $item" -ForegroundColor Yellow
             # Generate new name from change parts
             $parts = $item -split '-'
             $newPart0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
@@ -1231,22 +1237,25 @@ function UpdateAndSyncListBoxes {
             if ($newPart3) { $newNameParts += $newPart3 }
             $newName = $newNameParts -join '-'
 
+            Write-Host "Generated new name: $newName" -ForegroundColor Yellow
+
             # Check if the new name is invalid and mark it for removal
             if ($script:invalidNamesList -contains $item) {
-                Write-Host "Marking $item for removal as it became invalid" -ForegroundColor Yellow
+                Write-Host "Marking $item for removal as it became invalid" -ForegroundColor Red
                 $itemsToRemove.Add($item) | Out-Null
             }
             else {
                 if (-not $processedNewNames.Contains($newName)) {
+                    Write-Host "Adding valid new name $newName to newNamesListBox" -ForegroundColor Yellow
                     $script:newNamesListBox.Items.Add($newName) | Out-Null
                     $processedNewNames.Add($newName) | Out-Null
                 }
             }
         }
         else {
-            Write-Host "ELSE" -ForegroundColor Yellow
+            Write-Host "Processing non-change item $item" -ForegroundColor Yellow
             if (-not $processedNewNames.Contains($item)) {
-                Write-Host "IF" -ForegroundColor Yellow
+                Write-Host "Adding non-change item $item to newNamesListBox" -ForegroundColor Yellow
                 $script:newNamesListBox.Items.Add($item) | Out-Null
                 $processedNewNames.Add($item) | Out-Null
             }
@@ -1254,7 +1263,9 @@ function UpdateAndSyncListBoxes {
     }
 
     # Remove items marked for removal
+    Write-Host "Removing items marked for removal..." -ForegroundColor Red
     foreach ($item in $itemsToRemove) {
+        Write-Host "Removing $item from newNamesListBox" -ForegroundColor Red
         $script:newNamesListBox.Items.Remove($item)
     }
 
@@ -1273,6 +1284,7 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
+
 
 
 # Function to sync checked items to computerCheckedListBox
