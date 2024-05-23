@@ -1115,7 +1115,7 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(690, 470)
+$versionLabel.Location = New-Object System.Drawing.Point(710, 470)
 $versionLabel.AutoSize = $true
 $form.Controls.Add($versionLabel)
 
@@ -1139,15 +1139,7 @@ function UpdateAndSyncListBoxes {
     $script:newNamesListBox.Items.Clear()
     $sortedItems = New-Object System.Collections.ArrayList
     $nonChangeItems = New-Object System.Collections.ArrayList
-
-    # Check for invalid items and add them to the top of the list boxes
-    if ($script:invalidNamesList.Count -gt 0) {
-        Write-Host "Processing invalid items..."
-        foreach ($invalidItem in $script:invalidNamesList) {
-            $script:selectedCheckedListBox.Items.Insert(0, $invalidItem) | Out-Null
-            $script:newNamesListBox.Items.Insert(0, "$invalidItem-invalid") | Out-Null
-        }
-    }
+    $itemsToRemove = New-Object System.Collections.ArrayList
 
     # Add items from changesList first, sorted alphanumerically within groups
     Write-Host "Processing changesList..."
@@ -1155,7 +1147,6 @@ function UpdateAndSyncListBoxes {
         Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
         $sortedComputerNames = $change.ComputerNames | Sort-Object
         foreach ($computerName in $sortedComputerNames) {
-            # Write-Host "Adding $computerName to sortedItems from changesList"
             $sortedItems.Add($computerName) | Out-Null
         }
     }
@@ -1171,7 +1162,6 @@ function UpdateAndSyncListBoxes {
             }
         }
         if (-not $isInChangeList) {
-            # Write-Host "Adding $item to nonChangeItems"
             $nonChangeItems.Add($item) | Out-Null
         }
     }
@@ -1183,7 +1173,6 @@ function UpdateAndSyncListBoxes {
     # Combine the sorted change items and sorted non-change items
     Write-Host "Combining sorted change items and sorted non-change items..."
     foreach ($item in $sortedNonChangeItems) {
-        # Write-Host "Adding $item to sortedItems from nonChangeItems"
         $sortedItems.Add($item) | Out-Null
     }
 
@@ -1191,27 +1180,40 @@ function UpdateAndSyncListBoxes {
     Write-Host "Updating selectedCheckedListBox..."
     $selectedCheckedListBox.BeginUpdate()
     $selectedCheckedListBox.Items.Clear()
-    if ($script:invalidNamesList.Count -gt 0) {
-        foreach ($invalidItem in $script:invalidNamesList) {
+    $processedItems = New-Object System.Collections.ArrayList
+    foreach ($invalidItem in $script:invalidNamesList) {
+        if (-not $processedItems.Contains($invalidItem)) {
             $selectedCheckedListBox.Items.Add($invalidItem) | Out-Null
+            $processedItems.Add($invalidItem) | Out-Null
         }
     }
     foreach ($item in $sortedItems) {
-        $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
+        if (-not $processedItems.Contains($item)) {
+            $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
+            $processedItems.Add($item) | Out-Null
+        }
     }
     $selectedCheckedListBox.EndUpdate()
 
     # Update the newNamesListBox
     Write-Host "Updating newNamesListBox..."
-    if ($script:invalidNamesList.Count -gt 0) {
-        foreach ($invalidItem in $script:invalidNamesList) {
-            $script:newNamesListBox.Items.Add("$invalidItem -invalid") | Out-Null
+    $script:newNamesListBox.BeginUpdate()
+    $processedNewNames = New-Object System.Collections.ArrayList
+
+    # Add invalid items with "-invalid" suffix
+    foreach ($invalidItem in $script:invalidNamesList) {
+        $invalidNewName = "$invalidItem-invalid"
+        if (-not $processedNewNames.Contains($invalidNewName)) {
+            $script:newNamesListBox.Items.Add($invalidNewName) | Out-Null
+            $processedNewNames.Add($invalidNewName) | Out-Null
         }
     }
+
+    # Add valid items from sortedItems
     foreach ($item in $sortedItems) {
-        # Write-Host "Looking for change for $item in changesList"
         $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
         if ($change) {
+            # Remove the associated valid name item if it exists
             $parts = $item -split '-'
             $newPart0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
             $newPart1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
@@ -1225,14 +1227,30 @@ function UpdateAndSyncListBoxes {
             if ($newPart3) { $newNameParts += $newPart3 }
             $newName = $newNameParts -join '-'
 
-            # Write-Host "Adding new name $newName for $item to newNamesListBox"
-            $script:newNamesListBox.Items.Add($newName) | Out-Null
+            # Check if the new name is invalid and mark it for removal
+            if ($script:invalidNamesList -contains $item) {
+                Write-Host "Marking $item for removal as it became invalid"
+                $itemsToRemove.Add($item) | Out-Null
+            }
+            elseif (-not $processedNewNames.Contains($newName)) {
+                $script:newNamesListBox.Items.Add($newName) | Out-Null
+                $processedNewNames.Add($newName) | Out-Null
+            }
         }
         else {
-            # Write-Host "Adding unchanged name $item to newNamesListBox"
-            $script:newNamesListBox.Items.Add($item) | Out-Null
+            if (-not $processedNewNames.Contains($item)) {
+                $script:newNamesListBox.Items.Add($item) | Out-Null
+                $processedNewNames.Add($item) | Out-Null
+            }
         }
     }
+
+    # Remove items marked for removal
+    foreach ($item in $itemsToRemove) {
+        $sortedItems.Remove($item)
+    }
+
+    $script:newNamesListBox.EndUpdate()
 
     <# Print the items in the selectedCheckedListBox
     Write-Host "`nSelectedCheckedListBox Items in Order:"
@@ -1247,6 +1265,10 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
+
+
+
+
 
 
 
