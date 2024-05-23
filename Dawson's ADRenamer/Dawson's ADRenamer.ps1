@@ -452,7 +452,7 @@ function UpdateAllListBoxes {
         }
         else {
             # Assign a unique color to the new change
-            $groupColor = $colors[$script:changesList.Count % $colors.Count]
+            $groupColor = if (-not $isValid) { [System.Drawing.Color]::Red } else { $colors[$script:changesList.Count % $colors.Count] }
             Write-Host "Assigning color $groupColor to new change entry"
             $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, $isValid)
             $script:changesList.Add($newChange) | Out-Null
