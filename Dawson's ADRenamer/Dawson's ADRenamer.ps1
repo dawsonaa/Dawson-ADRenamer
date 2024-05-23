@@ -272,16 +272,20 @@ $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 # 8. Constructs new names and validates them based on length and uniqueness constraints.
 # 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
 # 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
+if (-not ([System.Drawing.Color]::type)) {
+    Add-Type -AssemblyName System.Drawing
+    Write-Host "Assembly not added in beginning" 
+}
 class Change {
     [string[]]$ComputerNames
     [string]$Part0
     [string]$Part1
     [string]$Part2
     [string]$Part3
-    [System.Drawing.Color]$GroupColor
+    [CustomColor]$GroupColor
     [bool]$Valid
 
-    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [System.Drawing.Color]$groupColor, [bool]$valid) {
+    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [CustomColor]$groupColor, [bool]$valid) {
         $this.ComputerNames = $computerNames
         $this.Part0 = $part0
         $this.Part1 = $part1
@@ -296,14 +300,40 @@ class Change {
 $script:changesList = New-Object System.Collections.ArrayList
 $script:newNamesList = @()
 
+# Define a custom class to represent RGB color
+class CustomColor {
+    [int]$R
+    [int]$G
+    [int]$B
+
+    CustomColor([int]$r, [int]$g, [int]$b) {
+        $this.R = $r
+        $this.G = $g
+        $this.B = $b
+    }
+
+    [string]ToString() {
+        return "R: $($this.R), G: $($this.G), B: $($this.B)"
+    }
+}
+
 # Define a list of unique colors for the items
 $colors = @(
+    <#
     [System.Drawing.Color]::FromArgb(255, 243, 12, 122), # Vibrant Pink
     [System.Drawing.Color]::FromArgb(255, 253, 175, 5), # Vibrant Orange
     [System.Drawing.Color]::FromArgb(255, 255, 223, 0), # Bright Yellow
     [System.Drawing.Color]::FromArgb(255, 76, 175, 80), # Light Green
     [System.Drawing.Color]::FromArgb(255, 0, 188, 212), # Cyan
     [System.Drawing.Color]::FromArgb(255, 103, 58, 183)   # Deep Purple
+    #>
+
+    [CustomColor]::new(243, 12, 122), # Vibrant Pink
+    [CustomColor]::new(253, 175, 5), # Vibrant Orange
+    [CustomColor]::new(255, 223, 0), # Bright Yellow
+    [CustomColor]::new(76, 175, 80), # Light Green
+    [CustomColor]::new(0, 188, 212), # Cyan
+    [CustomColor]::new(103, 58, 183)   # Deep Purple
 )
 
 # UpdateAllListBoxes function
@@ -448,7 +478,7 @@ function UpdateAllListBoxes {
         }
         else {
             # Assign a unique color to the new change
-            $groupColor = if (-not $isValid) { [System.Drawing.Color]::Red } else { $colors[$script:changesList.Count % $colors.Count] }
+            $groupColor = if (-not $isValid) { [CustomColor]::new(255, 0, 0) } else { $colors[$script:changesList.Count % $colors.Count] }
             Write-Host "Assigning color $groupColor to new change entry"
             $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, $isValid)
             $script:changesList.Add($newChange) | Out-Null
@@ -1530,7 +1560,7 @@ $colorPanel.add_Paint({
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
             $itemText = $selectedCheckedListBox.Items[$i]
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
-            $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
+            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { [System.Drawing.Color]::White }
             $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel.Width, $selectedCheckedListBox.ItemHeight)
             $y += $selectedCheckedListBox.ItemHeight
         }
@@ -1546,7 +1576,7 @@ $colorPanel2.add_Paint({
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
             $itemText = $selectedCheckedListBox.Items[$i]
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
-            $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
+            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { [System.Drawing.Color]::White }
             $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel2.Width, $selectedCheckedListBox.ItemHeight)
             $y += $selectedCheckedListBox.ItemHeight
         }
@@ -1562,11 +1592,64 @@ $colorPanel3.add_Paint({
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
             $itemText = $selectedCheckedListBox.Items[$i]
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $itemText }
-            $backgroundColor = if ($change) { $change.GroupColor } else { [System.Drawing.Color]::White }
+            $backgroundColor = if ($change) { [System.Drawing.Color]::FromArgb($change.GroupColor.R, $change.GroupColor.G, $change.GroupColor.B) } else { [System.Drawing.Color]::White }
             $e.Graphics.FillRectangle([System.Drawing.SolidBrush]::new($backgroundColor), 0, $y, $colorPanel3.Width, $selectedCheckedListBox.ItemHeight)
             $y += $selectedCheckedListBox.ItemHeight
         }
     })
+
+# Create a list box for displaying proposed new names
+$newNamesListBox = New-Object System.Windows.Forms.ListBox
+$newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
+$newNamesListBox.Location = New-Object System.Drawing.Point(530, 40)
+$newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
+$newNamesListBox.IntegralHeight = $false
+$newNamesListBox.BackColor = $catLightYellow
+
+# Define the MeasureItem event handler
+$measureItemHandler = {
+    param (
+        [object]$s,
+        [System.Windows.Forms.MeasureItemEventArgs]$e
+    )
+    # Set the item height to a custom value (e.g., 30 pixels)
+    $e.ItemHeight = 18
+}
+
+# Define the DrawItem event handler
+$drawItemHandler = {
+    param (
+        [object]$s,
+        [System.Windows.Forms.DrawItemEventArgs]$e
+    )
+
+    # Ensure the index is valid
+    if ($e.Index -ge 0) {
+        # Get the item text
+        $itemText = $s.Items[$e.Index]
+
+        # Draw the background
+        $e.DrawBackground()
+
+        # Draw the item text
+        $textBrush = [System.Drawing.SolidBrush]::new($e.ForeColor)
+        $pointF = [System.Drawing.PointF]::new($e.Bounds.X, $e.Bounds.Y)
+        $e.Graphics.DrawString($itemText, $e.Font, $textBrush, $pointF)
+
+        # Draw the focus rectangle if the ListBox has focus
+        $e.DrawFocusRectangle()
+    }
+}
+
+# Attach the event handlers
+$newNamesListBox.add_MeasureItem($measureItemHandler)
+$newNamesListBox.add_DrawItem($drawItemHandler)
+
+# Override the selection behavior to prevent selection
+$newNamesListBox.add_SelectedIndexChanged({
+        $newNamesListBox.ClearSelected()
+    })
+$form.Controls.Add($newNamesListBox)
 
 # Script-wide variable to store the current TopIndex
 $script:globalTopIndex = 0
@@ -1638,7 +1721,7 @@ $computerCheckedListBox_ItemCheck = {
         $script:checkedItems.Remove($item)
         $script:selectedCheckedItems.Remove($item)
     }
-    SyncSelectedCheckedItems
+    #SyncSelectedCheckedItems
 }
 
 # Event handler for checking items in selectedCheckedListBox
@@ -1651,7 +1734,7 @@ $selectedCheckedListBox_ItemCheck = {
     }
     else {
         $script:selectedCheckedItems.Remove($item)
-        SyncSelectedCheckedItems
+        #SyncSelectedCheckedItems
     }
 }
 
@@ -1661,7 +1744,7 @@ $selectedCheckedListBox.Add_ItemCheck($selectedCheckedListBox_ItemCheck)
 
 # Initial sync
 SyncCheckedItems
-SyncSelectedCheckedItems
+#SyncSelectedCheckedItems
 
 
 
@@ -1831,16 +1914,6 @@ $contextMenu.add_Opening({
         }
     })
 
-# Add the right click menu options to the context menu
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemove) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveAll) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuAddCustomName) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveCustomName) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuFindAndReplace) | Out-Null
-
-# Attach the context menu to the CheckedListBox
-$selectedCheckedListBox.ContextMenuStrip = $contextMenu
-
 # Add the key down event handler to selectedCheckedListBox
 $selectedCheckedListBox.add_KeyDown({
         param ($s, $e)
@@ -1849,8 +1922,6 @@ $selectedCheckedListBox.add_KeyDown({
             $e.Handled = $true
         }
     })
-
-$form.Controls.Add($selectedCheckedListBox)
 
 # Create menu context item for finding and replacing strings within selected computers
 $menuFindAndReplace = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1900,62 +1971,17 @@ $menuFindAndReplace.Add_Click({
         UpdateAllListBoxes
     })
 
+# Add the right click menu options to the context menu
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemove) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveAll) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuAddCustomName) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveCustomName) | Out-Null
+$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuFindAndReplace) | Out-Null
 
-# Attach the context menu to the ListBox
+# Attach the context menu to the CheckedListBox
 $selectedCheckedListBox.ContextMenuStrip = $contextMenu
+$form.Controls.Add($selectedCheckedListBox)
 
-# Create a list box for displaying proposed new names
-$newNamesListBox = New-Object System.Windows.Forms.ListBox
-$newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$newNamesListBox.Location = New-Object System.Drawing.Point(530, 40)
-$newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
-$newNamesListBox.IntegralHeight = $false
-$newNamesListBox.BackColor = $catLightYellow
-
-# Define the MeasureItem event handler
-$measureItemHandler = {
-    param (
-        [object]$s,
-        [System.Windows.Forms.MeasureItemEventArgs]$e
-    )
-    # Set the item height to a custom value (e.g., 30 pixels)
-    $e.ItemHeight = 18
-}
-
-# Define the DrawItem event handler
-$drawItemHandler = {
-    param (
-        [object]$s,
-        [System.Windows.Forms.DrawItemEventArgs]$e
-    )
-
-    # Ensure the index is valid
-    if ($e.Index -ge 0) {
-        # Get the item text
-        $itemText = $s.Items[$e.Index]
-
-        # Draw the background
-        $e.DrawBackground()
-
-        # Draw the item text
-        $textBrush = [System.Drawing.SolidBrush]::new($e.ForeColor)
-        $pointF = [System.Drawing.PointF]::new($e.Bounds.X, $e.Bounds.Y)
-        $e.Graphics.DrawString($itemText, $e.Font, $textBrush, $pointF)
-
-        # Draw the focus rectangle if the ListBox has focus
-        $e.DrawFocusRectangle()
-    }
-}
-
-# Attach the event handlers
-$newNamesListBox.add_MeasureItem($measureItemHandler)
-$newNamesListBox.add_DrawItem($drawItemHandler)
-
-# Override the selection behavior to prevent selection
-$newNamesListBox.add_SelectedIndexChanged({
-        $newNamesListBox.ClearSelected()
-    })
-$form.Controls.Add($newNamesListBox)
 
 $form.Controls.Add($colorPanel3)
 $form.Controls.Add($colorPanel)
@@ -2027,29 +2053,6 @@ $searchBox.Add_KeyDown({
         }
     })
 $form.Controls.Add($searchBox)
-
-# Add button to refresh or select a new OU to manage
-$refreshButton = New-StyledButton -text "Refresh OU" -x 195 -y 10 -width 88 -height 25 -enabled $true
-$refreshButton.BackColor = $catBlue
-
-$refreshButton.Add_Click({
-        $computerCheckedListBox.Items.Clear()
-        $selectedCheckedListBox.Items.Clear()
-        $newNamesListBox.Items.Clear()
-        $script:checkedItems.Clear()
-        $script::selectedItems.Clear()
-        # UpdateAllListBoxes
-
-        if ($online) {
-            LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
-        }
-        else {
-            LoadAndFilterComputersOFFLINE -computerCheckedListBox $computerCheckedListBox
-        }
-
-        # UpdateAllListBoxes
-    })
-$form.Controls.Add($refreshButton)
 
 # Create label for selectedCheckedListBox to show its filled with the original names
 $beforeChangeLabel = New-Object System.Windows.Forms.Label
@@ -2231,6 +2234,28 @@ $commitChangesButton.Add_Click({
     })
 $form.Controls.Add($commitChangesButton)
 
+# Add button to refresh or select a new OU to manage
+$refreshButton = New-StyledButton -text "Refresh OU" -x 195 -y 10 -width 88 -height 25 -enabled $true
+$refreshButton.BackColor = $catBlue
+
+$refreshButton.Add_Click({
+        $computerCheckedListBox.Items.Clear()
+        $selectedCheckedListBox.Items.Clear()
+        $newNamesListBox.Items.Clear()
+        $script:checkedItems.Clear()
+        $script::selectedItems.Clear()
+        # UpdateAllListBoxes
+
+        if ($online) {
+            LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
+        }
+        else {
+            LoadAndFilterComputersOFFLINE -computerCheckedListBox $computerCheckedListBox
+        }
+
+        # UpdateAllListBoxes
+    })
+$form.Controls.Add($refreshButton)
 
 $applyRenameButton = New-StyledButton -text "Apply Rename" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 430 -width 150 -height 30 -enabled $false
 $applyRenameButton.BackColor = $catRed
