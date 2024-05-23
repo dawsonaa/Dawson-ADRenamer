@@ -398,7 +398,7 @@ function UpdateAllListBoxes {
                     $part1Comparison = ($change.Part1 -eq $part1InputValue -or ([string]::IsNullOrEmpty($change.Part1) -and [string]::IsNullOrEmpty($part1InputValue)))
                     $part2Comparison = ($change.Part2 -eq $part2InputValue -or ([string]::IsNullOrEmpty($change.Part2) -and [string]::IsNullOrEmpty($part2InputValue)))
                     $part3Comparison = ($change.Part3 -eq $part3InputValue -or ([string]::IsNullOrEmpty($change.Part3) -and [string]::IsNullOrEmpty($part3InputValue)))
-
+            
                     Write-Host "Part0 Comparison: $part0Comparison"
                     Write-Host "Part1 Comparison: $part1Comparison"
                     Write-Host "Part2 Comparison: $part2Comparison"
@@ -409,7 +409,7 @@ function UpdateAllListBoxes {
                         $existingChange = $change
                         break
                     }
-                }
+                } 
 
                 # Remove the computer name from any previous change entries if they exist
                 foreach ($change in $script:changesList) {
@@ -457,7 +457,7 @@ function UpdateAllListBoxes {
     $commitChangesButton.Enabled = $true
 
     # Print the changesList for debugging
-    Write-Host "`nChanges List:"
+    Write-Host "`nChanges List:" -ForeGroundColor red
     foreach ($change in $script:changesList) {
         Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
@@ -466,7 +466,6 @@ function UpdateAllListBoxes {
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
-
 
 # Function for setting individual custom names
 function Show-InputBox {
@@ -1207,11 +1206,11 @@ function UpdateAndSyncListBoxes {
             if ($newPart3) { $newNameParts += $newPart3 }
             $newName = $newNameParts -join '-'
 
-            Write-Host "Adding new name $newName for $item to newNamesListBox"
+            # Write-Host "Adding new name $newName for $item to newNamesListBox"
             $script:newNamesListBox.Items.Add($newName) | Out-Null
         }
         else {
-            Write-Host "Adding unchanged name $item to newNamesListBox"
+            # Write-Host "Adding unchanged name $item to newNamesListBox"
             $script:newNamesListBox.Items.Add($item) | Out-Null
         }
     }
