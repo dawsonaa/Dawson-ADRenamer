@@ -2230,6 +2230,29 @@ function New-CustomTextBox {
     return $textBox
 }
 
+# Handle the MouseDown event to set ReadOnly to true if clicked outside the TextBoxes
+$form.add_MouseDown({
+        param($s, $e)
+
+        # Helper function to set TextBox to ReadOnly and reset text if empty
+        function SetReadOnlyIfNotFocused($textBox) {
+            $textBox.ReadOnly = $true
+            if ($textBox.Text -eq '') {
+                $textBox.Text = "Change $($textBox.Tag)"
+                $textBox.ForeColor = [System.Drawing.Color]::Gray
+                $textBox.BackColor = [System.Drawing.Color]::LightGray
+                $textbox.Enabled = $false
+                $textbox.Enabled = $true
+            }
+        }
+
+        # Check each part#Input TextBox
+        SetReadOnlyIfNotFocused $part0Input
+        SetReadOnlyIfNotFocused $part1Input
+        SetReadOnlyIfNotFocused $part2Input
+        SetReadOnlyIfNotFocused $part3Input
+    })
+
 $textBoxSize = New-Object System.Drawing.Size(150, 20)
 
 $gap = 30
