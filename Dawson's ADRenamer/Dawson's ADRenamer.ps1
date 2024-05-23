@@ -279,16 +279,19 @@ class Change {
     [string]$Part2
     [string]$Part3
     [System.Drawing.Color]$GroupColor
+    [bool]$Valid
 
-    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [System.Drawing.Color]$groupColor) {
+    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [System.Drawing.Color]$groupColor, [bool]$valid) {
         $this.ComputerNames = $computerNames
         $this.Part0 = $part0
         $this.Part1 = $part1
         $this.Part2 = $part2
         $this.Part3 = $part3
         $this.GroupColor = $groupColor
+        $this.Valid = $valid
     }
 }
+
 
 $script:changesList = New-Object System.Collections.ArrayList
 $script:newNamesList = @()
@@ -313,7 +316,7 @@ function UpdateAllListBoxes {
     Write-Host ""
 
     # Check if any relevant checkboxes are checked
-    $anyCheckboxChecked = (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
+    $anyCheckboxChecked = (-not $part0Input.ReadOnly) -or (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
 
     # Clear existing items and lists except for the new names list
     $hashSet.Clear()
@@ -376,92 +379,93 @@ function UpdateAllListBoxes {
         }
 
         Write-Host "New name: $newName"
-        if ($newName.Length -le 15) {
+        $isValid = $newName.Length -le 15
+        if ($isValid) {
             if ($hashSet.Add($newName)) {
                 $script:validNamesList += "$computerName -> $newName"
                 if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
                     $script:newNamesList += @{"ComputerName" = $computerName; "NewName" = $newName; "Custom" = $false }
-                }
-
-                # Check if an existing change matches
-                $existingChange = $null
-                foreach ($change in $script:changesList) {
-                    
-                    Write-Host "Comparing changes for $computerName..."
-                    Write-Host "Part0: '$($change.Part0)' vs '$part0InputValue'"
-                    Write-Host "Part1: '$($change.Part1)' vs '$part1InputValue'"
-                    Write-Host "Part2: '$($change.Part2)' vs '$part2InputValue'"
-                    Write-Host "Part3: '$($change.Part3)' vs '$part3InputValue'"
-
-                    $part0Comparison = ($change.Part0 -eq $part0InputValue -or ([string]::IsNullOrEmpty($change.Part0) -and [string]::IsNullOrEmpty($part0InputValue)))
-                    $part1Comparison = ($change.Part1 -eq $part1InputValue -or ([string]::IsNullOrEmpty($change.Part1) -and [string]::IsNullOrEmpty($part1InputValue)))
-                    $part2Comparison = ($change.Part2 -eq $part2InputValue -or ([string]::IsNullOrEmpty($change.Part2) -and [string]::IsNullOrEmpty($part2InputValue)))
-                    $part3Comparison = ($change.Part3 -eq $part3InputValue -or ([string]::IsNullOrEmpty($change.Part3) -and [string]::IsNullOrEmpty($part3InputValue)))
-            
-                    Write-Host "Part0 Comparison: $part0Comparison"
-                    Write-Host "Part1 Comparison: $part1Comparison"
-                    Write-Host "Part2 Comparison: $part2Comparison"
-                    Write-Host "Part3 Comparison: $part3Comparison"
-
-                    if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison) {
-                        Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
-                        $existingChange = $change
-                        break
-                    }
-                } 
-
-                $temp = $script:changesList
-
-                # Remove the computer name from any previous change entries if they exist
-                foreach ($change in $script:changesList) {
-                    Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
-                    Write-Host "does it contain: " ($change.ComputerNames -contains $computerName)
-                    Write-Host "does change equal existing: " ($change -eq $existingChange)
-                    if ($change -ne $existingChange -and $change.ComputerNames -contains $computerName) {
-                        Write-Host "Removing $computerName from previous change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
-                        $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $computerName }
-                   
-                        # Remove the change if no computer names are left
-                        if ($change.ComputerNames.Count -eq 0) {
-                            Write-Host "Removing empty change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"-ForegroundColor DarkRed
-                            $temp.Remove($change)
-                        }
-                    }
-                }
-                $script:changesList = $temp
-
-                if ($existingChange) {
-                    Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3)" -ForegroundColor DarkRed
-                    if (-not ($existingChange.ComputerNames -contains $computerName)) {
-                        $existingChange.ComputerNames += $computerName
-                    }
-                    else {
-                        Write-Host "$computerName is already in this change"
-                    }
-
-                }
-                else {
-                    # Assign a unique color to the new change
-                    $groupColor = $colors[$script:changesList.Count % $colors.Count]
-                    Write-Host "Assigning color $groupColor to new change entry"
-                    $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor)
-                    $script:changesList.Add($newChange) | Out-Null
                 }
             }
         }
         else {
             $script:invalidNamesList += $computerName
         }
+
+        # Check if an existing change matches
+        $existingChange = $null
+        foreach ($change in $script:changesList) {
+            Write-Host "Comparing changes for $computerName..."
+            Write-Host "Part0: '$($change.Part0)' vs '$part0InputValue'"
+            Write-Host "Part1: '$($change.Part1)' vs '$part1InputValue'"
+            Write-Host "Part2: '$($change.Part2)' vs '$part2InputValue'"
+            Write-Host "Part3: '$($change.Part3)' vs '$part3InputValue'"
+            Write-Host "Valid: '$($change.Valid)' vs '$isValid'"
+
+            $part0Comparison = ($change.Part0 -eq $part0InputValue -or ([string]::IsNullOrEmpty($change.Part0) -and [string]::IsNullOrEmpty($part0InputValue)))
+            $part1Comparison = ($change.Part1 -eq $part1InputValue -or ([string]::IsNullOrEmpty($change.Part1) -and [string]::IsNullOrEmpty($part1InputValue)))
+            $part2Comparison = ($change.Part2 -eq $part2InputValue -or ([string]::IsNullOrEmpty($change.Part2) -and [string]::IsNullOrEmpty($part2InputValue)))
+            $part3Comparison = ($change.Part3 -eq $part3InputValue -or ([string]::IsNullOrEmpty($change.Part3) -and [string]::IsNullOrEmpty($part3InputValue)))
+            $validComparison = ($change.Valid -eq $isValid)
+
+            Write-Host "Part0 Comparison: $part0Comparison"
+            Write-Host "Part1 Comparison: $part1Comparison"
+            Write-Host "Part2 Comparison: $part2Comparison"
+            Write-Host "Part3 Comparison: $part3Comparison"
+            Write-Host "Valid Comparison: $validComparison"
+
+            if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison -and $validComparison) {
+                Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
+                $existingChange = $change
+                break
+            }
+        }
+
+        $temp = $script:changesList
+
+        # Remove the computer name from any previous change entries if they exist
+        foreach ($change in $script:changesList) {
+            Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
+            Write-Host "does it contain: " ($change.ComputerNames -contains $computerName)
+            Write-Host "does change equal existing: " ($change -eq $existingChange)
+            if ($change -ne $existingChange -and $change.ComputerNames -contains $computerName) {
+                Write-Host "Removing $computerName from previous change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
+                $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $computerName }
+
+                # Remove the change if no computer names are left
+                if ($change.ComputerNames.Count -eq 0) {
+                    Write-Host "Removing empty change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"-ForegroundColor DarkRed
+                    $temp.Remove($change)
+                }
+            }
+        }
+        $script:changesList = $temp
+
+        if ($existingChange) {
+            Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3), Valid: $($existingChange.Valid)" -ForegroundColor DarkRed
+            if (-not ($existingChange.ComputerNames -contains $computerName)) {
+                $existingChange.ComputerNames += $computerName
+            }
+            else {
+                Write-Host "$computerName is already in this change"
+            }
+        }
+        else {
+            # Assign a unique color to the new change
+            $groupColor = $colors[$script:changesList.Count % $colors.Count]
+            Write-Host "Assigning color $groupColor to new change entry"
+            $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, $isValid)
+            $script:changesList.Add($newChange) | Out-Null
+        }
     }
 
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
-    # $applyRenameButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
     $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
     # Print the changesList for debugging
     Write-Host "`nChanges List:" -ForeGroundColor red
     foreach ($change in $script:changesList) {
-        Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
+        Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
     }
 
@@ -1146,7 +1150,7 @@ function UpdateAndSyncListBoxes {
     # Add items from changesList first, sorted alphanumerically within groups
     Write-Host "Processing changesList..." -ForegroundColor Green
     foreach ($change in $script:changesList) {
-        Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor Green
+        Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor Green
         $sortedComputerNames = $change.ComputerNames | Sort-Object
         foreach ($computerName in $sortedComputerNames) {
             Write-Host "Adding $computerName to sortedItems from changesList" -ForegroundColor Green
@@ -1239,9 +1243,9 @@ function UpdateAndSyncListBoxes {
             Write-Host "Generated new name: $newName" -ForegroundColor Yellow
 
             # Check if the new name is invalid and mark it for removal
-            if ($script:invalidNamesList -contains $newName) {
-                Write-Host "New name $newName is in invalidNamesList" -ForegroundColor Red
-                $itemsToRemove.Add($newName) | Out-Null
+            if ($change.Valid -eq $false) {
+                Write-Host "New name $newName is invalid" -ForegroundColor Red
+                $itemsToRemove.Add($item) | Out-Null
             }
             else {
                 if (-not $processedNewNames.Contains($newName)) {
@@ -1265,11 +1269,7 @@ function UpdateAndSyncListBoxes {
     Write-Host "Removing items marked for removal..." -ForegroundColor Red
     foreach ($item in $itemsToRemove) {
         Write-Host "Removing $item from newNamesListBox" -ForegroundColor Red
-        $validItemToRemove = $script:newNamesListBox.Items | Where-Object { $_ -eq $item }
-        foreach ($validItem in $validItemToRemove) {
-            Write-Host "Found and removing valid item $validItem from newNamesListBox" -ForegroundColor Red
-            $script:newNamesListBox.Items.Remove($validItem)
-        }
+        $script:newNamesListBox.Items.Remove($item)
     }
 
     $script:newNamesListBox.EndUpdate()
@@ -1287,6 +1287,7 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
+
 
 # Function to sync checked items to computerCheckedListBox
 function SyncCheckedItems {
