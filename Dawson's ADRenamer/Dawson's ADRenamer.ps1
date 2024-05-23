@@ -387,6 +387,7 @@ function UpdateAllListBoxes {
                 # Check if an existing change matches
                 $existingChange = $null
                 foreach ($change in $script:changesList) {
+                    
                     Write-Host "Comparing changes for $computerName..."
                     Write-Host "Part0: '$($change.Part0)' vs '$part0InputValue'"
                     Write-Host "Part1: '$($change.Part1)' vs '$part1InputValue'"
@@ -404,7 +405,7 @@ function UpdateAllListBoxes {
                     Write-Host "Part3 Comparison: $part3Comparison"
 
                     if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison) {
-                        Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+                        Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
                         $existingChange = $change
                         break
                     }
@@ -412,23 +413,23 @@ function UpdateAllListBoxes {
 
                 # Remove the computer name from any previous change entries if they exist
                 foreach ($change in $script:changesList) {
-                    <#Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
+                    Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
                     Write-Host "does it contain: " ($change.ComputerNames -contains $computerName)
-                    Write-Host "does change equal existing: " ($change -eq $existingChange)#>
+                    Write-Host "does change equal existing: " ($change -eq $existingChange)
                     if ($change -ne $existingChange -and $change.ComputerNames -contains $computerName) {
-                        Write-Host "Removing $computerName from previous change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+                        Write-Host "Removing $computerName from previous change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
                         $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $computerName }
                    
                         # Remove the change if no computer names are left
                         if ($change.ComputerNames.Count -eq 0) {
-                            Write-Host "Removing empty change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+                            Write-Host "Removing empty change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"-ForegroundColor DarkRed
                             $script:changesList.Remove($change)
                         }
                     }
                 }
 
                 if ($existingChange) {
-                    Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3)"
+                    Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3)" -ForegroundColor DarkRed
                     if (-not ($existingChange.ComputerNames -contains $computerName)) {
                         $existingChange.ComputerNames += $computerName
                     }
@@ -458,7 +459,7 @@ function UpdateAllListBoxes {
     # Print the changesList for debugging
     Write-Host "`nChanges List:"
     foreach ($change in $script:changesList) {
-        Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
+        Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
     }
 
@@ -1146,7 +1147,7 @@ function UpdateAndSyncListBoxes {
         Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"
         $sortedComputerNames = $change.ComputerNames | Sort-Object
         foreach ($computerName in $sortedComputerNames) {
-            Write-Host "Adding $computerName to sortedItems from changesList"
+            # Write-Host "Adding $computerName to sortedItems from changesList"
             $sortedItems.Add($computerName) | Out-Null
         }
     }
@@ -1162,7 +1163,7 @@ function UpdateAndSyncListBoxes {
             }
         }
         if (-not $isInChangeList) {
-            Write-Host "Adding $item to nonChangeItems"
+            # Write-Host "Adding $item to nonChangeItems"
             $nonChangeItems.Add($item) | Out-Null
         }
     }
@@ -1174,7 +1175,7 @@ function UpdateAndSyncListBoxes {
     # Combine the sorted change items and sorted non-change items
     Write-Host "Combining sorted change items and sorted non-change items..."
     foreach ($item in $sortedNonChangeItems) {
-        Write-Host "Adding $item to sortedItems from nonChangeItems"
+        # rite-Host "Adding $item to sortedItems from nonChangeItems"
         $sortedItems.Add($item) | Out-Null
     }
 
@@ -1190,7 +1191,7 @@ function UpdateAndSyncListBoxes {
     # Update the newNamesListBox
     Write-Host "Updating newNamesListBox..."
     foreach ($item in $sortedItems) {
-        Write-Host "Looking for change for $item in changesList"
+        # Write-Host "Looking for change for $item in changesList"
         $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
         if ($change) {
             $parts = $item -split '-'
@@ -1215,7 +1216,7 @@ function UpdateAndSyncListBoxes {
         }
     }
 
-    # Print the items in the selectedCheckedListBox
+    <# Print the items in the selectedCheckedListBox
     Write-Host "`nSelectedCheckedListBox Items in Order:"
     foreach ($item in $selectedCheckedListBox.Items) {
         Write-Host $item
@@ -1226,6 +1227,7 @@ function UpdateAndSyncListBoxes {
     foreach ($item in $script:newNamesListBox.Items) {
         Write-Host $item
     }
+    #>
 }
 
 
@@ -1795,7 +1797,7 @@ $measureItemHandler = {
         [System.Windows.Forms.MeasureItemEventArgs]$e
     )
     # Set the item height to a custom value (e.g., 30 pixels)
-    $e.ItemHeight = 20
+    $e.ItemHeight = 18
 }
 
 # Define the DrawItem event handler
