@@ -1134,8 +1134,8 @@ $listBoxHeight = 350
 $script:checkedItems = @{}
 $script:selectedCheckedItems = @{}
 
-function UpdateNewNamesListBox {
-    Write-Host "Updating New Names ListBox" -ForegroundColor Cyan
+function UpdateAndSyncListBoxes {
+    Write-Host "Updating and Syncing ListBoxes" -ForegroundColor Cyan
     $script:newNamesListBox.Items.Clear()
     $sortedItems = New-Object System.Collections.ArrayList
     $nonChangeItems = New-Object System.Collections.ArrayList
@@ -1178,6 +1178,15 @@ function UpdateNewNamesListBox {
         $sortedItems.Add($item) | Out-Null
     }
 
+    # Update the CheckedListBox
+    Write-Host "Updating selectedCheckedListBox..."
+    $selectedCheckedListBox.BeginUpdate()
+    $selectedCheckedListBox.Items.Clear()
+    foreach ($item in $sortedItems) {
+        $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
+    }
+    $selectedCheckedListBox.EndUpdate()
+
     # Update the newNamesListBox
     Write-Host "Updating newNamesListBox..."
     foreach ($item in $sortedItems) {
@@ -1206,6 +1215,12 @@ function UpdateNewNamesListBox {
         }
     }
 
+    # Print the items in the selectedCheckedListBox
+    Write-Host "`nSelectedCheckedListBox Items in Order:"
+    foreach ($item in $selectedCheckedListBox.Items) {
+        Write-Host $item
+    }
+
     # Print the items in the newNamesListBox
     Write-Host "`nNewNamesListBox Items in Order:"
     foreach ($item in $script:newNamesListBox.Items) {
@@ -1222,56 +1237,6 @@ function SyncCheckedItems {
     }
 }
 
-# Function to sync selected checked items to selectedCheckedListBox
-function SyncSelectedCheckedItems {
-    Write-Host "SYNCSELECTED" -ForegroundColor Green
-    $sortedItems = New-Object System.Collections.ArrayList
-    $nonChangeItems = New-Object System.Collections.ArrayList
-
-    # Add items from changesList first, sorted alphanumerically within groups
-    foreach ($change in $script:changesList) {
-        $sortedComputerNames = $change.ComputerNames | Sort-Object
-        foreach ($computerName in $sortedComputerNames) {
-            $sortedItems.Add($computerName) | Out-Null
-        }
-    }
-
-    # Add items not in any changesList group
-    foreach ($item in $script:checkedItems.Keys) {
-        $isInChangeList = $false
-        foreach ($change in $script:changesList) {
-            if ($change.ComputerNames -contains $item) {
-                $isInChangeList = $true
-                break
-            }
-        }
-        if (-not $isInChangeList) {
-            $nonChangeItems.Add($item) | Out-Null
-        }
-    }
-
-    # Sort the non-change items alphanumerically
-    $sortedNonChangeItems = $nonChangeItems | Sort-Object
-
-    # Combine the sorted change items and sorted non-change items
-    foreach ($item in $sortedNonChangeItems) {
-        $sortedItems.Add($item) | Out-Null
-    }
-
-    # Update the CheckedListBox
-    $selectedCheckedListBox.BeginUpdate()
-    $selectedCheckedListBox.Items.Clear()
-    foreach ($item in $sortedItems) {
-        $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
-    }
-    $selectedCheckedListBox.EndUpdate()
-
-    # Print the items in the selectedCheckedListBox
-    Write-Host "`nSelectedCheckedListBox Items in Order:"
-    foreach ($item in $selectedCheckedListBox.Items) {
-        Write-Host $item
-    }
-}
 
 # Ensure to call SyncSelectedCheckedItems wherever necessary in your script
 
@@ -1437,7 +1402,7 @@ function UpdateSelectedCheckedListBox {
         Write-Host $item
     }
 
-    SyncSelectedCheckedItems
+    UpdateAndSyncListBoxes
 }
 
 
@@ -2441,9 +2406,8 @@ $commitChangesButton.BackColor = $catPurple
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
         UpdateAllListBoxes
-        UpdateSelectedCheckedListBox
-        SyncSelectedCheckedItems
-        UpdateNewNamesListBox
+
+        UpdateAndSyncListBoxes
 
         $ApplyRenameButton.Enabled = $true
     })
