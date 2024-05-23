@@ -329,8 +329,8 @@ $colors = @(
     #>
 
     [CustomColor]::new(243, 12, 122), # Vibrant Pink
-    [CustomColor]::new(253, 175, 5), # Vibrant Orange
-    [CustomColor]::new(255, 223, 0), # Bright Yellow
+    [CustomColor]::new(243, 120, 22), # Vibrant Orange
+    #[CustomColor]::new(255, 223, 0), # Bright Yellow
     [CustomColor]::new(76, 175, 80), # Light Green
     [CustomColor]::new(0, 188, 212), # Cyan
     [CustomColor]::new(103, 58, 183)   # Deep Purple
@@ -1536,6 +1536,7 @@ $selectedCheckedListBox.add_DrawItem({
 $colorPanel3 = New-Object System.Windows.Forms.Panel
 $colorPanel3.Location = New-Object System.Drawing.Point(240, 40) # 530, 40
 $colorPanel3.Size = New-Object System.Drawing.Size(20, 350)
+$colorPanel3.AutoScroll = $true
 $colorPanel3.BackColor = [System.Drawing.Color]::White
 
 # Create a Panel to show the colors next to the CheckedListBox
@@ -1554,7 +1555,7 @@ $colorPanel2.BackColor = [System.Drawing.Color]::White
 $colorPanel.add_Paint({
         param ($s, $e)
         $visibleItems = [Math]::Ceiling($selectedCheckedListBox.ClientRectangle.Height / $selectedCheckedListBox.ItemHeight)
-        $firstVisibleIndex = [Math]::Ceiling($selectedCheckedListBox.TopIndex)
+        $firstVisibleIndex = [Math]::Ceiling($script:globalTopIndex)
         $y = 0
         for ($i = $firstVisibleIndex; $i -lt ($firstVisibleIndex + $visibleItems); $i++) {
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
@@ -1570,7 +1571,7 @@ $colorPanel.add_Paint({
 $colorPanel2.add_Paint({
         param ($s, $e)
         $visibleItems = [Math]::Ceiling($selectedCheckedListBox.ClientRectangle.Height / $selectedCheckedListBox.ItemHeight)
-        $firstVisibleIndex = [Math]::Ceiling($selectedCheckedListBox.TopIndex)
+        $firstVisibleIndex = [Math]::Ceiling($script:globalTopIndex)
         $y = 0
         for ($i = $firstVisibleIndex; $i -lt ($firstVisibleIndex + $visibleItems); $i++) {
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
@@ -1586,7 +1587,7 @@ $colorPanel2.add_Paint({
 $colorPanel3.add_Paint({
         param ($s, $e)
         $visibleItems = [Math]::Ceiling($selectedCheckedListBox.ClientRectangle.Height / $selectedCheckedListBox.ItemHeight)
-        $firstVisibleIndex = [Math]::Ceiling($selectedCheckedListBox.TopIndex)
+        $firstVisibleIndex = [Math]::Ceiling($script:globalTopIndex)
         $y = 0
         for ($i = $firstVisibleIndex; $i -lt ($firstVisibleIndex + $visibleItems); $i++) {
             if ($i -ge $selectedCheckedListBox.Items.Count) { break }
@@ -1686,6 +1687,9 @@ $selectedCheckedListBox.add_MouseWheel({
         }
         $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $selectedCheckedListBox.Items.Count - 18))
         Update-ListBoxes -topIndex $script:globalTopIndex
+        $colorPanel3.Invalidate()
+        $colorPanel.Invalidate()
+        $colorPanel2.Invalidate()
     })
 
 $newNamesListBox.add_MouseWheel({
@@ -1699,6 +1703,9 @@ $newNamesListBox.add_MouseWheel({
         }
         $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $newNamesListBox.Items.Count - 1))
         Update-ListBoxes -topIndex $script:globalTopIndex
+        $colorPanel3.Invalidate()
+        $colorPanel.Invalidate()
+        $colorPanel2.Invalidate()
     })
 
 # Handle the SelectedIndexChanged event to update the panel colors

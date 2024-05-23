@@ -16,7 +16,7 @@ Section "Install Dawson's ADRenamer"
 	File "icon.ico"  ; Ensure the icon is included in the files copied during installation
 
     ; Put your PowerShell script in the install directory
-    File "C:\Users\THE_BEAST\OneDrive - Kansas State University\ITSup\ADRenamerBuild1.0\In progress\Dawson's ADRenamer\Dawson's ADRenamer\Dawson's ADRenamer.ps1"
+    File "Dawson's ADRenamer.ps1"
 
     File "LICENSE"
     File "README.txt"
