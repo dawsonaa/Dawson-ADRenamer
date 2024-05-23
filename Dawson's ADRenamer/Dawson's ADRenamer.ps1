@@ -271,10 +271,6 @@ $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 # 8. Constructs new names and validates them based on length and uniqueness constraints.
 # 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
 # 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
-if (-not ([System.Drawing.Color]::type)) {
-    Add-Type -AssemblyName System.Drawing
-    Write-Host "Assembly not added in beginning" 
-}
 class Change {
     [string[]]$ComputerNames
     [string]$Part0
@@ -283,8 +279,9 @@ class Change {
     [string]$Part3
     [CustomColor]$GroupColor
     [bool]$Valid
+    [string[]]$AttemptedNames
 
-    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [CustomColor]$groupColor, [bool]$valid) {
+    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [CustomColor]$groupColor, [bool]$valid, [string[]]$attemptedNames) {
         $this.ComputerNames = $computerNames
         $this.Part0 = $part0
         $this.Part1 = $part1
@@ -292,8 +289,10 @@ class Change {
         $this.Part3 = $part3
         $this.GroupColor = $groupColor
         $this.Valid = $valid
+        $this.AttemptedNames = $attemptedNames
     }
 }
+
 
 
 $script:changesList = New-Object System.Collections.ArrayList
@@ -417,6 +416,9 @@ function UpdateAllListBoxes {
             $script:invalidNamesList += $computerName
         }
 
+        # Add the new name to the attempted names list
+        $attemptedNames = @($newName)
+
         # Check if an existing change matches
         $existingChange = $null
         foreach ($change in $script:changesList) {
@@ -474,12 +476,14 @@ function UpdateAllListBoxes {
             else {
                 Write-Host "$computerName is already in this change"
             }
+            # Add the new attempted name to the existing change
+            $existingChange.AttemptedNames += $newName
         }
         else {
             # Assign a unique color to the new change
             $groupColor = if (-not $isValid) { [CustomColor]::new(255, 0, 0) } else { $colors[$script:changesList.Count % $colors.Count] }
             Write-Host "Assigning color $groupColor to new change entry"
-            $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, $isValid)
+            $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, $isValid, $attemptedNames)
             $script:changesList.Add($newChange) | Out-Null
         }
     }
@@ -492,11 +496,13 @@ function UpdateAllListBoxes {
     foreach ($change in $script:changesList) {
         Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
+        Write-Host "AttemptedNames: $($change.AttemptedNames -join ', ')"
     }
 
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
+
 
 # Function for setting individual custom names
 function Show-InputBox {
