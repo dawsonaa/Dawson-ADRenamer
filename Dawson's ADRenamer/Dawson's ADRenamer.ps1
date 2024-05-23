@@ -134,7 +134,7 @@ if (-not $online) {
     }
     
     # Call the function with the desired number of devices
-    $numberOfDevices = 20
+    $numberOfDevices = 100
     $dummyComputers = Add-DummyComputers -numberOfDevices $numberOfDevices
 
     # Add the generated dummy computers to the CheckedListBox
@@ -1367,8 +1367,8 @@ $form.Controls.Add($computerCheckedListBox)
 
 # Create a new checked list box for displaying selected computers
 $selectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$selectedCheckedListBox.Location = New-Object System.Drawing.Point(280, 40)
-$selectedCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
+$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
+$selectedCheckedListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $selectedCheckedListBox.BackColor = $catLightYellow
@@ -1481,9 +1481,6 @@ function UpdateSelectedCheckedListBox {
     UpdateAndSyncListBoxes
 }
 
-
-
-
 # Handle the DrawItem event to customize item drawing
 $selectedCheckedListBox.add_DrawItem({
         param ($s, $e)
@@ -1505,13 +1502,13 @@ $selectedCheckedListBox.add_DrawItem({
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel = New-Object System.Windows.Forms.Panel
-$colorPanel.Location = New-Object System.Drawing.Point(260, 40)
+$colorPanel.Location = New-Object System.Drawing.Point(510, 40) # 260, 40
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel.BackColor = [System.Drawing.Color]::White
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel2 = New-Object System.Windows.Forms.Panel
-$colorPanel2.Location = New-Object System.Drawing.Point(530, 40)
+$colorPanel2.Location = New-Object System.Drawing.Point(780, 40) # 530, 40
 $colorPanel2.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel2.BackColor = [System.Drawing.Color]::White
 
@@ -1547,13 +1544,73 @@ $colorPanel2.add_Paint({
         }
     })
 
+# Script-wide variable to store the current TopIndex
+$script:globalTopIndex = 0
+
+# Function to update list boxes based on the global TopIndex
+function Update-ListBoxes {
+    param ($topIndex)
+    #Write-Host "Updating ListBoxes to TopIndex: $topIndex" -ForegroundColor Green
+    if ($topIndex -ge 0 -and $topIndex -lt $selectedCheckedListBox.Items.Count) {
+        $selectedCheckedListBox.TopIndex = $topIndex
+        $newNamesListBox.TopIndex = $topIndex
+        #Write-Host "Updated SelectedCheckedListBox and NewNamesListBox to TopIndex: $topIndex" -ForegroundColor Green
+    }
+    else {
+        #Write-Host "Error: TopIndex: $topIndex out of range" -ForegroundColor Red
+    }
+}
+
+# Disable default scrolling for the list boxes
+$selectedCheckedListBox.add_MouseWheel({
+        param ($s, $e)
+        $e.Handled = $true
+    })
+
+$newNamesListBox.add_MouseWheel({
+        param ($s, $e)
+        $e.Handled = $true
+    })
+
 # Handle the MouseWheel event for the CheckedListBox to act as a scrollbar
 $selectedCheckedListBox.add_MouseWheel({
         param ($s, $e)
-        $selectedCheckedListBox.TopIndex += [math]::Sign($e.Delta) * -3
-        $colorPanel.Invalidate()
-        $colorPanel2.Invalidate()
+        $delta = [math]::Sign($e.Delta)
+        #Write-Host "GloablTopIndex Value prior to scroll change: " $script:globalTopIndex -ForegroundColor Magenta
+        if ($delta -eq 1) {
+            $script:globalTopIndex -= 1
+            #Write-Host "GLOBAL TOP DECREMENT" -ForegroundColor Blue
+        }
+        elseif ($delta -eq -1) {
+            $script:globalTopIndex += 1
+            #Write-Host "GLOBAL TOP increment" -ForegroundColor Blue
+        }
+        #Write-Host "GLOBALTOP BEFORE: " $script:globalTopIndex -ForegroundColor Blue
+        #Write-Host "ITEMS COUTN: " $selectedCheckedListBox.Items.Count -ForegroundColor Magenta
+        $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $selectedCheckedListBox.Items.Count - 18))
+        #Write-Host "MouseWheel detected on SelectedCheckedListBox, New Global TopIndex: $script:globalTopIndex" -ForegroundColor Yellow
+        Update-ListBoxes -topIndex $script:globalTopIndex
     })
+
+$newNamesListBox.add_MouseWheel({
+        param ($s, $e)
+        $delta = [math]::Sign($e.Delta)
+        if ($delta -eq 1) {
+            $script:globalTopIndex -= 1
+        }
+        elseif ($delta -eq -1) {
+            $script:globalTopIndex += 1
+        }
+        $script:globalTopIndex = [Math]::Max(0, [Math]::Min($script:globalTopIndex, $newNamesListBox.Items.Count - 1))
+        #Write-Host "MouseWheel detected on NewNamesListBox, New Global TopIndex: $script:globalTopIndex" -ForegroundColor Yellow
+        Update-ListBoxes -topIndex $script:globalTopIndex
+    })
+
+# Disable default scrolling for the list boxes
+$selectedCheckedListBox.HorizontalScroll.Maximum = 0
+$selectedCheckedListBox.VerticalScroll.Maximum = 0
+$newNamesListBox.HorizontalScroll.Maximum = 0
+$newNamesListBox.VerticalScroll.Maximum = 0
 
 # Handle the SelectedIndexChanged event to update the panel colors
 $selectedCheckedListBox.add_SelectedIndexChanged({
@@ -1561,8 +1618,8 @@ $selectedCheckedListBox.add_SelectedIndexChanged({
         $colorPanel.Invalidate()
         $colorPanel2.Invalidate()
     })
-$form.Controls.Add($colorPanel)
-$form.Controls.Add($colorPanel2)
+# $form.Controls.Add($colorPanel)
+# $form.Controls.Add($colorPanel2)
 
 # Define the script-wide variable for selectedCheckedListBox
 # $script:selectedCheckedItems = @{}
@@ -1859,8 +1916,8 @@ $selectedCheckedListBox.ContextMenuStrip = $contextMenu
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object System.Windows.Forms.ListBox
 $newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$newNamesListBox.Location = New-Object System.Drawing.Point(550, 40)
-$newNamesListBox.Size = New-Object System.Drawing.Size($listBoxWidth, ($listBoxHeight))
+$newNamesListBox.Location = New-Object System.Drawing.Point(530, 40)
+$newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
 $newNamesListBox.BackColor = $catLightYellow
 
@@ -1908,6 +1965,12 @@ $newNamesListBox.add_SelectedIndexChanged({
         $newNamesListBox.ClearSelected()
     })
 $form.Controls.Add($newNamesListBox)
+
+$form.Controls.Add($colorPanel)
+$form.Controls.Add($colorPanel2)
+
+$colorPanel.BringToFront()
+$colorPanel2.BringToFront()
 
 <# Create a label for the swapCheckBox
 $swapCheckBoxLabel = New-Object System.Windows.Forms.Label
