@@ -1140,6 +1140,15 @@ function UpdateAndSyncListBoxes {
     $sortedItems = New-Object System.Collections.ArrayList
     $nonChangeItems = New-Object System.Collections.ArrayList
 
+    # Check for invalid items and add them to the top of the list boxes
+    if ($script:invalidNamesList.Count -gt 0) {
+        Write-Host "Processing invalid items..."
+        foreach ($invalidItem in $script:invalidNamesList) {
+            $script:selectedCheckedListBox.Items.Insert(0, $invalidItem) | Out-Null
+            $script:newNamesListBox.Items.Insert(0, "$invalidItem-invalid") | Out-Null
+        }
+    }
+
     # Add items from changesList first, sorted alphanumerically within groups
     Write-Host "Processing changesList..."
     foreach ($change in $script:changesList) {
@@ -1174,7 +1183,7 @@ function UpdateAndSyncListBoxes {
     # Combine the sorted change items and sorted non-change items
     Write-Host "Combining sorted change items and sorted non-change items..."
     foreach ($item in $sortedNonChangeItems) {
-        # rite-Host "Adding $item to sortedItems from nonChangeItems"
+        # Write-Host "Adding $item to sortedItems from nonChangeItems"
         $sortedItems.Add($item) | Out-Null
     }
 
@@ -1182,6 +1191,11 @@ function UpdateAndSyncListBoxes {
     Write-Host "Updating selectedCheckedListBox..."
     $selectedCheckedListBox.BeginUpdate()
     $selectedCheckedListBox.Items.Clear()
+    if ($script:invalidNamesList.Count -gt 0) {
+        foreach ($invalidItem in $script:invalidNamesList) {
+            $selectedCheckedListBox.Items.Add($invalidItem) | Out-Null
+        }
+    }
     foreach ($item in $sortedItems) {
         $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
     }
@@ -1189,6 +1203,11 @@ function UpdateAndSyncListBoxes {
 
     # Update the newNamesListBox
     Write-Host "Updating newNamesListBox..."
+    if ($script:invalidNamesList.Count -gt 0) {
+        foreach ($invalidItem in $script:invalidNamesList) {
+            $script:newNamesListBox.Items.Add("$invalidItem -invalid") | Out-Null
+        }
+    }
     foreach ($item in $sortedItems) {
         # Write-Host "Looking for change for $item in changesList"
         $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
@@ -1228,6 +1247,7 @@ function UpdateAndSyncListBoxes {
     }
     #>
 }
+
 
 
 # Function to sync checked items to computerCheckedListBox
