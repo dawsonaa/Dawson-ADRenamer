@@ -326,6 +326,9 @@ $colors = @(
     [CustomColor]::new(103, 58, 183)   # Deep Purple
 )
 
+# Initialize the global variable for the color index
+$global:nextColorIndex = 0
+
 # UpdateAllListBoxes function
 function ProcessCommittedChanges {
 
@@ -477,7 +480,7 @@ function ProcessCommittedChanges {
         }
         else {
             # Assign a unique color to the new change
-            $groupColor = if (-not $isValid) { [CustomColor]::new(255, 0, 0) } else { $colors[$script:changesList.Count % $colors.Count] }
+            $groupColor = if (-not $isValid) { [CustomColor]::new(255, 0, 0) } else { $colors[$global:nextColorIndex % $colors.Count] }
             # Write-Host "Assigning color $groupColor to new change entry"
             $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, @($isValid), $attemptedNames)
             $script:changesList.Add($newChange) | Out-Null
