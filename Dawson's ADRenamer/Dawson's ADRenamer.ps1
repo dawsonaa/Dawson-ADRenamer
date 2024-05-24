@@ -318,15 +318,6 @@ class CustomColor {
 
 # Define a list of unique colors for the items
 $colors = @(
-    <#
-    [System.Drawing.Color]::FromArgb(255, 243, 12, 122), # Vibrant Pink
-    [System.Drawing.Color]::FromArgb(255, 253, 175, 5), # Vibrant Orange
-    [System.Drawing.Color]::FromArgb(255, 255, 223, 0), # Bright Yellow
-    [System.Drawing.Color]::FromArgb(255, 76, 175, 80), # Light Green
-    [System.Drawing.Color]::FromArgb(255, 0, 188, 212), # Cyan
-    [System.Drawing.Color]::FromArgb(255, 103, 58, 183)   # Deep Purple
-    #>
-
     [CustomColor]::new(243, 12, 122), # Vibrant Pink
     [CustomColor]::new(243, 120, 22), # Vibrant Orange
     #[CustomColor]::new(255, 223, 0), # Bright Yellow
@@ -1169,14 +1160,18 @@ function UpdateAndSyncListBoxes {
     # Create collections for invalid and valid items grouped by change group
     $groupedInvalidItems = @{}
     $groupedValidItems = @{}
+    $groupColors = @{}
 
     # Process changesList and sort items into valid and invalid groups
     Write-Host "Processing changesList..." -ForegroundColor Green
+    $groupIndex = 0
     foreach ($change in $script:changesList) {
         $groupName = "$($change.Part0)-$($change.Part1)-$($change.Part2)-$($change.Part3)"
         if (-not $groupedInvalidItems.ContainsKey($groupName)) {
             $groupedInvalidItems[$groupName] = New-Object System.Collections.ArrayList
             $groupedValidItems[$groupName] = New-Object System.Collections.ArrayList
+            $groupColors[$groupName] = $colors[$groupIndex % $colors.Count]
+            $groupIndex++
         }
         $sortedComputerNames = $change.ComputerNames | Sort-Object
         foreach ($computerName in $sortedComputerNames) {
@@ -1217,6 +1212,10 @@ function UpdateAndSyncListBoxes {
     $selectedCheckedListBox.BeginUpdate()
 
     foreach ($group in $groupedInvalidItems.Keys) {
+        # Set group color
+        $color = $groupColors[$group]
+        Write-Host "Group: $group, Color: $color" -ForegroundColor Green
+
         # Add invalid items with "- Invalid" suffix
         foreach ($item in ($groupedInvalidItems[$group] | Sort-Object)) {
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
@@ -1251,7 +1250,12 @@ function UpdateAndSyncListBoxes {
 
     $script:newNamesListBox.EndUpdate()
     $selectedCheckedListBox.EndUpdate()
+
+    # Force a refresh of the ListBox controls
+    $script:newNamesListBox.Refresh()
+    $selectedCheckedListBox.Refresh()
 }
+
 
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
@@ -2261,6 +2265,8 @@ $commitChangesButton.Add_Click({
         $script:selectedCtrlA = 1
         ProcessCommittedChanges
         UpdateAndSyncListBoxes
+
+        $script:globalTopIndex = 0
 
         # Reset part#Input TextBoxes to default text and ReadOnly status
         function ResetTextBox($textBox) {
