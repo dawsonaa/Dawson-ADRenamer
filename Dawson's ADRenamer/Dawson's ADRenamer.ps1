@@ -1354,6 +1354,7 @@ $computerCheckedListBox.Add_KeyDown({
                     $computerCheckedListBox.SetItemChecked($i, $false)
                     $currentItem = $computerCheckedListBox.Items[$i]
                     $script:checkedItems.Remove($currentItem)
+                    $newNamesListBox.Items.Clear()
                     $itemsProcessed++
                 }
                 $script:computerCtrlA = 1  # Set to select next time
@@ -1397,6 +1398,19 @@ $computerCheckedListBox.add_ItemCheck({
             # Remove the item from script:checkedItems if unchecked
             if ($script:checkedItems.ContainsKey($item)) {
                 $script:checkedItems.Remove($item)
+            
+                # Temporarily disable updates to the list boxes
+                $selectedCheckedListBox.BeginUpdate()
+                $newNamesListBox.BeginUpdate()
+
+                # Remove the item from the selectedCheckedListBox and newNamesListBox
+                $selectedCheckedListBox.Items.Remove($item)
+                $newNamesListBox.Items.Remove($item)
+
+                # Re-enable updates to the list boxes
+                $selectedCheckedListBox.EndUpdate()
+                $newNamesListBox.EndUpdate()
+            
                 # Write-Host "Item removed: $item" -ForegroundColor Red
             }
         }
@@ -1410,6 +1424,7 @@ $computerCheckedListBox.add_ItemCheck({
         }
         $selectedCheckedListBox.EndUpdate()
     })
+
 
 
 # Attach the event handler to the CheckedListBox
