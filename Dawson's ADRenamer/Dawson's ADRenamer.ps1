@@ -1042,11 +1042,11 @@ $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontSty
 # Make sure user knows what mode they are in
 if ($online) {
     $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in ONLINE mode. Set the variable $online to $false for OFFLINE mode. (Line 104)' -ForegroundColor Yellow
+    Write-Host 'You have started this application in ONLINE mode. Set the variable $online to $false for OFFLINE mode. (Line 54)' -ForegroundColor Yellow
 }
 else {
     $form.Text = "OFFLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in OFFLINE mode. Set the variable $online to $true for ONLINE mode. (Line 104)' -ForegroundColor Yellow
+    Write-Host 'You have started this application in OFFLINE mode. Set the variable $online to $true for ONLINE mode. (Line 54)' -ForegroundColor Yellow
 }
 
 
