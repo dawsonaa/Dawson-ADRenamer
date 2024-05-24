@@ -1848,52 +1848,45 @@ $menuRemove.Add_Click({
         }
         Write-Host ""
 
+        # Create a temporary list to store changes that need to be removed
+        $tempChangesToRemove = @()
+
         foreach ($item in $selectedItems) {
             $script:checkedItems.Remove($item)
-        
+
             # Try to uncheck the selected items from the computerCheckedListBox
             $index = $computerCheckedListBox.Items.IndexOf($item)
             if ($index -ge 0) {
                 $computerCheckedListBox.SetItemChecked($index, $false)
             }
 
-            # Remove the item from the selectedCheckedListBox
+            # Remove the item from the selectedCheckedListBox and newNamesListBox
             $selectedCheckedListBox.Items.Remove($item)
-
-            # Remove the item from the newNamesListBox
             $newName = $script:originalToNewNameMap[$item]
             if ($newName) {
                 $newNamesListBox.Items.Remove($newName)
-                $script:originalToNewNameMap.Remove($item)
             }
 
-            # Remove the item from the changesList
-            $tempChangesList = $script:changesList.Clone()
-            foreach ($change in $tempChangesList) {
+            # Remove the item from changesList
+            foreach ($change in $script:changesList) {
                 if ($change.ComputerNames -contains $item) {
                     $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
-
-                    # Mark the change for removal if no computer names are left
                     if ($change.ComputerNames.Count -eq 0) {
-                        $tempChangesList.Remove($change)
+                        $tempChangesToRemove += $change
                     }
                 }
             }
-            $script:changesList = $tempChangesList
-
-            Write-Host "Selected device removed: $item"  # Outputs the names of selected devices to the console
         }
 
-        # Update the selectedCheckedListBox with sorted items
-        $selectedCheckedListBox.BeginUpdate()
-        $selectedCheckedListBox.Items.Clear()
-        $sortedCheckedItems = $script:checkedItems.Keys | Sort-Object
-        foreach ($checkedItem in $sortedCheckedItems) {
-            $selectedCheckedListBox.Items.Add($checkedItem, $script:checkedItems[$checkedItem]) | Out-Null
+        # Remove the marked changes from the changesList after iteration
+        foreach ($changeToRemove in $tempChangesToRemove) {
+            $script:changesList.Remove($changeToRemove)
         }
-        $selectedCheckedListBox.EndUpdate()
+
+        Write-Host "Selected device(s) removed: $($selectedItems -join ', ')"  # Outputs the names of selected devices to the console
         Write-Host ""
     })
+
 
 
 # Create menu context item for removing all devices within the selectedCheckedListBox
