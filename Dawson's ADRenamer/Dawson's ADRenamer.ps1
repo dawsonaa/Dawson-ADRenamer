@@ -1850,17 +1850,51 @@ $menuRemove.Add_Click({
 
         foreach ($item in $selectedItems) {
             $script:checkedItems.Remove($item)
-
+        
             # Try to uncheck the selected items from the computerCheckedListBox
             $index = $computerCheckedListBox.Items.IndexOf($item)
             if ($index -ge 0) {
                 $computerCheckedListBox.SetItemChecked($index, $false)
             }
 
+            # Remove the item from the selectedCheckedListBox
+            $selectedCheckedListBox.Items.Remove($item)
+
+            # Remove the item from the newNamesListBox
+            $newName = $script:originalToNewNameMap[$item]
+            if ($newName) {
+                $newNamesListBox.Items.Remove($newName)
+                $script:originalToNewNameMap.Remove($item)
+            }
+
+            # Remove the item from the changesList
+            $tempChangesList = $script:changesList.Clone()
+            foreach ($change in $tempChangesList) {
+                if ($change.ComputerNames -contains $item) {
+                    $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
+
+                    # Mark the change for removal if no computer names are left
+                    if ($change.ComputerNames.Count -eq 0) {
+                        $tempChangesList.Remove($change)
+                    }
+                }
+            }
+            $script:changesList = $tempChangesList
+
             Write-Host "Selected device removed: $item"  # Outputs the names of selected devices to the console
         }
+
+        # Update the selectedCheckedListBox with sorted items
+        $selectedCheckedListBox.BeginUpdate()
+        $selectedCheckedListBox.Items.Clear()
+        $sortedCheckedItems = $script:checkedItems.Keys | Sort-Object
+        foreach ($checkedItem in $sortedCheckedItems) {
+            $selectedCheckedListBox.Items.Add($checkedItem, $script:checkedItems[$checkedItem]) | Out-Null
+        }
+        $selectedCheckedListBox.EndUpdate()
         Write-Host ""
     })
+
 
 # Create menu context item for removing all devices within the selectedCheckedListBox
 $menuRemoveAll = [System.Windows.Forms.ToolStripMenuItem]::new()
