@@ -1182,7 +1182,6 @@ $listBoxHeight = 350
 # Define the script-wide variables
 $script:checkedItems = @{}
 $script:selectedCheckedItems = @{}
-
 function UpdateAndSyncListBoxes {
     # Write-Host "Updating and Syncing ListBoxes" -ForegroundColor Cyan
     $script:newNamesListBox.Items.Clear()
@@ -1298,8 +1297,6 @@ function UpdateAndSyncListBoxes {
 }
 
 
-
-
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
@@ -1396,11 +1393,13 @@ $computerCheckedListBox.add_ItemCheck({
         param($s, $e)
 
         $item = $computerCheckedListBox.Items[$e.Index]
-    
+
         if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
             # Add the item to script:checkedItems if checked
             if (-not $script:checkedItems.ContainsKey($item)) {
                 $script:checkedItems[$item] = $true
+                # Add the item directly to the selectedCheckedListBox
+                $selectedCheckedListBox.Items.Add($item, $true)
                 # Write-Host "Item added: $item" -ForegroundColor Green
             }
         }
@@ -1408,7 +1407,7 @@ $computerCheckedListBox.add_ItemCheck({
             # Remove the item from script:checkedItems if unchecked
             if ($script:checkedItems.ContainsKey($item)) {
                 $script:checkedItems.Remove($item)
-            
+
                 # Get the new name from the map
                 $newName = $script:originalToNewNameMap[$item]
 
@@ -1431,17 +1430,24 @@ $computerCheckedListBox.add_ItemCheck({
 
                 # Write-Host "Item removed: $item" -ForegroundColor Red
             }
-        }
 
-        # Update the selectedCheckedListBox with sorted items
-        $selectedCheckedListBox.BeginUpdate()
-        $selectedCheckedListBox.Items.Clear()
-        $sortedCheckedItems = $script:checkedItems.Keys | Sort-Object
-        foreach ($checkedItem in $sortedCheckedItems) {
-            $selectedCheckedListBox.Items.Add($checkedItem, $script:checkedItems[$checkedItem]) | Out-Null
+            # Remove the item from changesList
+            $tempChangesList = $script:changesList.Clone()
+            foreach ($change in $tempChangesList) {
+                if ($change.ComputerNames -contains $item) {
+                    $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
+                    # Remove the change if no computer names are left
+                    if ($change.ComputerNames.Count -eq 0) {
+                        $tempChangesList.Remove($change)
+                    }
+                }
+            }
+
+            # Update the original changesList with modified tempChangesList
+            $script:changesList = $tempChangesList
         }
-        $selectedCheckedListBox.EndUpdate()
     })
+
 
 # Attach the event handler to the CheckedListBox
 
@@ -1809,39 +1815,6 @@ $selectedCheckedListBox.add_SelectedIndexChanged({
         $colorPanel2.Invalidate()
         $colorPanel3.Invalidate()
     })
-
-# Event handler for checking items in computerCheckedListBox
-$computerCheckedListBox_ItemCheck = {
-    param($s, $e)
-
-    $item = $s.Items[$e.Index]
-    if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
-        $script:checkedItems[$item] = $true
-    }
-    else {
-        $script:checkedItems.Remove($item)
-        $script:selectedCheckedItems.Remove($item)
-    }
-    #SyncSelectedCheckedItems
-}
-
-# Event handler for checking items in selectedCheckedListBox
-$selectedCheckedListBox_ItemCheck = {
-    param($s, $e)
-
-    $item = $s.Items[$e.Index]
-    if ($e.NewValue -eq [System.Windows.Forms.CheckState]::Checked) {
-        $script:selectedCheckedItems[$item] = $true
-    }
-    else {
-        $script:selectedCheckedItems.Remove($item)
-        #SyncSelectedCheckedItems
-    }
-}
-
-# Subscribe to the ItemCheck events
-$computerCheckedListBox.Add_ItemCheck($computerCheckedListBox_ItemCheck)
-$selectedCheckedListBox.Add_ItemCheck($selectedCheckedListBox_ItemCheck)
 
 # Create the context menu for right-click actions
 $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
