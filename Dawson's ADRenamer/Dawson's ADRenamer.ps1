@@ -453,21 +453,25 @@ function ProcessCommittedChanges {
                 break
             }
         }
-
-        $temp = $script:changesList
+        # Create a temporary list to store changes that need to be removed
+        $tempChangesToRemove = @()
 
         # Remove the computer name from any previous change entries if they exist
         foreach ($change in $script:changesList) {
             if ($change -ne $existingChange -and $change.ComputerNames -contains $computerName) {
                 $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $computerName }
 
-                # Remove the change if no computer names are left
+                # Mark the change for removal if no computer names are left
                 if ($change.ComputerNames.Count -eq 0) {
-                    $temp.Remove($change)
+                    $tempChangesToRemove += $change
                 }
             }
         }
-        $script:changesList = $temp
+
+        # Remove the marked changes from the changesList
+        foreach ($changeToRemove in $tempChangesToRemove) {
+            $script:changesList.Remove($changeToRemove)
+        }
 
         if ($existingChange) {
             if (-not ($existingChange.ComputerNames -contains $computerName)) {
