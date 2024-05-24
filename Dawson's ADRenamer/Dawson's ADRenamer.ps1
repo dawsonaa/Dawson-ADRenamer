@@ -1032,7 +1032,6 @@ $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 $form = New-Object System.Windows.Forms.Form
 $form.Size = New-Object System.Drawing.Size(830, 530) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
-$form.borde
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
 
@@ -1072,6 +1071,13 @@ $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
 $versionLabel.Location = New-Object System.Drawing.Point(710, 470)
 $versionLabel.AutoSize = $true
+$versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
+
+# Add click event handler to open the URL
+$versionLabel.Add_Click({
+        Start-Process "https://github.com/dawsonaa/Dawson-ADRenamer"
+    })
+
 $form.Controls.Add($versionLabel)
 
 # Create label to display author information
@@ -1079,6 +1085,13 @@ $authorLabel = New-Object System.Windows.Forms.Label
 $authorLabel.Text = "Author: Dawson Adams (dawsonaa@ksu.edu)"
 $authorLabel.Location = New-Object System.Drawing.Point(10, 470)
 $authorLabel.AutoSize = $true
+$authorLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
+
+# Add click event handler to open Microsoft Teams chat with the specified email
+$authorLabel.Add_Click({
+        Start-Process "msteams://teams.microsoft.com/l/chat/0/0?users=dawsonaa@ksu.edu"
+    })
+
 $form.Controls.Add($authorLabel)
 
 # Define the size for the list boxes
