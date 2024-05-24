@@ -1,102 +1,52 @@
 <#
-# Dawson's AD Computer Renamer 3.5.24
-# Author: Dawson Adams (dawsonaa@ksu.edu)
-# Version: 3.5.24
-# Date: 5/21/2024
-# This script provides a comprehensive tool for renaming Active Directory (AD) computer objects. It includes functionalities to:
+.SYNOPSIS
+    A PowerShell script for renaming Active Directory computer objects based on user-defined rules and inputs.
 
-## Loading and Filtering
+.DESCRIPTION
+    This script allows administrators to rename computer objects in Active Directory (AD) based on customizable patterns and input values.
+    The script provides a graphical user interface (GUI) for selecting computers, specifying renaming patterns, and performing renaming operations.
+    The script supports both online and offline modes, and handles various scenarios including checking for logged-on users, restarting computers,
+    and logging the results of the renaming operations.
 
-- Load and filter AD computer objects based on the last logon date (LoadAndFilterComputers function).
+    Key functionalities include:
+    - Loading and filtering computers from AD or an offline dataset.
+    - Selecting computers and specifying renaming patterns.
+    - Validating new names to ensure they meet naming conventions and length restrictions.
+    - Grouping related changes by color for easier visualization.
+    - Removing selected computers or groups of computers based on their assigned colors.
+    - Generating logs and results, and triggering a Power Automate flow to upload these to SharePoint.
+    - Converting department names to strings based on OU location, with truncation logic for specific naming patterns.
+    - Supporting Ctrl+A for select all functionality in text boxes.
+    - Dynamically updating context menu items based on the changes list.
+    - Differentiating between online and offline modes for loading computer data and performing operations.
 
-## Display and Selection
+    Online Mode:
+    - Queries AD for computer objects and their last logon dates.
+    - Checks the online status of computers before renaming and restarting them.
+    - Uses provided credentials for AD operations.
 
-- Display a list of computers for selection (computerCheckedListBox and selectedCheckedListBox).
-- Allow users to specify new names for selected computers (UpdateAllListBoxes function and input text boxes).
-- Validate new names against specified naming conventions (UpdateAllListBoxes function).
-- Ensure new computer names are unique using a hash set (UpdateAllListBoxes function).
+    Offline Mode:
+    - Simulates computer data and online checks.
+    - Does not perform actual AD operations but logs actions as if they were performed. (Other than sharepoint upload)
 
-## Renaming and Logging
+.PARAMETER None
+    This script does not take any parameters.
 
-- Rename AD computer objects and log successful and failed renames (ApplyRenameButton click event handler).
-- Check if computers are online before renaming (ApplyRenameButton click event handler).
-- Check if users are logged on and handle restarts (ApplyRenameButton click event handler).
-- Display progress and results of the renaming process (ApplyRenameButton click event handler).
-- Track and display total time taken for operations (ApplyRenameButton click event handler).
-- Display and handle invalid rename guidelines (ApplyRenameButton click event handler).
+.NOTES
+    - The script uses a GUI built with Windows Forms.
+    - The script includes functions for handling AD queries, user interactions, and renaming operations.
+    - The script logs its operations and can upload results to SharePoint via a Power Automate flow.
+    - The script is designed to handle edge cases such as duplicate names, invalid names, and offline computers.
+    - The script dynamically updates context menu items based on the changes list.
+    - The script supports converting department names to strings and truncating them based on specific patterns.
+    - The script supports Ctrl+A for select all functionality in text boxes.
 
-## Custom Names
-
-- Add custom names for selected computers (context menu item for "Set/Change Custom rename").
-- Remove custom names for selected computers (context menu item for "Remove Custom rename").
-
-## Search and Filter
-
-- Implement search functionality for filtering computers (searchBox).
-- Select and set Organizational Unit (OU) for filtering (Select-OU function and refreshButton).
-- Populate a TreeView with Organizational Units from Active Directory (Select-OU function).
-- Handle OU selection and expand nodes to show child OUs (Select-OU function).
-
-## Synchronization and Context Menus
-
-- Synchronize scrolling between list boxes (Scroll event handlers for list boxes).
-- Enable context menu items based on selected and available items (contextMenu Opening event handler).
-
-## Bulk Selection and Removal
-
-- Implement Ctrl+A to mass select up to 500 items in the main list box (KeyDown event handler for computerCheckedListBox).
-- Remove selected devices from the list (context menu item for "Remove selected device(s)").
-- Remove all devices from the list (context menu item for "Remove all device(s)").
-
-## Find and Replace
-
-- Find and replace strings within selected computers (context menu item for "Find and Replace").
-
-## Operation Summaries
-
-- Display rename and restart operation summaries (ApplyRenameButton click event handler).
-- Display the list of logged on users (ApplyRenameButton click event handler).
-
-## Credentials
-
-- Ensure credentials are retained across login attempts (login section at the beginning of the script).
-
-## Custom Scroll Event
-
-- Implement a custom scroll event to keep list box's top items index synced (CustomListBox class and Scroll event handlers).
-
-## Email Drafts
-
-- Automatically generate email drafts for users of logged on devices (Show-EmailDrafts function).
-- Allow users to specify a support link that is included in email drafts (supportLinkTextBox and Update-OutlookWebDraft function).
-- Create an email draft for each selected device with the specified support link (Update-OutlookWebDraft function).
-- Remove selected items from the list using right-click context menu (Show-EmailDrafts function with context menu).
-- Display a form for users to select devices and create email drafts (Show-EmailDrafts function with threading).
-
-## Logging and Export
-
-- Create `RESULTS` and `LOGS` folders if they do not exist in the script directory (ApplyRenameButton click event handler).
-- Export CSV file with renaming results to the `RESULTS` folder (ApplyRenameButton click event handler).
-- Export log content to a .txt file in the `LOGS` folder (ApplyRenameButton click event handler).
-- Include timestamp in the CSV file name for better organization (ApplyRenameButton click event handler).
-
-## Script Relocation
-
-- Check if the current script's parent folder is named as the target folder.
-- If not, create the target parent folder.
-- Define the new script path in the target parent folder.
-- Copy the current script to the new folder.
-- Define the logs folder path and the new logs folder path in the target parent folder.
-- Move the logs folder to the new location if it exists.
-- Schedule deletion of the current script after copying.
-
-## Power Automate Integration
-
-- Convert CSV and log files to Base64 format (ApplyRenameButton click event handler).
-- Send HTTP POST request to trigger a Power Automate flow to upload the CSV and log files to SharePoint (ApplyRenameButton click event handler).
+.EXAMPLE
+    # Run the script
+    .\Dawson's ADRenamer.ps1
+#>
 
 # All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
-#>
 
 # IMPORTANT
 # $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
@@ -362,7 +312,34 @@ function Get-DepartmentString($deviceName, $part) {
 }
 
 
-# ProcessCommittedChanges function to update the name map
+<#
+.SYNOPSIS
+    Processes the committed changes for computer name renaming and updates the list boxes accordingly.
+
+.DESCRIPTION
+    This function processes the selected checked items, generates new names for each computer based on the input values and specified rules, 
+    and updates the valid and invalid name lists. It also handles checking for duplicate names, updating the changes list, 
+    and synchronizing the updated names with the relevant list boxes. It ensures that each computer name conforms to the maximum length of 15 characters,
+    handles department-specific truncation logic, and updates the changes list by grouping related changes together based on their naming components.
+
+.PARAMETER None
+    This function does not take any parameters.
+
+.NOTES
+    - The function clears existing items and lists except for the new names list.
+    - It tracks attempted names to identify duplicates.
+    - It processes each selected checked item, splits the computer name into parts, and applies input values.
+    - It checks if any part contains "dept" and replaces it with the department string.
+    - It generates new names based on the parts and checks for validity and duplicates.
+    - It updates the valid and invalid names lists accordingly.
+    - It updates the changes list with the new names and synchronizes the updated names with the list boxes.
+    - It handles color coding for different groups of changes.
+
+.EXAMPLE
+    ProcessCommittedChanges
+    This command processes the committed changes for computer name renaming and updates the list boxes.
+
+#>
 function ProcessCommittedChanges {
     # Clear existing items and lists except for the new names list
     $hashSet.Clear()
@@ -527,96 +504,6 @@ function ProcessCommittedChanges {
 
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors #>
-}
-
-# Function for setting individual custom names
-function Show-InputBox {
-    param (
-        [string]$message,
-        [string]$title,
-        [string]$defaultText
-    )
-
-    # Create the form
-    $inputBoxForm = New-Object System.Windows.Forms.Form
-    $inputBoxForm.Text = $title
-    $inputBoxForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
-    $inputBoxForm.Width = 400
-    $inputBoxForm.Height = 150
-    $inputBoxForm.MaximizeBox = $false
-    $inputBoxForm.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-
-    $inputBoxForm.BackColor = $catDark
-    $inputBoxForm.ForeColor = $white
-    $inputBoxForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
-
-    # Create the label
-    $label = New-Object System.Windows.Forms.Label
-    $label.Text = $message
-    $label.AutoSize = $true
-    $label.Top = 20
-    $label.Left = 10
-    $inputBoxForm.Controls.Add($label)
-
-    # Create the text box
-    $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.Width = 360
-    $textBox.Top = 50
-    $textBox.Left = 10
-    $textBox.MaxLength = 15
-    $textBox.Text = $defaultText
-    $textBox.add_KeyDown({
-            param($s, $e)
-            if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
-                $textBox.SelectAll()
-                $e.SuppressKeyPress = $true
-                $e.Handled = $true
-            }
-        })
-    $inputBoxForm.Controls.Add($textBox)
-
-    # Create the OK button
-    $okButton = New-Object System.Windows.Forms.Button
-    $okButton.Text = "OK"
-    $okButton.Top = 80
-    $okButton.Left = 220
-    $okButton.Width = 75
-    $okButton.Enabled = $false # Initially disabled to avoid renaming to the oldname
-    $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $inputBoxForm.Controls.Add($okButton)
-
-    # Create the Cancel button
-    $cancelButton = New-Object System.Windows.Forms.Button
-    $cancelButton.Text = "Cancel"
-    $cancelButton.Top = 80
-    $cancelButton.Left = 300
-    $cancelButton.Width = 75
-    $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $inputBoxForm.Controls.Add($cancelButton)
-
-    # Add OK and Cancel button to $form
-    $inputBoxForm.AcceptButton = $okButton
-    $inputBoxForm.CancelButton = $cancelButton
-
-    # Add event handler for text changed event
-    $textBox.Add_TextChanged({
-            if ($textBox.Text -ne $defaultText -and $textBox.Text.Trim() -ne "") {
-                $okButton.Enabled = $true
-            }
-            else {
-                $okButton.Enabled = $false
-            }
-        })
-
-    # Show the form
-    $dialogResult = $inputBoxForm.ShowDialog()
-    
-    if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
-        return $textBox.Text
-    }
-    else {
-        return $null
-    }
 }
 
 # Initialize the link for submitting a ticket
@@ -984,6 +871,31 @@ function Select-OU {
     }
 }
 
+<#
+.SYNOPSIS
+    Loads and filters computer objects from Active Directory (AD) or offline data source and updates the provided CheckedListBox with the filtered computer names.
+
+.DESCRIPTION
+    This function loads computer objects from Active Directory (online mode) or from a simulated offline data source.
+    It filters the computers based on their last logon date, excluding those that have been offline for more than 180 days.
+    The filtered and sorted computer names are then added to the provided CheckedListBox.
+    The function also includes progress tracking and user feedback during the loading process.
+
+.PARAMETER computerCheckedListBox
+    The CheckedListBox control to be updated with the filtered computer names.
+
+.NOTES
+    - The function disables the form while loading data to prevent user interaction.
+    - It filters computers based on their last logon date, excluding those offline for more than 180 days.
+    - It updates the CheckedListBox with the filtered and sorted computer names.
+    - It includes progress tracking and user feedback.
+    - It re-enables the form after loading is complete.
+    - It handles both online and offline modes.
+
+.EXAMPLE
+    LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
+    This command loads and filters computer objects and updates the provided CheckedListBox with the filtered computer names.
+#>
 function LoadAndFilterComputers {
     param (
         [System.Windows.Forms.CheckedListBox]$computerCheckedListBox
@@ -1128,6 +1040,7 @@ $form.BackColor = $catDark
 $form.ForeColor = $white
 $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
+# Make sure user knows what mode they are in
 if ($online) {
     $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
     Write-Host 'You have started this application in ONLINE mode. Set the variable $online to $false for OFFLINE mode. (Line 104)' -ForegroundColor Yellow
@@ -1175,6 +1088,31 @@ $listBoxHeight = 350
 # Define the script-wide variables
 $script:checkedItems = @{}
 $script:selectedCheckedItems = @{}
+
+<#
+.SYNOPSIS
+    Updates and synchronizes the list boxes with the latest changes in computer names.
+
+.DESCRIPTION
+    This function updates the new names list box and the selected checked list box with the latest computer name changes.
+    It processes both valid and invalid items, groups them by change groups, and assigns colors to each group. 
+    The function ensures that the list boxes are updated and refreshed to reflect the current state of the changes.
+
+.PARAMETER None
+    This function does not take any parameters.
+
+.NOTES
+    - The function clears existing items and lists except for the new names list.
+    - It groups invalid and valid items by their change groups.
+    - It assigns colors to each group for visual differentiation.
+    - It processes checked items not in the changes list separately.
+    - It updates and refreshes the new names list box and the selected checked list box with the latest changes.
+
+.EXAMPLE
+    UpdateAndSyncListBoxes
+    This command updates and synchronizes the list boxes with the latest changes in computer names.
+
+#>
 function UpdateAndSyncListBoxes {
     # Write-Host "Updating and Syncing ListBoxes" -ForegroundColor Cyan
     $script:newNamesListBox.Items.Clear()
@@ -1521,6 +1459,7 @@ $selectedCheckedListBox.add_MeasureItem({
         $e.ItemHeight = 20
     })
 
+# Updates color panels with change
 function UpdateColors {
     $selectedCheckedListBox.Invalidate()
     $colorPanel3.Invalidate()
@@ -1528,6 +1467,28 @@ function UpdateColors {
     $colorPanel2.Invalidate()
 }
 
+<#
+.SYNOPSIS
+    Updates the SelectedCheckedListBox with sorted items from the changes list and other checked items.
+
+.DESCRIPTION
+    This function updates the SelectedCheckedListBox by first adding items from the changes list, sorted alphanumerically within groups,
+    and then adding items not in any changes list group, also sorted alphanumerically. It preserves the checked state of items during the update process.
+
+.PARAMETER None
+    This function does not take any parameters.
+
+.NOTES
+    - The function initializes two collections: one for items from the changes list and another for non-change items.
+    - It sorts and combines these collections to update the SelectedCheckedListBox.
+    - It preserves and restores the checked state of items during the update.
+    - It ensures the list is updated without flicker by using BeginUpdate and EndUpdate methods.
+    - It calls UpdateAndSyncListBoxes to synchronize the updated list with other relevant controls.
+
+.EXAMPLE
+    UpdateSelectedCheckedListBox
+    This command updates the SelectedCheckedListBox with sorted items from the changes list and other checked items.
+#>
 function UpdateSelectedCheckedListBox {
     #Write-Host "UPDATESELECTED" -ForegroundColor Cyan
     $sortedItems = New-Object System.Collections.ArrayList
@@ -1872,8 +1833,6 @@ $menuRemove.Add_Click({
         Write-Host ""
     })
 
-
-
 # Create menu context item for removing all devices within the selectedCheckedListBox
 $menuRemoveAll = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemoveAll.Text = "Remove all device(s)"
@@ -2051,6 +2010,43 @@ $afterChangeLabel.Location = New-Object System.Drawing.Point(590, 15)
 $afterChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
 $form.Controls.Add($afterChangeLabel)
 
+<#
+.SYNOPSIS
+    Creates a custom TextBox control with specified properties and behavior.
+
+.DESCRIPTION
+    This function creates a custom TextBox control with specified properties such as name, default text, location, size, and maximum length.
+    The TextBox is initialized with a default appearance and behavior, including read-only mode, color settings, and event handlers for mouse and keyboard interactions.
+    The TextBox becomes editable and changes color when clicked, and supports Ctrl+A for selecting all text.
+
+.PARAMETER name
+    The name of the TextBox control.
+
+.PARAMETER defaultText
+    The default text displayed in the TextBox.
+
+.PARAMETER x
+    The X-coordinate of the TextBox location.
+
+.PARAMETER y
+    The Y-coordinate of the TextBox location.
+
+.PARAMETER size
+    The size of the TextBox control.
+
+.PARAMETER maxLength
+    The maximum length of text that can be entered in the TextBox.
+
+.NOTES
+    - The TextBox is initialized in read-only mode with a gray background and text color.
+    - When the TextBox is clicked, it becomes editable and changes its background and text color.
+    - The TextBox supports Ctrl+A for selecting all text.
+    - The default text is restored if the TextBox loses focus and no text is entered.
+
+.EXAMPLE
+    $textBox = New-CustomTextBox -name "exampleTextBox" -defaultText "Enter text here" -x 10 -y 10 -size (New-Object System.Drawing.Size(200, 20)) -maxLength 15
+    This command creates a custom TextBox with the specified properties.
+#>
 function New-CustomTextBox {
     param (
         [string]$name,
@@ -2152,7 +2148,7 @@ $form.add_MouseDown({
 
 $textBoxSize = New-Object System.Drawing.Size(150, 20)
 
-$gap = 30
+$gap = 30 # set space between bottom buttons
 
 # Calculate the total width occupied by the text boxes and their distances
 $totalWidth = (4 * $textBoxSize.Width) + (3 * $gap) # 3 gaps between 4 text boxes, each gap is 20 pixels
@@ -2232,7 +2228,41 @@ $part1Input.Add_TextChanged({ UpdateCommitChangesButton })
 $part2Input.Add_TextChanged({ UpdateCommitChangesButton })
 $part3Input.Add_TextChanged({ UpdateCommitChangesButton })
 
-# Function to create styled buttons
+<#
+.SYNOPSIS
+    Creates a styled Button control with specified properties.
+
+.DESCRIPTION
+    This function creates a styled Button control with specified properties such as text, location, size, and enabled state.
+    The Button is initialized with the provided text and dimensions, and can be optionally enabled or disabled.
+
+.PARAMETER text
+    The text displayed on the Button control.
+
+.PARAMETER x
+    The X-coordinate of the Button location.
+
+.PARAMETER y
+    The Y-coordinate of the Button location.
+
+.PARAMETER width
+    The width of the Button control. Default is 100.
+
+.PARAMETER height
+    The height of the Button control. Default is 35.
+
+.PARAMETER enabled
+    The enabled state of the Button control. Default is $true.
+
+.NOTES
+    - The Button control is created with specified dimensions and text.
+    - The Button's enabled state can be set using the enabled parameter.
+    - The Button is styled with default appearance settings.
+
+.EXAMPLE
+    $button = New-StyledButton -text "Submit" -x 50 -y 100 -width 120 -height 40 -enabled $false
+    This command creates a styled Button with the specified properties, and the Button is initially disabled.
+#>
 function New-StyledButton {
     param (
         [string]$text,
@@ -2252,8 +2282,6 @@ function New-StyledButton {
     return $button
 }
 $commitChangesButton = New-StyledButton -text "Commit Changes" -x $startX -y 430 -width 150 -height 30 -enabled $false
-
-
 $commitChangesButton.BackColor = $catPurple
 
 # Event handler for clicking the Commit Changes button
@@ -2292,11 +2320,27 @@ $commitChangesButton.Add_Click({
 
 $form.Controls.Add($commitChangesButton)
 
-
 # Add button to refresh or select a new OU to manage
 $refreshButton = New-StyledButton -text "Refresh OU" -x 195 -y 10 -width 88 -height 25 -enabled $true
 $refreshButton.BackColor = $catBlue
 
+<#
+.SYNOPSIS
+    Refreshes the computer lists and clears the current selections.
+
+.DESCRIPTION
+    This event handler function is triggered when the refresh button is clicked. It performs the following steps:
+    - Clears the items in the computerCheckedListBox, selectedCheckedListBox, and newNamesListBox.
+    - Clears the script-wide checkedItems hashtable.
+    - Calls the LoadAndFilterComputers function to reload and filter the computers, updating the computerCheckedListBox with the refreshed data.
+
+.PARAMETER None
+    This event handler does not take any parameters.
+
+.NOTES
+    - The function ensures that all current selections and items are cleared before reloading the computer list.
+    - The LoadAndFilterComputers function is responsible for repopulating the computerCheckedListBox with the updated data.
+#>
 $refreshButton.Add_Click({
         $computerCheckedListBox.Items.Clear()
         $selectedCheckedListBox.Items.Clear()
@@ -2311,7 +2355,31 @@ $applyRenameButton = New-StyledButton -text "Apply Rename" -x ($startX + 3 * ($t
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $white
 
-# ApplyRenameButton click event to start renaming process if user chooses # ONLINE
+<#
+.SYNOPSIS
+    Initiates the computer renaming process when the "Apply Rename" button is clicked.
+
+.DESCRIPTION
+    This event handler function is triggered when the "Apply Rename" button is clicked. It performs the following steps:
+    - Validates the list of invalid renames and prompts the user for action.
+    - Prompts the user to confirm the renaming operation.
+    - Iterates through the selected items and performs the renaming process.
+    - Checks the online status of each computer and attempts to rename it.
+    - Logs the results of the renaming operation and outputs the total time taken.
+    - Generates CSV and log files for the renaming results and triggers a Power Automate flow to upload the files to SharePoint.
+    - Updates the UI by removing successfully renamed computers from the list and refreshing the checked list box.
+
+.PARAMETER None
+    This event handler does not take any parameters.
+
+.NOTES
+    - The function handles both online and offline modes for the renaming process.
+    - It logs the results of the renaming, restart, and user login checks.
+    - It generates CSV and log files for the renaming results and uploads them to SharePoint.
+    - The UI is updated to reflect the changes after the renaming process is completed.
+
+#>
+# ApplyRenameButton click event to start renaming process if user chooses
 $applyRenameButton.Add_Click({
         $applyRenameButton.Enabled = $false
 
