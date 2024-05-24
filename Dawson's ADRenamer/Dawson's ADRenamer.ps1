@@ -361,8 +361,6 @@ function Get-DepartmentString($deviceName) {
 
 # Update the ProcessCommittedChanges function to update the name map
 function ProcessCommittedChanges {
-    # Check if any relevant checkboxes are checked
-    $anyCheckboxChecked = (-not $part0Input.ReadOnly) -or (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
 
     # Clear existing items and lists except for the new names list
     $hashSet.Clear()
@@ -515,9 +513,6 @@ function ProcessCommittedChanges {
             $script:changesList.Add($newChange) | Out-Null
         }
     }
-
-    # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
-    $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
     <# Print the changesList for debugging
     Write-Host "`nChanges List:" -ForegroundColor red
@@ -1510,7 +1505,13 @@ $selectedCheckedListBox.add_ItemCheck({
             $colorPanel.Invalidate()
             $colorPanel2.Invalidate()
         }
-        
+
+        if (($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) -and $selectedCheckedListBox.CheckedItems.Count -gt 0) {
+            $commitChangesButton.Enabled = $true
+        }
+        else {
+            $commitChangesButton.Enabled = $false
+        }  
     })
 
 
