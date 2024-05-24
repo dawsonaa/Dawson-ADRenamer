@@ -101,7 +101,7 @@
 # IMPORTANT
 # $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
 # $true will run the application with imported AD modules and will request credentials to be used for actual AD device name manipulation
-$online = $true
+$online = $false
 
 # Load required assemblies
 Add-Type -AssemblyName System.Windows.Forms
@@ -346,7 +346,16 @@ function Get-DepartmentString($deviceName) {
         }
     }
     else {
-        return "deptoffline"
+
+        $ouLocation = "/Dept/OFFLN/Workstations/"
+
+        # Extract the string directly after "Dept/"
+        if ($ouLocation -match "Dept/([^/]+)") {
+            return $matches[1]
+        }
+        else {
+            return "deptnotfound"
+        }
     }
 }
 
@@ -403,11 +412,38 @@ function ProcessCommittedChanges {
             }
         }
 
-        # Check if any part contains "dept" (case insensitive) and replace with $deptString
-        if ($part0 -match "(?i)dept") { $part0 = Get-DepartmentString($computerName) }
-        if ($part1 -match "(?i)dept") { $part1 = Get-DepartmentString($computerName) }
-        if ($part2 -match "(?i)dept") { $part2 = Get-DepartmentString($computerName) }
-        if ($part3 -match "(?i)dept") { $part3 = Get-DepartmentString($computerName) }
+        # Check if any part contains "dept" (case insensitive) and replace with $deptString with truncation logic
+        $deptString = Get-DepartmentString($computerName)
+
+        # Function to process parts with "dept" and optional number for truncation
+        function ProcessDeptPart($part) {
+            if ($part -match "(?i)(\d*)dept(\d*)") {
+                $prefixLength = if ($matches[1] -and $matches[1] -ge 2 -and $matches[1] -le 5) { [int]::Parse($matches[1]) } else { $null }
+                $suffixLength = if ($matches[2] -and $matches[2] -ge 2 -and $matches[2] -le 5) { [int]::Parse($matches[2]) } else { $null }
+        
+                if ($suffixLength) {
+                    # If the number is after "dept", truncate from the left
+                    return $deptString.Substring(0, [Math]::Min($deptString.Length, $suffixLength))
+                }
+                elseif ($prefixLength) {
+                    # If the number is before "dept", truncate from the right
+                    $startIndex = [Math]::Max(0, $deptString.Length - $prefixLength)
+                    return $deptString.Substring($startIndex, $prefixLength)
+                }
+                else {
+                    # Default truncation to 5 characters if no valid number is found
+                    return $deptString.Substring(0, [Math]::Min($deptString.Length, 5))
+                }
+            }
+            else {
+                return $part
+            }
+        }
+
+        $part0 = ProcessDeptPart($part0)
+        $part1 = ProcessDeptPart($part1)
+        $part2 = if ($part2) { ProcessDeptPart($part2) } else { $null }
+        $part3 = if ($part3) { ProcessDeptPart($part3) } else { $null }
 
         Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
 
@@ -453,6 +489,7 @@ function ProcessCommittedChanges {
                 break
             }
         }
+
         # Create a temporary list to store changes that need to be removed
         $tempChangesToRemove = @()
 
@@ -503,7 +540,6 @@ function ProcessCommittedChanges {
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
-
 
 
 # Function for setting individual custom names
