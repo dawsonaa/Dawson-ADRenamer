@@ -1442,19 +1442,21 @@ $computerCheckedListBox.add_ItemCheck({
             }
 
             # Remove the item from changesList
-            $tempChangesList = $script:changesList.Clone()
-            foreach ($change in $tempChangesList) {
+            $tempChangesToRemove = @()
+            foreach ($change in $script:changesList) {
                 if ($change.ComputerNames -contains $item) {
                     $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
-                    # Remove the change if no computer names are left
+                    # Mark the change for removal if no computer names are left
                     if ($change.ComputerNames.Count -eq 0) {
-                        $tempChangesList.Remove($change)
+                        $tempChangesToRemove += $change
                     }
                 }
             }
 
-            # Update the original changesList with modified tempChangesList
-            $script:changesList = $tempChangesList
+            # Remove the marked changes from the changesList after iteration
+            foreach ($changeToRemove in $tempChangesToRemove) {
+                $script:changesList.Remove($changeToRemove)
+            }
         }
     })
 
@@ -1898,6 +1900,10 @@ $menuRemoveAll.Add_Click({
         $form.Enabled = $false
         Write-Host "Form disabled for remove all"
         $script:customNamesList = @()
+
+        # Create a temporary list to store changes that need to be removed
+        $tempChangesToRemove = @()
+
         foreach ($item in $selectedItems) {
             $script:checkedItems.Remove($item)
 
@@ -1907,14 +1913,34 @@ $menuRemoveAll.Add_Click({
                 $computerCheckedListBox.SetItemChecked($index, $false)
             }
 
-            #Write-Host "device removed: $item"  # Outputs the names of selected devices to the console
+            # Remove the item from the selectedCheckedListBox and newNamesListBox
+            $selectedCheckedListBox.Items.Remove($item)
+            $newName = $script:originalToNewNameMap[$item]
+            if ($newName) {
+                $newNamesListBox.Items.Remove($newName)
+            }
+
+            # Remove the item from changesList
+            foreach ($change in $script:changesList) {
+                if ($change.ComputerNames -contains $item) {
+                    $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
+                    if ($change.ComputerNames.Count -eq 0) {
+                        $tempChangesToRemove += $change
+                    }
+                }
+            }
         }
+
+        # Remove the marked changes from the changesList after iteration
+        foreach ($changeToRemove in $tempChangesToRemove) {
+            $script:changesList.Remove($changeToRemove)
+        }
+
         $form.Enabled = $true
         Write-Host "Form enabled"
-        Write-Host ""
-
-        # UpdateAllListBoxes  # Call this function if it updates the UI based on changes
+        Write-Host "All devices removed from the list"
     })
+
 
 # Create context menu item for adding a custom name if one item in the selectedCheckedListBox is selected
 $menuAddCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
