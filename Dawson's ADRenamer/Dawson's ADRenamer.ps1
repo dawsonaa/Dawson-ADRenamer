@@ -359,6 +359,7 @@ function Get-DepartmentString($deviceName) {
     }
 }
 
+# Update the ProcessCommittedChanges function to update the name map
 function ProcessCommittedChanges {
     # Check if any relevant checkboxes are checked
     $anyCheckboxChecked = (-not $part0Input.ReadOnly) -or (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
@@ -459,6 +460,9 @@ function ProcessCommittedChanges {
         $attemptedNames = @($newName)
         $duplicate = @($isDuplicate)
 
+        # Update the name map with the new attempted name
+        UpdateNameMap -originalName $computerName -newName $newName
+
         # Check if an existing change matches
         $existingChange = $null
         foreach ($change in $script:changesList) {
@@ -512,17 +516,6 @@ function ProcessCommittedChanges {
         }
     }
 
-    # Second pass to mark all items with the same new name as duplicates
-    foreach ($change in $script:changesList) {
-        foreach ($name in $change.AttemptedNames) {
-            if ($attemptedNamesTracker[$name] -gt 1) {
-                $index = [array]::IndexOf($change.AttemptedNames, $name)
-                $change.Duplicate[$index] = $true
-                $change.Valid[$index] = $false
-            }
-        }
-    }
-
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
@@ -538,7 +531,6 @@ function ProcessCommittedChanges {
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
-
 
 
 
@@ -1381,6 +1373,24 @@ $computerCheckedListBox.Add_KeyDown({
         }
     })
 
+# Initialize a dictionary to map the original computer name to the new attempted name
+$script:originalToNewNameMap = @{}
+
+# Function to update the dictionary when names change
+function UpdateNameMap {
+    param (
+        [string]$originalName,
+        [string]$newName
+    )
+
+    if ($newName) {
+        $script:originalToNewNameMap[$originalName] = $newName
+    }
+    else {
+        $script:originalToNewNameMap.Remove($originalName)
+    }
+}
+
 # Handle the ItemCheck event to update script:checkedItems
 $computerCheckedListBox.add_ItemCheck({
         param($s, $e)
@@ -1399,18 +1409,26 @@ $computerCheckedListBox.add_ItemCheck({
             if ($script:checkedItems.ContainsKey($item)) {
                 $script:checkedItems.Remove($item)
             
+                # Get the new name from the map
+                $newName = $script:originalToNewNameMap[$item]
+
                 # Temporarily disable updates to the list boxes
                 $selectedCheckedListBox.BeginUpdate()
                 $newNamesListBox.BeginUpdate()
 
                 # Remove the item from the selectedCheckedListBox and newNamesListBox
                 $selectedCheckedListBox.Items.Remove($item)
-                $newNamesListBox.Items.Remove($item)
+                if ($newName) {
+                    $newNamesListBox.Items.Remove($newName)
+                }
 
                 # Re-enable updates to the list boxes
                 $selectedCheckedListBox.EndUpdate()
                 $newNamesListBox.EndUpdate()
-            
+
+                # Remove the item from the map
+                $script:originalToNewNameMap.Remove($item)
+
                 # Write-Host "Item removed: $item" -ForegroundColor Red
             }
         }
@@ -1424,8 +1442,6 @@ $computerCheckedListBox.add_ItemCheck({
         }
         $selectedCheckedListBox.EndUpdate()
     })
-
-
 
 # Attach the event handler to the CheckedListBox
 
@@ -1474,6 +1490,9 @@ $selectedCheckedListBox.add_ItemCheck({
                 $script:selectedCheckedItems[$item] = $true
                 # Write-Host "Item added: $item" -ForegroundColor Green
             }
+            $colorPanel3.Invalidate()
+            $colorPanel.Invalidate()
+            $colorPanel2.Invalidate()
         }
         elseif ($e.NewValue -eq [System.Windows.Forms.CheckState]::Unchecked) {
             # Remove the item from script:selectedCheckedItems if unchecked
@@ -1481,7 +1500,11 @@ $selectedCheckedListBox.add_ItemCheck({
                 $script:selectedCheckedItems.Remove($item)
                 # Write-Host "Item removed: $item" -ForegroundColor Red
             }
+            $colorPanel3.Invalidate()
+            $colorPanel.Invalidate()
+            $colorPanel2.Invalidate()
         }
+        
     })
 
 
