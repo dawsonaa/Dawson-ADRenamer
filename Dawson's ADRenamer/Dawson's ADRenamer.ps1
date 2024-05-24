@@ -101,7 +101,7 @@
 # IMPORTANT
 # $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
 # $true will run the application with imported AD modules and will request credentials to be used for actual AD device name manipulation
-$online = $false
+$online = $true
 
 # Load required assemblies
 Add-Type -AssemblyName System.Windows.Forms
@@ -329,9 +329,29 @@ $colors = @(
 # Initialize the global variable for the color index
 $global:nextColorIndex = 0
 
+# Function to get the department string
+function Get-DepartmentString($deviceName) {
+    # Get the OU location of the device
+
+    if ($online) {
+        $device = Get-ADComputer -Identity $deviceName -Properties CanonicalName
+        $ouLocation = $device.CanonicalName -replace "^CN=[^,]+,", ""
+
+        # Extract the string directly after "Dept/"
+        if ($ouLocation -match "Dept/([^/]+)") {
+            return $matches[1]
+        }
+        else {
+            return "deptnotfound"
+        }
+    }
+    else {
+        return "deptoffline"
+    }
+}
+
 # UpdateAllListBoxes function
 function ProcessCommittedChanges {
-
     # Check if any relevant checkboxes are checked
     $anyCheckboxChecked = (-not $part0Input.ReadOnly) -or (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
 
@@ -383,6 +403,12 @@ function ProcessCommittedChanges {
             }
         }
 
+        # Check if any part contains "dept" (case insensitive) and replace with $deptString
+        if ($part0 -match "(?i)dept") { $part0 = Get-DepartmentString($computerName) }
+        if ($part1 -match "(?i)dept") { $part1 = Get-DepartmentString($computerName) }
+        if ($part2 -match "(?i)dept") { $part2 = Get-DepartmentString($computerName) }
+        if ($part3 -match "(?i)dept") { $part3 = Get-DepartmentString($computerName) }
+
         Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
 
         if ($part3) {
@@ -415,29 +441,11 @@ function ProcessCommittedChanges {
         # Check if an existing change matches
         $existingChange = $null
         foreach ($change in $script:changesList) {
-
-            <#
-            Write-Host "Comparing changes for $computerName..."
-            Write-Host "Part0: '$($change.Part0)' vs '$part0InputValue'"
-            Write-Host "Part1: '$($change.Part1)' vs '$part1InputValue'"
-            Write-Host "Part2: '$($change.Part2)' vs '$part2InputValue'"
-            Write-Host "Part3: '$($change.Part3)' vs '$part3InputValue'"
-            Write-Host "Valid: '$($change.Valid)' vs '$isValid'"
-            #>
-
             $part0Comparison = ($change.Part0 -eq $part0InputValue -or ([string]::IsNullOrEmpty($change.Part0) -and [string]::IsNullOrEmpty($part0InputValue)))
             $part1Comparison = ($change.Part1 -eq $part1InputValue -or ([string]::IsNullOrEmpty($change.Part1) -and [string]::IsNullOrEmpty($part1InputValue)))
             $part2Comparison = ($change.Part2 -eq $part2InputValue -or ([string]::IsNullOrEmpty($change.Part2) -and [string]::IsNullOrEmpty($part2InputValue)))
             $part3Comparison = ($change.Part3 -eq $part3InputValue -or ([string]::IsNullOrEmpty($change.Part3) -and [string]::IsNullOrEmpty($part3InputValue)))
             $validComparison = ($change.Valid -eq $isValid)
-
-            <#
-            Write-Host "Part0 Comparison: $part0Comparison"
-            Write-Host "Part1 Comparison: $part1Comparison"
-            Write-Host "Part2 Comparison: $part2Comparison"
-            Write-Host "Part3 Comparison: $part3Comparison"
-            Write-Host "Valid Comparison: $validComparison"
-            #>
 
             if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison -and $validComparison) {
                 Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
@@ -450,16 +458,11 @@ function ProcessCommittedChanges {
 
         # Remove the computer name from any previous change entries if they exist
         foreach ($change in $script:changesList) {
-            # Write-Host "Checking $($change.ComputerNames) for $computerName removal..."
-            # Write-Host "does it contain: " ($change.ComputerNames -contains $computerName)
-            # Write-Host "does change equal existing: " ($change -eq $existingChange)
             if ($change -ne $existingChange -and $change.ComputerNames -contains $computerName) {
-                # Write-Host "Removing $computerName from previous change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)" -ForegroundColor DarkRed
                 $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $computerName }
 
                 # Remove the change if no computer names are left
                 if ($change.ComputerNames.Count -eq 0) {
-                    # Write-Host "Removing empty change entry: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3)"-ForegroundColor DarkRed
                     $temp.Remove($change)
                 }
             }
@@ -467,21 +470,16 @@ function ProcessCommittedChanges {
         $script:changesList = $temp
 
         if ($existingChange) {
-            # Write-Host "Merging with existing change for parts: Part0: $($existingChange.Part0), Part1: $($existingChange.Part1), Part2: $($existingChange.Part2), Part3: $($existingChange.Part3), Valid: $($existingChange.Valid)" -ForegroundColor DarkRed
             if (-not ($existingChange.ComputerNames -contains $computerName)) {
                 $existingChange.ComputerNames += $computerName
             }
-            else {
-                # Write-Host "$computerName is already in this change"
-            }
-            # Add the new attempted name to the existing change
             $existingChange.AttemptedNames += $newName
             $existingChange.Valid += $isValid
         }
         else {
             # Assign a unique color to the new change
             $groupColor = if (-not $isValid) { [CustomColor]::new(255, 0, 0) } else { $colors[$global:nextColorIndex % $colors.Count] }
-            # Write-Host "Assigning color $groupColor to new change entry"
+            $global:nextColorIndex++
             $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, @($isValid), $attemptedNames)
             $script:changesList.Add($newChange) | Out-Null
         }
@@ -491,7 +489,7 @@ function ProcessCommittedChanges {
     $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
     # Print the changesList for debugging
-    Write-Host "`nChanges List:" -ForeGroundColor red
+    Write-Host "`nChanges List:" -ForegroundColor red
     foreach ($change in $script:changesList) {
         Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
@@ -501,6 +499,7 @@ function ProcessCommittedChanges {
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
+
 
 
 # Function for setting individual custom names
@@ -1018,8 +1017,8 @@ function LoadAndFilterComputers {
                 $computerCheckedListBox.Items.Add($_.Name, $false) | Out-Null
                 $loadedCount++
                 $deviceTimer++
-                Write-Host "loaded:" $_.Name
-                Write-Host ""
+                # Write-Host "loaded:" $_.Name
+                # Write-Host ""
                 # Update the progress bar every 150 devices
                 if ($deviceTimer -ge $deviceRefresh) {
                     $deviceTimer = 0
@@ -2300,7 +2299,6 @@ $refreshButton.Add_Click({
         $selectedCheckedListBox.Items.Clear()
         $newNamesListBox.Items.Clear()
         $script:checkedItems.Clear()
-        $script:selectedItems.Clear()
 
         LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
     })
