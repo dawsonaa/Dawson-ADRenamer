@@ -2954,6 +2954,140 @@ $applyRenameButton.Add_Click({
 
 $form.Controls.Add($applyRenameButton) 
 
+# Create the root context menu
+$formContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+
+# Create main menu items
+$menuItemRemoveAll = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemRemoveAll.Text = "Remove All"
+
+$menuItemRemoveSelected = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemRemoveSelected.Text = "Remove Selected"
+
+$menuItemRemoveGroup = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuItemRemoveGroup.Text = "Remove items of group"
+
+# Add the main menu items to the context menu
+$formContextMenu.Items.Add($menuItemRemoveAll)
+$formContextMenu.Items.Add($menuItemRemoveSelected)
+$formContextMenu.Items.Add($menuItemRemoveGroup)
+
+# Assign the context menu to the form
+$form.ContextMenuStrip = $formContextMenu
+
+# Define the functions for menu actions
+function RemoveItemsOfGroup {
+    param (
+        [CustomColor]$groupColor
+    )
+
+    $itemsToRemove = @()
+    foreach ($change in $script:changesList) {
+        if ($change.GroupColor -eq $groupColor) {
+            $itemsToRemove += $change.ComputerNames
+        }
+    }
+
+    foreach ($item in $itemsToRemove) {
+        $script:checkedItems.Remove($item)
+        $selectedCheckedListBox.Items.Remove($item)
+
+        $newName = $script:originalToNewNameMap[$item]
+        if ($newName) {
+            $newNamesListBox.Items.Remove($newName)
+        }
+
+        # Remove the item from changesList
+        $tempChangesToRemove = @()
+        foreach ($change in $script:changesList) {
+            if ($change.ComputerNames -contains $item) {
+                $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
+                if ($change.ComputerNames.Count -eq 0) {
+                    $tempChangesToRemove += $change
+                }
+            }
+        }
+        foreach ($changeToRemove in $tempChangesToRemove) {
+            $script:changesList.Remove($changeToRemove)
+        }
+    }
+    Write-Host "Items with the specified color removed."
+}
+
+function CreateColorSubmenuItems {
+    param (
+        [System.Windows.Forms.ToolStripMenuItem]$parentMenuItem,
+        [System.Collections.Hashtable]$groupColors
+    )
+
+    # Clear existing submenu items
+    $parentMenuItem.DropDownItems.Clear()
+
+    foreach ($group in $groupColors.Keys) {
+        $color = $groupColors[$group]
+        $submenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+        $submenuItem.Text = "$group ($color)"
+        $submenuItem.BackColor = [System.Drawing.Color]::FromArgb($color.R, $color.G, $color.B)
+
+        # Add event handler for the submenu item
+        $submenuItem.Add_Click({
+                RemoveItemsOfGroup -groupColor $color
+            })
+
+        $parentMenuItem.DropDownItems.Add($submenuItem)
+    }
+}
+
+# Populate the context menu with color-based group items on form load
+$form.add_Load({
+        $groupColors = @{}
+        foreach ($change in $script:changesList) {
+            $colorKey = "$($change.GroupColor.R),$($change.GroupColor.G),$($change.GroupColor.B)"
+            if (-not $groupColors.ContainsKey($colorKey)) {
+                $groupColors[$colorKey] = $change.GroupColor
+            }
+        }
+        CreateColorSubmenuItems -parentMenuItem $menuItemRemoveGroup -groupColors $groupColors
+    })
+
+# Define other menu item actions
+$menuItemRemoveAll.Add_Click({
+        $script:checkedItems.Clear()
+        $selectedCheckedListBox.Items.Clear()
+        $newNamesListBox.Items.Clear()
+        $script:changesList.Clear()
+        Write-Host "All items removed."
+    })
+
+$menuItemRemoveSelected.Add_Click({
+        $selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+
+        foreach ($item in $selectedItems) {
+            $script:checkedItems.Remove($item)
+            $selectedCheckedListBox.Items.Remove($item)
+        
+            $newName = $script:originalToNewNameMap[$item]
+            if ($newName) {
+                $newNamesListBox.Items.Remove($newName)
+            }
+
+            # Remove the item from changesList
+            $tempChangesToRemove = @()
+            foreach ($change in $script:changesList) {
+                if ($change.ComputerNames -contains $item) {
+                    $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
+                    if ($change.ComputerNames.Count -eq 0) {
+                        $tempChangesToRemove += $change
+                    }
+                }
+            }
+            foreach ($changeToRemove in $tempChangesToRemove) {
+                $script:changesList.Remove($changeToRemove)
+            }
+        }
+        Write-Host "Selected items removed."
+    })
+
 # Call the function to load and filter computers
 LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
     
