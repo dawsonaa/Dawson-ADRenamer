@@ -370,11 +370,11 @@ function ProcessCommittedChanges {
     $script:validNamesList = @()
     $script:invalidNamesList = @()
 
-    Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
+    # Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
 
     # Process selected checked items
     foreach ($computerName in $script:selectedCheckedItems.Keys) {
-        Write-Host "Processing computer: $computerName"
+        # Write-Host "Processing computer: $computerName"
         
         $parts = $computerName -split '-'
         $part0 = $parts[0]
@@ -382,14 +382,14 @@ function ProcessCommittedChanges {
         $part2 = if ($parts.Count -ge 3) { $parts[2] } else { $null }
         $part3 = if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null }
 
-        Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkBlue
+        # Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkBlue
 
         $part0InputValue = if (-not $part0Input.ReadOnly) { $part0Input.Text } else { $null }
         $part1InputValue = if (-not $part1Input.ReadOnly) { $part1Input.Text } else { $null }
         $part2InputValue = if (-not $part2Input.ReadOnly) { $part2Input.Text } else { $null }
         $part3InputValue = if (-not $part3Input.ReadOnly) { $part3Input.Text } else { $null }
 
-        Write-Host "Input values: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
+        # Write-Host "Input values: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
 
         if ($part0InputValue) { $part0 = $part0InputValue }
         if ($part1InputValue) { $part1 = $part1InputValue }
@@ -445,7 +445,7 @@ function ProcessCommittedChanges {
         $part2 = if ($part2) { ProcessDeptPart($part2) } else { $null }
         $part3 = if ($part3) { ProcessDeptPart($part3) } else { $null }
 
-        Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
+        # Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
 
         if ($part3) {
             $newName = "$part0-$part1-$part2-$part3"
@@ -457,7 +457,7 @@ function ProcessCommittedChanges {
             $newName = "$part0-$part1"
         }
 
-        Write-Host "New name: $newName"
+        # Write-Host "New name: $newName"
         $isValid = $newName.Length -le 15
         if ($isValid) {
             if ($hashSet.Add($newName)) {
@@ -484,7 +484,7 @@ function ProcessCommittedChanges {
             $validComparison = ($change.Valid -eq $isValid)
 
             if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison -and $validComparison) {
-                Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
+                # Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
                 $existingChange = $change
                 break
             }
@@ -529,13 +529,13 @@ function ProcessCommittedChanges {
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
-    # Print the changesList for debugging
+    <# Print the changesList for debugging
     Write-Host "`nChanges List:" -ForegroundColor red
     foreach ($change in $script:changesList) {
         Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
         Write-Host "AttemptedNames: $($change.AttemptedNames -join ', ')"
-    }
+    } #>
 
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
@@ -1191,7 +1191,7 @@ $script:checkedItems = @{}
 $script:selectedCheckedItems = @{}
 
 function UpdateAndSyncListBoxes {
-    Write-Host "Updating and Syncing ListBoxes" -ForegroundColor Cyan
+    # Write-Host "Updating and Syncing ListBoxes" -ForegroundColor Cyan
     $script:newNamesListBox.Items.Clear()
     $selectedCheckedListBox.Items.Clear()
     $itemsToRemove = New-Object System.Collections.ArrayList
@@ -1205,7 +1205,7 @@ function UpdateAndSyncListBoxes {
     $groupColors = @{}
 
     # Process changesList and sort items into valid and invalid groups
-    Write-Host "Processing changesList..." -ForegroundColor Green
+    #Write-Host "Processing changesList..." -ForegroundColor Green
     $groupIndex = 0
     foreach ($change in $script:changesList) {
         $groupName = "$($change.Part0)-$($change.Part1)-$($change.Part2)-$($change.Part3)"
@@ -1229,7 +1229,7 @@ function UpdateAndSyncListBoxes {
     }
 
     # Process checkedItems not in changesList
-    Write-Host "Processing checkedItems not in changesList..." -ForegroundColor Blue
+    #Write-Host "Processing checkedItems not in changesList..." -ForegroundColor Blue
     $nonChangeItems = New-Object System.Collections.ArrayList
     foreach ($item in $script:checkedItems.Keys) {
         $isInChangeList = $false
@@ -1245,18 +1245,18 @@ function UpdateAndSyncListBoxes {
     }
 
     # Sort the non-change items alphanumerically
-    Write-Host "Sorting non-change items..." -ForegroundColor Magenta
+    #Write-Host "Sorting non-change items..." -ForegroundColor Magenta
     $sortedNonChangeItems = $nonChangeItems | Sort-Object
 
     # Update both ListBoxes
-    Write-Host "Updating ListBoxes..." -ForegroundColor Yellow
+    #Write-Host "Updating ListBoxes..." -ForegroundColor Yellow
     $script:newNamesListBox.BeginUpdate()
     $selectedCheckedListBox.BeginUpdate()
 
     foreach ($group in $groupedInvalidItems.Keys) {
         # Set group color
-        $color = $groupColors[$group]
-        Write-Host "Group: $group, Color: $color" -ForegroundColor Green
+        # $color = $groupColors[$group]
+        # Write-Host "Group: $group, Color: $color" -ForegroundColor Green
 
         # Add invalid items with "- Invalid" suffix
         foreach ($item in ($groupedInvalidItems[$group] | Sort-Object)) {
@@ -1284,9 +1284,9 @@ function UpdateAndSyncListBoxes {
     }
 
     # Remove items marked for removal
-    Write-Host "Removing items marked for removal..." -ForegroundColor Red
+    # Write-Host "Removing items marked for removal..." -ForegroundColor Red
     foreach ($item in $itemsToRemove) {
-        Write-Host "Removing $item from newNamesListBox" -ForegroundColor Red
+        # Write-Host "Removing $item from newNamesListBox" -ForegroundColor Red
         $script:newNamesListBox.Items.Remove($item)
     }
 
@@ -1475,7 +1475,7 @@ function UpdateColors {
 }
 
 function UpdateSelectedCheckedListBox {
-    Write-Host "UPDATESELECTED" -ForegroundColor Cyan
+    #Write-Host "UPDATESELECTED" -ForegroundColor Cyan
     $sortedItems = New-Object System.Collections.ArrayList
     $nonChangeItems = New-Object System.Collections.ArrayList
 
@@ -1497,28 +1497,29 @@ function UpdateSelectedCheckedListBox {
             }
         }
         if (-not $isInChangeList) {
-            Write-Host "Adding non-change item: $item" -ForegroundColor Yellow
+            # Write-Host "Adding non-change item: $item" -ForegroundColor Yellow
             $nonChangeItems.Add($item) | Out-Null
         }
+        <#
         else {
             Write-Host "Item in change list, skipping: $item" -ForegroundColor Green
-        }
+        } #>
     }
 
     # Sort the non-change items alphanumerically
     $sortedNonChangeItems = $nonChangeItems | Sort-Object
 
     # Debugging: Print non-change items before sorting
-    Write-Host "`nNon-change items before sorting:"
+    <# Write-Host "`nNon-change items before sorting:"
     foreach ($item in $nonChangeItems) {
         Write-Host $item
-    }
+    } #>
 
     # Debugging: Print non-change items after sorting
-    Write-Host "`nNon-change items after sorting:"
+    <# Write-Host "`nNon-change items after sorting:"
     foreach ($item in $sortedNonChangeItems) {
         Write-Host $item
-    }
+    } #>
 
     # Combine the sorted change items and sorted non-change items
     if ($sortedNonChangeItems.Count -gt 0) {
@@ -1549,10 +1550,10 @@ function UpdateSelectedCheckedListBox {
     }
 
     # Print the items in the selectedCheckedListBox
-    Write-Host "`nSelectedCheckedListBox Items in Order:"
+    <# Write-Host "`nSelectedCheckedListBox Items in Order:"
     foreach ($item in $selectedCheckedListBox.Items) {
         Write-Host $item
-    }
+    } #>
 
     UpdateAndSyncListBoxes
 }
@@ -2241,16 +2242,16 @@ $part3Input = New-CustomTextBox -name "part3Input" -defaultText "part3Name" -x (
 $form.Controls.Add($part3Input)
 
 $part0Input.Add_TextChanged({
-        if ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) {
+        if (($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) -and $selectedCheckedListBox.CheckedItems.Count -gt 0) {
             $commitChangesButton.Enabled = $true
         }
         else {
             $commitChangesButton.Enabled = $false
-        }
+        } 
     })
 
 $part1Input.Add_TextChanged({
-        if ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) {
+        if (($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) -and $selectedCheckedListBox.CheckedItems.Count -gt 0) {
             $commitChangesButton.Enabled = $true
         }
         else {
@@ -2259,7 +2260,7 @@ $part1Input.Add_TextChanged({
     })
 
 $part2Input.Add_TextChanged({
-        if ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) {
+        if (($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) -and $selectedCheckedListBox.CheckedItems.Count -gt 0) {
             $commitChangesButton.Enabled = $true
         }
         else {
@@ -2275,6 +2276,24 @@ $part3Input.Add_TextChanged({
             $commitChangesButton.Enabled = $false
         }
     })
+
+# Function to check conditions and enable/disable the commit button
+function UpdateCommitChangesButton {
+    if (($part0Input.Text -ne "" -and $part1Input.Text -ne "" -and $part2Input.Text -ne "" -and $part3Input.Text -ne "") -and 
+        ($part0Input.ReadOnly -ne $true -or $part1Input.ReadOnly -ne $true -or $part2Input.ReadOnly -ne $true -or $part3Input.ReadOnly -ne $true) -and 
+        $selectedCheckedListBox.CheckedItems.Count -gt 0) {
+        $commitChangesButton.Enabled = $true
+    }
+    else {
+        $commitChangesButton.Enabled = $false
+    }
+}
+
+# Attach the UpdateCommitChangesButton function to the TextChanged events of the text boxes
+$part0Input.Add_TextChanged({ UpdateCommitChangesButton })
+$part1Input.Add_TextChanged({ UpdateCommitChangesButton })
+$part2Input.Add_TextChanged({ UpdateCommitChangesButton })
+$part3Input.Add_TextChanged({ UpdateCommitChangesButton })
 
 # Function to create styled buttons
 function New-StyledButton {
