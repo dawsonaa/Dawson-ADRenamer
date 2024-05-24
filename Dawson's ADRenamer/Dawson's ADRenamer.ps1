@@ -2466,7 +2466,7 @@ $applyRenameButton.Add_Click({
                     Microsoft.PowerShell.Utility\Write-Host -Object $Object
                 }
             }
-    
+
             $form.Enabled = $false
             Write-Host "Form disabled for rename operation, loading..."
             Write-Host " "
@@ -2481,9 +2481,17 @@ $applyRenameButton.Add_Click({
                         $oldName = $change.ComputerNames[$index]
                         $newName = $change.AttemptedNames[$index]
                         $isValid = $change.Valid[$index]
+                        $isDuplicate = $change.Duplicate[$index]
+
+                        if ($isDuplicate) {
+                            Write-Host "$oldName has been ignored due to duplicate name" -ForegroundColor Magenta
+                            Write-Host " "
+                            continue
+                        }
 
                         if (-not $isValid) {
                             Write-Host "$oldName has been ignored due to invalid naming scheme" -ForegroundColor Red
+                            Write-Host " "
                             continue
                         }
 
@@ -2528,11 +2536,11 @@ $applyRenameButton.Add_Click({
                         # Output the time taken to check if computer is online
                         Write-Host "Time taken to check if $oldName was online: $($checkOfflineTime.TotalSeconds) seconds" -ForegroundColor Blue
                         $individualTime = $individualTime.Add($checkOfflineTime)
-                
+
                         if ($online) {
                             $testComp = Get-WmiObject Win32_ComputerSystem -ComputerName $oldName -Credential $cred
                         }
-                
+
                         Write-Host "Checking if $oldName was renamed successfully..."
 
                         if ($online) {
@@ -2570,14 +2578,14 @@ $applyRenameButton.Add_Click({
                                 }
                             }
                         }
-                
+
                         # Check if computer was successfully renamed
                         if ($renameResult.ReturnValue -eq 0) {
                             Write-Host "Computer $oldName successfully renamed to $newName." -ForegroundColor Green
 
                             # Output the time taken to rename
                             Write-Host "Time taken to rename $oldName`: $($checkRenameTime.TotalSeconds) seconds" -ForegroundColor Blue
-                    
+
                             $individualTime = $individualTime.Add($checkRenameTime)
                             $successfulRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
 
@@ -2594,7 +2602,7 @@ $applyRenameButton.Add_Click({
                                     Write-Host "Checking if $oldName has a user logged on..."
                                     $loggedOnUser = Get-RandomOutcome -outcomes $loggedOnUserss
                                 }
-                    
+
                                 if ($loggedOnUser -eq "none") {
                                     $loggedOnUser = $null
                                 }
@@ -2623,11 +2631,11 @@ $applyRenameButton.Add_Click({
                                     }
                                     else {
                                         Write-Host "Computer $oldname ($newName) has $loggedOnUser logged in. Manual restart required." -ForegroundColor Yellow #Need to add excel sheet creation to capture users logged into devices
-                            
+
                                         # Output the time taken to check if user was logged on
                                         Write-Host "Time taken to check $oldname ($newName) has logged on users`: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
                                         $individualTime = $individualTime.Add($checkLoginTime)
-                            
+
                                         $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
                                         $loggedOnUsers += "$oldName`: $loggedOnUser"
 
@@ -2646,11 +2654,11 @@ $applyRenameButton.Add_Click({
                                     if (-not $loggedOnUser) {
                                         try {
                                             Write-Host "Computer $oldName ($newName) has no users logged on." -ForegroundColor Green
-                    
+
                                             # Output the time taken to check if user was logged on
                                             Write-Host "Time taken to check $oldName for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
                                             $individualTime = $individualTime.Add($checkLoginTime)
-                    
+
                                             Write-Host "Checking if $oldName restarted successfully..."
                                             $restartOutcome = Get-RandomOutcome -outcomes $restartOutcomes
                                             if ($restartOutcome -eq "Success") {
@@ -2668,14 +2676,14 @@ $applyRenameButton.Add_Click({
                                     }
                                     else {
                                         Write-Host "Computer $oldName ($newName) has $loggedOnUser logged in. Manual restart required." -ForegroundColor Yellow
-                                            
+
                                         # Output the time taken to check if user was logged on
                                         Write-Host "Time taken to check $oldName ($newName) for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
                                         $individualTime = $individualTime.Add($checkLoginTime)
-                                            
+
                                         $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
                                         $loggedOnUsers += "$oldName`: $loggedOnUser"
-                    
+
                                         # Collect offline device information
                                         $loggedOnDevices += [PSCustomObject]@{
                                             OldName  = $oldName
@@ -2705,7 +2713,7 @@ $applyRenameButton.Add_Click({
                     }
                 }
             }
-    
+
             Write-Host "Rename operation completed." 
 
             # Output the total time taken for all operations in the appropriate format
@@ -2736,7 +2744,7 @@ $applyRenameButton.Add_Click({
             if (-not (Test-Path -Path $logsFolderPath)) {
                 New-Item -Path $logsFolderPath -ItemType Directory | Out-Null
             }
-    
+
             # Create the CSV file
             $csvData = @()
 
@@ -2835,7 +2843,7 @@ $applyRenameButton.Add_Click({
                 Write-Host "Triggered Power Automate flow to upload the log files to SharePoint (OFFLINE - IGNORED)" -ForegroundColor Yellow
                 Write-Host " "
             }
-    
+
             # Print the list of logged on users
             if ($loggedOnUsers.Count -gt 0) {
                 Write-Host "Logged on users:" -ForegroundColor Yellow
@@ -2889,6 +2897,7 @@ $applyRenameButton.Add_Click({
             Write-Host " "
         }
     })
+
 
 $form.Controls.Add($applyRenameButton) 
 
