@@ -101,7 +101,7 @@
 # IMPORTANT
 # $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
 # $true will run the application with imported AD modules and will request credentials to be used for actual AD device name manipulation
-$online = $true
+$online = $false
 
 # Load required assemblies
 Add-Type -AssemblyName System.Windows.Forms
@@ -280,8 +280,9 @@ class Change {
     [CustomColor]$GroupColor
     [bool[]]$Valid
     [string[]]$AttemptedNames
+    [bool[]]$Duplicate
 
-    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [CustomColor]$groupColor, [bool[]]$valid, [string[]]$attemptedNames) {
+    Change([string[]]$computerNames, [string]$part0, [string]$part1, [string]$part2, [string]$part3, [CustomColor]$groupColor, [bool[]]$valid, [string[]]$attemptedNames, [bool[]]$duplicate) {
         $this.ComputerNames = $computerNames
         $this.Part0 = $part0
         $this.Part1 = $part1
@@ -290,10 +291,9 @@ class Change {
         $this.GroupColor = $groupColor
         $this.Valid = $valid
         $this.AttemptedNames = $attemptedNames
+        $this.Duplicate = $duplicate
     }
 }
-
-
 
 
 $script:changesList = New-Object System.Collections.ArrayList
@@ -359,7 +359,6 @@ function Get-DepartmentString($deviceName) {
     }
 }
 
-# UpdateAllListBoxes function
 function ProcessCommittedChanges {
     # Check if any relevant checkboxes are checked
     $anyCheckboxChecked = (-not $part0Input.ReadOnly) -or (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
@@ -370,11 +369,14 @@ function ProcessCommittedChanges {
     $script:validNamesList = @()
     $script:invalidNamesList = @()
 
-    # Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
+    Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
+
+    # Track attempted names to identify duplicates
+    $attemptedNamesTracker = @{}
 
     # Process selected checked items
     foreach ($computerName in $script:selectedCheckedItems.Keys) {
-        # Write-Host "Processing computer: $computerName"
+        Write-Host "Processing computer: $computerName"
         
         $parts = $computerName -split '-'
         $part0 = $parts[0]
@@ -382,14 +384,14 @@ function ProcessCommittedChanges {
         $part2 = if ($parts.Count -ge 3) { $parts[2] } else { $null }
         $part3 = if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null }
 
-        # Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkBlue
+        Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkBlue
 
         $part0InputValue = if (-not $part0Input.ReadOnly) { $part0Input.Text } else { $null }
         $part1InputValue = if (-not $part1Input.ReadOnly) { $part1Input.Text } else { $null }
         $part2InputValue = if (-not $part2Input.ReadOnly) { $part2Input.Text } else { $null }
         $part3InputValue = if (-not $part3Input.ReadOnly) { $part3Input.Text } else { $null }
 
-        # Write-Host "Input values: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
+        Write-Host "Input values: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
 
         if ($part0InputValue) { $part0 = $part0InputValue }
         if ($part1InputValue) { $part1 = $part1InputValue }
@@ -412,40 +414,13 @@ function ProcessCommittedChanges {
             }
         }
 
-        # Check if any part contains "dept" (case insensitive) and replace with $deptString with truncation logic
-        $deptString = Get-DepartmentString($computerName)
+        # Check if any part contains "dept" (case insensitive) and replace with $deptString
+        if ($part0 -match "(?i)dept") { $part0 = Get-DepartmentString($computerName) }
+        if ($part1 -match "(?i)dept") { $part1 = Get-DepartmentString($computerName) }
+        if ($part2 -match "(?i)dept") { $part2 = Get-DepartmentString($computerName) }
+        if ($part3 -match "(?i)dept") { $part3 = Get-DepartmentString($computerName) }
 
-        # Function to process parts with "dept" and optional number for truncation
-        function ProcessDeptPart($part) {
-            if ($part -match "(?i)(\d*)dept(\d*)") {
-                $prefixLength = if ($matches[1] -and $matches[1] -ge 2 -and $matches[1] -le 5) { [int]::Parse($matches[1]) } else { $null }
-                $suffixLength = if ($matches[2] -and $matches[2] -ge 2 -and $matches[2] -le 5) { [int]::Parse($matches[2]) } else { $null }
-        
-                if ($suffixLength) {
-                    # If the number is after "dept", truncate from the left
-                    return $deptString.Substring(0, [Math]::Min($deptString.Length, $suffixLength))
-                }
-                elseif ($prefixLength) {
-                    # If the number is before "dept", truncate from the right
-                    $startIndex = [Math]::Max(0, $deptString.Length - $prefixLength)
-                    return $deptString.Substring($startIndex, $prefixLength)
-                }
-                else {
-                    # Default truncation to 5 characters if no valid number is found
-                    return $deptString.Substring(0, [Math]::Min($deptString.Length, 5))
-                }
-            }
-            else {
-                return $part
-            }
-        }
-
-        $part0 = ProcessDeptPart($part0)
-        $part1 = ProcessDeptPart($part1)
-        $part2 = if ($part2) { ProcessDeptPart($part2) } else { $null }
-        $part3 = if ($part3) { ProcessDeptPart($part3) } else { $null }
-
-        # Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
+        Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
 
         if ($part3) {
             $newName = "$part0-$part1-$part2-$part3"
@@ -457,9 +432,11 @@ function ProcessCommittedChanges {
             $newName = "$part0-$part1"
         }
 
-        # Write-Host "New name: $newName"
+        Write-Host "New name: $newName"
         $isValid = $newName.Length -le 15
-        if ($isValid) {
+        $isDuplicate = $attemptedNamesTracker.ContainsKey($newName)
+        
+        if ($isValid -and -not $isDuplicate) {
             if ($hashSet.Add($newName)) {
                 $script:validNamesList += "$computerName -> $newName"
                 if (-not ($script:newNamesList | Where-Object { $_.ComputerName -eq $computerName })) {
@@ -471,8 +448,16 @@ function ProcessCommittedChanges {
             $script:invalidNamesList += $computerName
         }
 
-        # Add the new name to the attempted names list
+        # Add the new name to the attempted names list and track duplicates
+        if (-not $attemptedNamesTracker.ContainsKey($newName)) {
+            $attemptedNamesTracker[$newName] = 1
+        }
+        else {
+            $attemptedNamesTracker[$newName]++
+        }
+
         $attemptedNames = @($newName)
+        $duplicate = @($isDuplicate)
 
         # Check if an existing change matches
         $existingChange = $null
@@ -484,7 +469,7 @@ function ProcessCommittedChanges {
             $validComparison = ($change.Valid -eq $isValid)
 
             if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison -and $validComparison) {
-                # Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
+                Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
                 $existingChange = $change
                 break
             }
@@ -516,30 +501,46 @@ function ProcessCommittedChanges {
             }
             $existingChange.AttemptedNames += $newName
             $existingChange.Valid += $isValid
+            $existingChange.Duplicate += $isDuplicate
         }
         else {
             # Assign a unique color to the new change
             $groupColor = if (-not $isValid) { [CustomColor]::new(255, 0, 0) } else { $colors[$global:nextColorIndex % $colors.Count] }
             $global:nextColorIndex++
-            $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, @($isValid), $attemptedNames)
+            $newChange = [Change]::new(@($computerName), $part0InputValue, $part1InputValue, $part2InputValue, $part3InputValue, $groupColor, @($isValid), $attemptedNames, $duplicate)
             $script:changesList.Add($newChange) | Out-Null
+        }
+    }
+
+    # Second pass to mark all items with the same new name as duplicates
+    foreach ($change in $script:changesList) {
+        foreach ($name in $change.AttemptedNames) {
+            if ($attemptedNamesTracker[$name] -gt 1) {
+                $index = [array]::IndexOf($change.AttemptedNames, $name)
+                $change.Duplicate[$index] = $true
+                $change.Valid[$index] = $false
+            }
         }
     }
 
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
-    <# Print the changesList for debugging
+    # Print the changesList for debugging
     Write-Host "`nChanges List:" -ForegroundColor red
     foreach ($change in $script:changesList) {
         Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
         Write-Host "ComputerNames: $($change.ComputerNames -join ', ')"
         Write-Host "AttemptedNames: $($change.AttemptedNames -join ', ')"
-    } #>
+        Write-Host "Duplicate: $($change.Duplicate -join ', ')"
+    }
 
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors
 }
+
+
+
 
 
 # Function for setting individual custom names
@@ -1205,7 +1206,7 @@ function UpdateAndSyncListBoxes {
     $groupColors = @{}
 
     # Process changesList and sort items into valid and invalid groups
-    #Write-Host "Processing changesList..." -ForegroundColor Green
+    # Write-Host "Processing changesList..." -ForegroundColor Green
     $groupIndex = 0
     foreach ($change in $script:changesList) {
         $groupName = "$($change.Part0)-$($change.Part1)-$($change.Part2)-$($change.Part3)"
@@ -1219,7 +1220,8 @@ function UpdateAndSyncListBoxes {
         foreach ($computerName in $sortedComputerNames) {
             $index = [array]::IndexOf($change.ComputerNames, $computerName)
             $isValid = $change.Valid[$index]
-            if ($isValid) {
+            $isDuplicate = $change.Duplicate[$index]
+            if ($isValid -and -not $isDuplicate) {
                 $groupedValidItems[$groupName].Add($computerName) | Out-Null
             }
             else {
@@ -1229,7 +1231,7 @@ function UpdateAndSyncListBoxes {
     }
 
     # Process checkedItems not in changesList
-    #Write-Host "Processing checkedItems not in changesList..." -ForegroundColor Blue
+    # Write-Host "Processing checkedItems not in changesList..." -ForegroundColor Blue
     $nonChangeItems = New-Object System.Collections.ArrayList
     foreach ($item in $script:checkedItems.Keys) {
         $isInChangeList = $false
@@ -1245,11 +1247,11 @@ function UpdateAndSyncListBoxes {
     }
 
     # Sort the non-change items alphanumerically
-    #Write-Host "Sorting non-change items..." -ForegroundColor Magenta
+    # Write-Host "Sorting non-change items..." -ForegroundColor Magenta
     $sortedNonChangeItems = $nonChangeItems | Sort-Object
 
     # Update both ListBoxes
-    #Write-Host "Updating ListBoxes..." -ForegroundColor Yellow
+    # Write-Host "Updating ListBoxes..." -ForegroundColor Yellow
     $script:newNamesListBox.BeginUpdate()
     $selectedCheckedListBox.BeginUpdate()
 
@@ -1258,11 +1260,16 @@ function UpdateAndSyncListBoxes {
         # $color = $groupColors[$group]
         # Write-Host "Group: $group, Color: $color" -ForegroundColor Green
 
-        # Add invalid items with "- Invalid" suffix
+        # Add invalid items with "- Invalid" or "- Duplicate" suffix
         foreach ($item in ($groupedInvalidItems[$group] | Sort-Object)) {
             $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
             $index = [array]::IndexOf($change.ComputerNames, $item)
-            $newName = $change.AttemptedNames[$index] + " - Invalid"
+            $newName = if ($change.Duplicate[$index]) {
+                $item + " - Duplicate"
+            }
+            else {
+                $change.AttemptedNames[$index] + " - Invalid"
+            }
             $script:newNamesListBox.Items.Add($newName) | Out-Null
             $selectedCheckedListBox.Items.Add($item) | Out-Null
         }
@@ -1297,6 +1304,8 @@ function UpdateAndSyncListBoxes {
     $script:newNamesListBox.Refresh()
     $selectedCheckedListBox.Refresh()
 }
+
+
 
 
 # Create checked list box for computers
