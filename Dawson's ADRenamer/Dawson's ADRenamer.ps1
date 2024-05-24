@@ -336,9 +336,7 @@ $colors = @(
 )
 
 # UpdateAllListBoxes function
-function UpdateAllListBoxes {
-    Write-Host "UpdateAllListBoxes"
-    Write-Host ""
+function ProcessCommittedChanges {
 
     # Check if any relevant checkboxes are checked
     $anyCheckboxChecked = (-not $part0Input.ReadOnly) -or (-not $part1Input.ReadOnly) -or (-not $part2Input.ReadOnly) -or (-not $part3Input.ReadOnly)
@@ -1132,7 +1130,6 @@ else {
 }
 
 # Initialize script-scope variables
-# $script:checkedItems = @{}
 $script:invalidNamesList = @()
 $script:validNamesList = @()
 $script:customNamesList = @() 
@@ -1163,27 +1160,40 @@ $script:selectedCheckedItems = @{}
 function UpdateAndSyncListBoxes {
     Write-Host "Updating and Syncing ListBoxes" -ForegroundColor Cyan
     $script:newNamesListBox.Items.Clear()
-    $sortedItems = New-Object System.Collections.ArrayList
-    $nonChangeItems = New-Object System.Collections.ArrayList
+    $selectedCheckedListBox.Items.Clear()
     $itemsToRemove = New-Object System.Collections.ArrayList
 
     # Clear script:selectedItems
     $script:selectedCheckedItems.Clear()
-    # Write-Host "Cleared script:selectedCheckedItems" -ForegroundColor Cyan
 
-    # Add items from changesList first, sorted alphanumerically within groups
+    # Create collections for invalid and valid items grouped by change group
+    $groupedInvalidItems = @{}
+    $groupedValidItems = @{}
+
+    # Process changesList and sort items into valid and invalid groups
     Write-Host "Processing changesList..." -ForegroundColor Green
     foreach ($change in $script:changesList) {
-        # Write-Host "Processing Change: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor Green
+        $groupName = "$($change.Part0)-$($change.Part1)-$($change.Part2)-$($change.Part3)"
+        if (-not $groupedInvalidItems.ContainsKey($groupName)) {
+            $groupedInvalidItems[$groupName] = New-Object System.Collections.ArrayList
+            $groupedValidItems[$groupName] = New-Object System.Collections.ArrayList
+        }
         $sortedComputerNames = $change.ComputerNames | Sort-Object
         foreach ($computerName in $sortedComputerNames) {
-            # Write-Host "Adding $computerName to sortedItems from changesList" -ForegroundColor Green
-            $sortedItems.Add($computerName) | Out-Null
+            $index = [array]::IndexOf($change.ComputerNames, $computerName)
+            $isValid = $change.Valid[$index]
+            if ($isValid) {
+                $groupedValidItems[$groupName].Add($computerName) | Out-Null
+            }
+            else {
+                $groupedInvalidItems[$groupName].Add($computerName) | Out-Null
+            }
         }
     }
 
-    # Add items not in any changesList group
+    # Process checkedItems not in changesList
     Write-Host "Processing checkedItems not in changesList..." -ForegroundColor Blue
+    $nonChangeItems = New-Object System.Collections.ArrayList
     foreach ($item in $script:checkedItems.Keys) {
         $isInChangeList = $false
         foreach ($change in $script:changesList) {
@@ -1193,7 +1203,6 @@ function UpdateAndSyncListBoxes {
             }
         }
         if (-not $isInChangeList) {
-            # Write-Host "Adding $item to nonChangeItems" -ForegroundColor Blue
             $nonChangeItems.Add($item) | Out-Null
         }
     }
@@ -1202,103 +1211,35 @@ function UpdateAndSyncListBoxes {
     Write-Host "Sorting non-change items..." -ForegroundColor Magenta
     $sortedNonChangeItems = $nonChangeItems | Sort-Object
 
-    # Combine the sorted change items and sorted non-change items
-    Write-Host "Combining sorted change items and sorted non-change items..." -ForegroundColor Cyan
-    foreach ($item in $sortedNonChangeItems) {
-        #Write-Host "Adding $item to sortedItems from nonChangeItems" -ForegroundColor Cyan
-        $sortedItems.Add($item) | Out-Null
-    }
-
-    # Update the CheckedListBox
-    Write-Host "Updating selectedCheckedListBox..." -ForegroundColor Yellow
-    $selectedCheckedListBox.BeginUpdate()
-    $selectedCheckedListBox.Items.Clear()
-    $processedItems = New-Object System.Collections.ArrayList
-
-    # Clear the checked status of all items in selectedCheckedListBox
-    for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
-        $selectedCheckedListBox.SetItemChecked($i, $false)
-    }
-    Write-Host "Cleared checked status of all items in selectedCheckedListBox" -ForegroundColor Yellow
-
-    foreach ($invalidItem in $script:invalidNamesList) {
-        if (-not $processedItems.Contains($invalidItem)) {
-            $selectedCheckedListBox.Items.Add($invalidItem) | Out-Null
-            $processedItems.Add($invalidItem) | Out-Null
-        }
-    }
-    foreach ($item in $sortedItems) {
-        if (-not $processedItems.Contains($item)) {
-            $selectedCheckedListBox.Items.Add($item, $script:selectedCheckedItems.ContainsKey($item)) | Out-Null
-            $processedItems.Add($item) | Out-Null
-        }
-    }
-    $selectedCheckedListBox.EndUpdate()
-
-    # Update the newNamesListBox
-    Write-Host "Updating newNamesListBox..." -ForegroundColor Yellow
+    # Update both ListBoxes
+    Write-Host "Updating ListBoxes..." -ForegroundColor Yellow
     $script:newNamesListBox.BeginUpdate()
-    $processedNewNames = New-Object System.Collections.ArrayList
+    $selectedCheckedListBox.BeginUpdate()
 
-    # Add invalid items with "- Invalid" suffix
-    foreach ($change in $script:changesList) {
-        $sortedComputerNames = $change.ComputerNames | Sort-Object
-        foreach ($computerName in $sortedComputerNames) {
-            $index = [array]::IndexOf($change.ComputerNames, $computerName)
-            $isValid = $change.Valid[$index]
+    foreach ($group in $groupedInvalidItems.Keys) {
+        # Add invalid items with "- Invalid" suffix
+        foreach ($item in ($groupedInvalidItems[$group] | Sort-Object)) {
+            $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
+            $index = [array]::IndexOf($change.ComputerNames, $item)
+            $newName = $change.AttemptedNames[$index] + " - Invalid"
+            $script:newNamesListBox.Items.Add($newName) | Out-Null
+            $selectedCheckedListBox.Items.Add($item) | Out-Null
+        }
+
+        # Add valid items
+        foreach ($item in ($groupedValidItems[$group] | Sort-Object)) {
+            $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
+            $index = [array]::IndexOf($change.ComputerNames, $item)
             $newName = $change.AttemptedNames[$index]
-
-            if (-not $isValid) {
-                $newName = "$newName - Invalid"
-                # Write-Host "Adding invalid item $newName to newNamesListBox" -ForegroundColor Red
-                if (-not $processedNewNames.Contains($newName)) {
-                    $script:newNamesListBox.Items.Add($newName) | Out-Null
-                    $processedNewNames.Add($newName) | Out-Null
-                }
-            }
+            $script:newNamesListBox.Items.Add($newName) | Out-Null
+            $selectedCheckedListBox.Items.Add($item) | Out-Null
         }
     }
 
-    # Process valid items and remove associated valid names if they are in the invalid list
-    foreach ($item in $sortedItems) {
-        $change = $script:changesList | Where-Object { $_.ComputerNames -contains $item }
-        if ($change) {
-            Write-Host "Processing change for $item" -ForegroundColor Yellow
-            $index = [array]::IndexOf($change.ComputerNames, $item)
-            $isValid = $change.Valid[$index]
-
-            if ($isValid) {
-                # Generate new name from change parts
-                $parts = $item -split '-'
-                $newPart0 = if ($change.Part0) { $change.Part0 } else { $parts[0] }
-                $newPart1 = if ($change.Part1) { $change.Part1 } else { $parts[1] }
-                $newPart2 = if ($change.Part2) { $change.Part2 } else { if ($parts.Count -ge 3) { $parts[2] } else { $null } }
-                $newPart3 = if ($change.Part3) { $change.Part3 } else { if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null } }
-
-                $newNameParts = @()
-                if ($newPart0) { $newNameParts += $newPart0 }
-                if ($newPart1) { $newNameParts += $newPart1 }
-                if ($newPart2) { $newNameParts += $newPart2 }
-                if ($newPart3) { $newNameParts += $newPart3 }
-                $newName = $newNameParts -join '-'
-
-                Write-Host "Generated new name: $newName" -ForegroundColor Yellow
-
-                if (-not $processedNewNames.Contains($newName)) {
-                    Write-Host "Adding valid new name $newName to newNamesListBox" -ForegroundColor Yellow
-                    $script:newNamesListBox.Items.Add($newName) | Out-Null
-                    $processedNewNames.Add($newName) | Out-Null
-                }
-            }
-        }
-        else {
-            Write-Host "Processing non-change item $item" -ForegroundColor Yellow
-            if (-not $processedNewNames.Contains($item)) {
-                Write-Host "Adding non-change item $item to newNamesListBox" -ForegroundColor Yellow
-                $script:newNamesListBox.Items.Add($item) | Out-Null
-                $processedNewNames.Add($item) | Out-Null
-            }
-        }
+    # Add non-change items
+    foreach ($item in $sortedNonChangeItems) {
+        $script:newNamesListBox.Items.Add($item) | Out-Null
+        $selectedCheckedListBox.Items.Add($item) | Out-Null
     }
 
     # Remove items marked for removal
@@ -1309,33 +1250,8 @@ function UpdateAndSyncListBoxes {
     }
 
     $script:newNamesListBox.EndUpdate()
-
-    <# Print the items in the selectedCheckedListBox
-    Write-Host "`nSelectedCheckedListBox Items in Order:"
-    foreach ($item in $selectedCheckedListBox.Items) {
-        Write-Host $item
-    }
-
-    # Print the items in the newNamesListBox
-    Write-Host "`nNewNamesListBox Items in Order:"
-    foreach ($item in $script:newNamesListBox.Items) {
-        Write-Host $item
-    }
-    #>
+    $selectedCheckedListBox.EndUpdate()
 }
-
-
-# Function to sync checked items to computerCheckedListBox
-function SyncCheckedItems {
-    $computerCheckedListBox.Items.Clear()
-    foreach ($item in $listBox.Items) {
-        $computerCheckedListBox.Items.Add($item, $script:checkedItems.ContainsKey($item))
-    }
-}
-
-
-# Ensure to call SyncSelectedCheckedItems wherever necessary in your script
-
 
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
@@ -1833,12 +1749,6 @@ $selectedCheckedListBox_ItemCheck = {
 $computerCheckedListBox.Add_ItemCheck($computerCheckedListBox_ItemCheck)
 $selectedCheckedListBox.Add_ItemCheck($selectedCheckedListBox_ItemCheck)
 
-# Initial sync
-SyncCheckedItems
-#SyncSelectedCheckedItems
-
-
-
 # Create the context menu for right-click actions
 $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
@@ -1847,7 +1757,7 @@ $menuRemove = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemove.Text = "Remove selected device(s)"
 $menuRemove.Add_Click({
         # Update the script-wide variable with currently checked items
-        $global:selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
 
         if (!($selectedItems.Count -gt 0)) {
             Write-Host "No devices selected"
@@ -1866,9 +1776,7 @@ $menuRemove.Add_Click({
 
             Write-Host "Selected device removed: $item"  # Outputs the names of selected devices to the console
         }
-
         Write-Host ""
-        #UpdateAllListBoxes  # Call this function if it updates the UI based on changes
     })
 
 # Create menu context item for removing all devices within the selectedCheckedListBox
@@ -1876,7 +1784,7 @@ $menuRemoveAll = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemoveAll.Text = "Remove all device(s)"
 $menuRemoveAll.Enabled = $false
 $menuRemoveAll.Add_Click({
-        $global:selectedItems = @($selectedCheckedListBox.Items | ForEach-Object { $_ })
+        $selectedItems = @($selectedCheckedListBox.Items | ForEach-Object { $_ })
         $form.Enabled = $false
         Write-Host "Form disabled for remove all"
         $script:customNamesList = @()
@@ -1903,7 +1811,7 @@ $menuAddCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuAddCustomName.Text = "Set/Change Custom rename"
 $menuAddCustomName.Enabled = $false
 $menuAddCustomName.Add_Click({
-        $global:selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
         $tempList = $script:customNamesList
         $script:customNamesList = @()
 
@@ -1939,7 +1847,7 @@ $menuRemoveCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
 $menuRemoveCustomName.Text = "Remove Custom rename"
 $menuRemoveCustomName.Enabled = $false
 $menuRemoveCustomName.Add_Click({
-        $global:selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
+        $selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
         $tempList = $script:customNamesList
         $script:customNamesList = @()
 
@@ -1961,7 +1869,7 @@ $menuRemoveCustomName.Add_Click({
 # Event handler for when the context menu is opening
 $contextMenu.add_Opening({
         # Check if there are any items
-        $global:selectedItems = @($selectedCheckedListBox.CheckedItems)
+        $selectedItems = @($selectedCheckedListBox.CheckedItems)
         $itemsInBox = @($selectedCheckedListBox.Items)
 
         if ($itemsInBox.Count -gt 0) {
@@ -2059,7 +1967,7 @@ $menuFindAndReplace.Add_Click({
             }
         
         }
-        UpdateAllListBoxes
+        ProcessCommittedChanges
     })
 
 # Add the right click menu options to the context menu
@@ -2349,9 +2257,9 @@ $commitChangesButton.BackColor = $catPurple
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
         $form.Enabled = $false
-        $script:selectedItems.Clear()
+        #$script:selectedItems.Clear()
         $script:selectedCtrlA = 1
-        UpdateAllListBoxes
+        ProcessCommittedChanges
         UpdateAndSyncListBoxes
 
         # Reset part#Input TextBoxes to default text and ReadOnly status
@@ -2421,8 +2329,6 @@ $applyRenameButton.Add_Click({
         $loggedOnUsers = @()
         $loggedOnDevices = @() # Array to store offline devices and their users
         $totalTime = [System.TimeSpan]::Zero
-
-        # UpdateAllListBoxes # Update all list boxes
 
         #  If user confirms they want to proceed with renaming
         if ($userResponse -eq "Yes") {
@@ -2857,7 +2763,6 @@ $applyRenameButton.Add_Click({
                 }
                 $computerCheckedListBox.Items.Add($computer.Name, $isChecked)
             }
-            # UpdateAllListBoxes
             $form.Enabled = $true
             Write-Host "Form enabled"
             Write-Host " "
