@@ -101,7 +101,7 @@
 # IMPORTANT
 # $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
 # $true will run the application with imported AD modules and will request credentials to be used for actual AD device name manipulation
-$online = $false
+$online = $true
 
 # Load required assemblies
 Add-Type -AssemblyName System.Windows.Forms
@@ -2423,239 +2423,246 @@ $applyRenameButton.Add_Click({
                     Microsoft.PowerShell.Utility\Write-Host -Object $Object
                 }
             }
-            
+        
             $form.Enabled = $false
             Write-Host "Form disabled for rename operation, loading..."
             Write-Host " "
             Write-Host "Starting rename operation..."
             Write-Host " "
 
-            # Iterate through the valid names list and perform renaming operations
-            foreach ( $computerName in $script:invalidNamesList) {
-                Write-Host "$computerName has been ignored due to invalid naming scheme" -ForegroundColor Red
-            }
-    
-            # Check if new name is the same as old name
-            foreach ($renameEntry in $script:validNamesList) {
-                $individualTime = [System.TimeSpan]::Zero
+            # Iterate through the selectedCheckedListBox items and perform renaming operations
+            foreach ($item in $selectedCheckedListBox.Items) {
+                foreach ($change in $script:changesList) {
+                    $index = [array]::IndexOf($change.ComputerNames, $item)
+                    if ($index -ne -1) {
+                        $oldName = $change.ComputerNames[$index]
+                        $newName = $change.AttemptedNames[$index]
+                        $isValid = $change.Valid[$index]
 
-                $oldName, $newName = $renameEntry -split ' -> '
-
-                # Check if new name is the same as old name
-                if ($oldName -eq $newName) {
-                    Write-Host "New name for $oldName is the same as the old one. Ignoring this device." -ForegroundColor Yellow
-                    Write-Host " "
-                    continue
-                }
-
-                if ($online) {
-                    $checkOfflineTime = Measure-Command {
-                        # Check if the computer is online
-                        Write-Host "Checking if $oldName is online..."
-                        if (-not (Test-Connection -ComputerName $oldName -Count 1 -Quiet)) {
-                            Write-Host "Computer $oldName is offline. Skipping rename." -ForegroundColor Red
-                            Write-Host " "
-                            $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                        if (-not $isValid) {
+                            Write-Host "$oldName has been ignored due to invalid naming scheme" -ForegroundColor Red
                             continue
                         }
-                        Write-Host "Computer $oldName is online." -ForegroundColor Green
-                    }
-                }
-                else {
-                    # OFFLINE
-                    $checkOfflineTime = Measure-Command {
-                        # Simulate checking if the computer is online
-                        Write-Host "Checking if $oldName is online..."
-                        $onlineStatus = Get-RandomOutcome -outcomes $onlineStatuses
-                        if ($onlineStatus -eq "Offline") {
-                            Write-Host "Computer $oldName is offline. Skipping rename." -ForegroundColor Red
+
+                        # Check if new name is the same as old name
+                        if ($oldName -eq $newName) {
+                            Write-Host "New name for $oldName is the same as the old one. Ignoring this device." -ForegroundColor Yellow
                             Write-Host " "
-                            $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
                             continue
                         }
-                        Write-Host "Computer $oldName is online." -ForegroundColor Green
-                    }
-                }
 
-                # Output the time taken to check if computer is online
-                Write-Host "Time taken to check if $oldName was online: $($checkOfflineTime.TotalSeconds) seconds" -ForegroundColor Blue
-                $individualTime = $individualTime.Add($checkOfflineTime)
-                
-                if ($online) {
-                    $testComp = Get-WmiObject Win32_ComputerSystem -ComputerName $oldName -Credential $cred
-                }
-                
-                Write-Host "Checking if $oldName was renamed successfully..."
+                        $individualTime = [System.TimeSpan]::Zero
 
-                if ($online) {
-                    # Start timing rename operation
-                    $checkRenameTime = Measure-Command {
-                        try {
-                            $password = $cred.GetNetworkCredential().Password
-                            $username = $cred.GetNetworkCredential().UserName
-                            $renameResult = $testComp.Rename($newName, $password, $username)
-                            if ($renameResult.ReturnValue -ne 0) {
-                                throw "Failed to rename the computer $oldName. Error code: $($renameResult.ReturnValue)"
+                        if ($online) {
+                            $checkOfflineTime = Measure-Command {
+                                # Check if the computer is online
+                                Write-Host "Checking if $oldName is online..."
+                                if (-not (Test-Connection -ComputerName $oldName -Count 1 -Quiet)) {
+                                    Write-Host "Computer $oldName is offline. Skipping rename." -ForegroundColor Red
+                                    Write-Host " "
+                                    $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                    continue
+                                }
+                                Write-Host "Computer $oldName is online." -ForegroundColor Green
                             }
                         }
-                        catch {
-                            Write-Host "Error during rename operation: $_" -ForegroundColor Red
-                            $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                            continue # Skip to the next iteration of the loop
-                        }
-                    }
-                }
-                else {
-                    # OFFLINE
-                    # Start timing rename operation
-                    $checkRenameTime = Measure-Command {
-                        try {
-                            $renameResult = Get-RandomOutcome -outcomes $renameOutcomes 
-                            if ($renameResult.ReturnValue -ne 0) {
-                                throw "Failed to rename the computer $oldName. Error code: $($renameResult.ReturnValue)"
+                        else {
+                            # OFFLINE
+                            $checkOfflineTime = Measure-Command {
+                                # Simulate checking if the computer is online
+                                Write-Host "Checking if $oldName is online..."
+                                $onlineStatus = Get-RandomOutcome -outcomes $onlineStatuses
+                                if ($onlineStatus -eq "Offline") {
+                                    Write-Host "Computer $oldName is offline. Skipping rename." -ForegroundColor Red
+                                    Write-Host " "
+                                    $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                    continue
+                                }
+                                Write-Host "Computer $oldName is online." -ForegroundColor Green
                             }
                         }
-                        catch {
-                            Write-Host "Error during rename operation: $_" -ForegroundColor Red
-                            $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                            continue # Skip to the next iteration of the loop
-                        }
-                    }
-                }
-                
-                # Check if computer was successfully renamed
-                if ($renameResult.ReturnValue -eq 0) {
-                    Write-Host "Computer $oldName successfully renamed to $newName." -ForegroundColor Green
 
-                    # Output the time taken to rename
-                    Write-Host "Time taken to rename $oldName`: $($checkRenameTime.TotalSeconds) seconds" -ForegroundColor Blue
+                        # Output the time taken to check if computer is online
+                        Write-Host "Time taken to check if $oldName was online: $($checkOfflineTime.TotalSeconds) seconds" -ForegroundColor Blue
+                        $individualTime = $individualTime.Add($checkOfflineTime)
                     
-                    $individualTime = $individualTime.Add($checkRenameTime)
-                    $successfulRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-
-                    if ($online) {
-                        # Start timing $loggedOnUser operation
-                        $checkLoginTime = Measure-Command {
-                            Write-Host "Checking if $oldname has a user logged on..."
-                            $loggedOnUser = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $oldName -Credential $cred | Select-Object -ExpandProperty UserName
-                        }
-                    }
-                    else {
-                        # Start timing $loggedOnUser operation
-                        $checkLoginTime = Measure-Command {
-                            Write-Host "Checking if $oldName has a user logged on..."
-                            $loggedOnUser = Get-RandomOutcome -outcomes $loggedOnUserss
+                        if ($online) {
+                            $testComp = Get-WmiObject Win32_ComputerSystem -ComputerName $oldName -Credential $cred
                         }
                     
-                        if ($loggedOnUser -eq "none") {
-                            $loggedOnUser = $null
-                        }
-                    }
+                        Write-Host "Checking if $oldName was renamed successfully..."
 
-                    if ($online) {
-                        # Start timing restart operation
-                        $checkRestartTime = Measure-Command {
-                            if (-not $loggedOnUser) {
+                        if ($online) {
+                            # Start timing rename operation
+                            $checkRenameTime = Measure-Command {
                                 try {
-                                    Write-Host "Computer $oldname ($newName) has no users logged on." -ForegroundColor Green
-
-                                    # Output the time taken to check if user was logged on
-                                    Write-Host "Time taken to check $oldName for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
-                                    $individualTime = $individualTime.Add($checkLoginTime)
-
-                                    Write-Host "Checking if $oldName restarted successfully..."
-                                    Restart-Computer -ComputerName $oldName -Credential $cred -Force
-                                    Write-Host "Computer $oldName ($newName) successfully restarted." -ForegroundColor Green
-                                    $successfulRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                    $password = $cred.GetNetworkCredential().Password
+                                    $username = $cred.GetNetworkCredential().UserName
+                                    $renameResult = $testComp.Rename($newName, $password, $username)
+                                    if ($renameResult.ReturnValue -ne 0) {
+                                        throw "Failed to rename the computer $oldName. Error code: $($renameResult.ReturnValue)"
+                                    }
                                 }
                                 catch {
-                                    Write-Host "Computer $oldname ($newName) attempted to restart and failed. Manual restart required." -ForegroundColor Red
-                                    $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                    Write-Host "Error during rename operation: $_" -ForegroundColor Red
+                                    $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                    continue # Skip to the next iteration of the loop
+                                }
+                            }
+                        }
+                        else {
+                            # OFFLINE
+                            # Start timing rename operation
+                            $checkRenameTime = Measure-Command {
+                                try {
+                                    $renameResult = Get-RandomOutcome -outcomes $renameOutcomes 
+                                    if ($renameResult.ReturnValue -ne 0) {
+                                        throw "Failed to rename the computer $oldName. Error code: $($renameResult.ReturnValue)"
+                                    }
+                                }
+                                catch {
+                                    Write-Host "Error during rename operation: $_" -ForegroundColor Red
+                                    $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                    continue # Skip to the next iteration of the loop
+                                }
+                            }
+                        }
+                    
+                        # Check if computer was successfully renamed
+                        if ($renameResult.ReturnValue -eq 0) {
+                            Write-Host "Computer $oldName successfully renamed to $newName." -ForegroundColor Green
+
+                            # Output the time taken to rename
+                            Write-Host "Time taken to rename $oldName`: $($checkRenameTime.TotalSeconds) seconds" -ForegroundColor Blue
+                        
+                            $individualTime = $individualTime.Add($checkRenameTime)
+                            $successfulRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+
+                            if ($online) {
+                                # Start timing $loggedOnUser operation
+                                $checkLoginTime = Measure-Command {
+                                    Write-Host "Checking if $oldname has a user logged on..."
+                                    $loggedOnUser = Get-WmiObject -Class Win32_ComputerSystem -ComputerName $oldName -Credential $cred | Select-Object -ExpandProperty UserName
                                 }
                             }
                             else {
-                                Write-Host "Computer $oldname ($newName) has $loggedOnUser logged in. Manual restart required." -ForegroundColor Yellow #Need to add excel sheet creation to capture users logged into devices
-                            
-                                # Output the time taken to check if user was logged on
-                                Write-Host "Time taken to check $oldname ($newName) has logged on users`: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
-                                $individualTime = $individualTime.Add($checkLoginTime)
-                            
-                                $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                                $loggedOnUsers += "$oldName`: $loggedOnUser"
-
-                                # Collect offline device information
-                                $loggedOnDevices += [PSCustomObject]@{
-                                    OldName  = $oldName
-                                    NewName  = $newName
-                                    UserName = $loggedOnUser
+                                # Start timing $loggedOnUser operation
+                                $checkLoginTime = Measure-Command {
+                                    Write-Host "Checking if $oldName has a user logged on..."
+                                    $loggedOnUser = Get-RandomOutcome -outcomes $loggedOnUserss
+                                }
+                        
+                                if ($loggedOnUser -eq "none") {
+                                    $loggedOnUser = $null
                                 }
                             }
-                        }
-                    }
-                    else {
-                        # Start timing restart operation
-                        $checkRestartTime = Measure-Command {
-                            if (-not $loggedOnUser) {
-                                try {
-                                    Write-Host "Computer $oldName ($newName) has no users logged on." -ForegroundColor Green
-                    
-                                    # Output the time taken to check if user was logged on
-                                    Write-Host "Time taken to check $oldName for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
-                                    $individualTime = $individualTime.Add($checkLoginTime)
-                    
-                                    Write-Host "Checking if $oldName restarted successfully..."
-                                    $restartOutcome = Get-RandomOutcome -outcomes $restartOutcomes
-                                    if ($restartOutcome -eq "Success") {
-                                        Write-Host "Computer $oldName ($newName) successfully restarted." -ForegroundColor Green
-                                        $successfulRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+
+                            if ($online) {
+                                # Start timing restart operation
+                                $checkRestartTime = Measure-Command {
+                                    if (-not $loggedOnUser) {
+                                        try {
+                                            Write-Host "Computer $oldname ($newName) has no users logged on." -ForegroundColor Green
+
+                                            # Output the time taken to check if user was logged on
+                                            Write-Host "Time taken to check $oldName for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
+                                            $individualTime = $individualTime.Add($checkLoginTime)
+
+                                            Write-Host "Checking if $oldName restarted successfully..."
+                                            Restart-Computer -ComputerName $oldName -Credential $cred -Force
+                                            Write-Host "Computer $oldName ($newName) successfully restarted." -ForegroundColor Green
+                                            $successfulRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                        }
+                                        catch {
+                                            Write-Host "Computer $oldname ($newName) attempted to restart and failed. Manual restart required." -ForegroundColor Red
+                                            $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                        }
                                     }
                                     else {
-                                        throw "Manual restart required."
+                                        Write-Host "Computer $oldname ($newName) has $loggedOnUser logged in. Manual restart required." -ForegroundColor Yellow #Need to add excel sheet creation to capture users logged into devices
+                                
+                                        # Output the time taken to check if user was logged on
+                                        Write-Host "Time taken to check $oldname ($newName) has logged on users`: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
+                                        $individualTime = $individualTime.Add($checkLoginTime)
+                                
+                                        $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                        $loggedOnUsers += "$oldName`: $loggedOnUser"
+
+                                        # Collect offline device information
+                                        $loggedOnDevices += [PSCustomObject]@{
+                                            OldName  = $oldName
+                                            NewName  = $newName
+                                            UserName = $loggedOnUser
+                                        }
                                     }
-                                }
-                                catch {
-                                    Write-Host "Computer $oldName ($newName) attempted to restart and failed. Manual restart required." -ForegroundColor Red
-                                    $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
                                 }
                             }
                             else {
-                                Write-Host "Computer $oldName ($newName) has $loggedOnUser logged in. Manual restart required." -ForegroundColor Yellow
-                                            
-                                # Output the time taken to check if user was logged on
-                                Write-Host "Time taken to check $oldName ($newName) for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
-                                $individualTime = $individualTime.Add($checkLoginTime)
-                                            
-                                $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                                $loggedOnUsers += "$oldName`: $loggedOnUser"
-                    
-                                # Collect offline device information
-                                $loggedOnDevices += [PSCustomObject]@{
-                                    OldName  = $oldName
-                                    NewName  = $newName
-                                    UserName = $loggedOnUser
+                                # Start timing restart operation
+                                $checkRestartTime = Measure-Command {
+                                    if (-not $loggedOnUser) {
+                                        try {
+                                            Write-Host "Computer $oldName ($newName) has no users logged on." -ForegroundColor Green
+                        
+                                            # Output the time taken to check if user was logged on
+                                            Write-Host "Time taken to check $oldName for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
+                                            $individualTime = $individualTime.Add($checkLoginTime)
+                        
+                                            Write-Host "Checking if $oldName restarted successfully..."
+                                            $restartOutcome = Get-RandomOutcome -outcomes $restartOutcomes
+                                            if ($restartOutcome -eq "Success") {
+                                                Write-Host "Computer $oldName ($newName) successfully restarted." -ForegroundColor Green
+                                                $successfulRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                            }
+                                            else {
+                                                throw "Manual restart required."
+                                            }
+                                        }
+                                        catch {
+                                            Write-Host "Computer $oldName ($newName) attempted to restart and failed. Manual restart required." -ForegroundColor Red
+                                            $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                        }
+                                    }
+                                    else {
+                                        Write-Host "Computer $oldName ($newName) has $loggedOnUser logged in. Manual restart required." -ForegroundColor Yellow
+                                                
+                                        # Output the time taken to check if user was logged on
+                                        Write-Host "Time taken to check $oldName ($newName) for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
+                                        $individualTime = $individualTime.Add($checkLoginTime)
+                                                
+                                        $failedRestarts += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                                        $loggedOnUsers += "$oldName`: $loggedOnUser"
+                        
+                                        # Collect offline device information
+                                        $loggedOnDevices += [PSCustomObject]@{
+                                            OldName  = $oldName
+                                            NewName  = $newName
+                                            UserName = $loggedOnUser
+                                        }
+                                    }
                                 }
                             }
+                            # Output the time taken to send restart
+                            Write-Host "Time taken to send restart to $oldname`: $($checkRestartTime.TotalSeconds) seconds" -ForegroundColor Blue
+                            $individualTime = $individualTime.Add($checkRestartTime)
                         }
+                        else {
+                            # Output the time taken to rename
+                            Write-Host "Time taken to rename $oldName to $newName`: $($checkRenameTime.TotalSeconds) seconds" -ForegroundColor Blue
+                            $individualTime = $individualTime.Add($checkRenameTime)
+
+                            Write-Host "Failed to rename the computer $oldName to $newName. Error code: $($renameResult.ReturnValue)" -ForegroundColor Red
+                            Write-Host " "
+                            $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
+                        }
+
+                        $totalTime = $totalTime.Add($individualTime)
+                        Write-Host ("Total time taken for $oldName to be renamed: {0:F2} seconds" -f $individualTime.TotalSeconds) -ForegroundColor Blue
+                        Write-Host " "
                     }
-                    # Output the time taken to send restart
-                    Write-Host "Time taken to send restart to $oldname`: $($checkRestartTime.TotalSeconds) seconds" -ForegroundColor Blue
-                    $individualTime = $individualTime.Add($checkRestartTime)
                 }
-                else {
-                    # Output the time taken to rename
-                    Write-Host "Time taken to rename $oldName to $newName`: $($checkRenameTime.TotalSeconds) seconds" -ForegroundColor Blue
-                    $individualTime = $individualTime.Add($checkRenameTime)
-
-                    Write-Host "Failed to rename the computer $oldName to $newName. Error code: $($renameResult.ReturnValue)" -ForegroundColor Red
-                    Write-Host " "
-                    $failedRenames += [PSCustomObject]@{OldName = $oldName; NewName = $newName }
-                }
-
-                $totalTime = $totalTime.Add($individualTime)
-                Write-Host ("Total time taken for $oldName to be renamed: {0:F2} seconds" -f $individualTime.TotalSeconds) -ForegroundColor Blue
-                Write-Host " "
             }
-            
+        
             Write-Host "Rename operation completed." 
 
             # Output the total time taken for all operations in the appropriate format
@@ -2686,7 +2693,7 @@ $applyRenameButton.Add_Click({
             if (-not (Test-Path -Path $logsFolderPath)) {
                 New-Item -Path $logsFolderPath -ItemType Directory | Out-Null
             }
-            
+        
             # Create the CSV file
             $csvData = @()
 
@@ -2748,10 +2755,6 @@ $applyRenameButton.Add_Click({
             Write-Host " "
 
             # Convert the CSV file content to Base64
-            # $fileContent = [System.IO.File]::ReadAllBytes($csvFilePath)
-            # $base64Content = [Convert]::ToBase64String($fileContent)
-
-            # Convert the CSV file content to Base64
             $csvFileContent = [System.IO.File]::ReadAllBytes($csvFilePath)
             $csvBase64Content = [Convert]::ToBase64String($csvFileContent)
 
@@ -2789,7 +2792,7 @@ $applyRenameButton.Add_Click({
                 Write-Host "Triggered Power Automate flow to upload the log files to SharePoint (OFFLINE - IGNORED)" -ForegroundColor Yellow
                 Write-Host " "
             }
-            
+        
             # Print the list of logged on users
             if ($loggedOnUsers.Count -gt 0) {
                 Write-Host "Logged on users:" -ForegroundColor Yellow
@@ -2805,21 +2808,21 @@ $applyRenameButton.Add_Click({
             foreach ($renameEntry in $script:validNamesList) {
                 $oldName, $newName = $renameEntry -split ' -> '
                 $script:checkedItems.Remove($oldName)
-        
+    
                 # Remove the old name from the filteredComputers
                 $script:filteredComputers = $script:filteredComputers | Where-Object { $_.Name -ne $oldName }
-        
+    
                 # Try to remove the old name from the computerCheckedListBox
                 $index = $computerCheckedListBox.Items.IndexOf($oldName)
                 if ($index -ge 0) {
                     $computerCheckedListBox.Items.RemoveAt($index)
                 }
             }
-        
+    
             # Refresh the checked list box based on current search term
             $searchTerm = $searchBox.Text
             $filteredList = $script:filteredComputers | Where-Object { $_.Name -like "*$searchTerm*" }
-        
+    
             # Clear and repopulate the checked list box with filtered computers and restore their checked state
             $computerCheckedListBox.Items.Clear()
             foreach ($computer in $filteredList) {
@@ -2835,6 +2838,7 @@ $applyRenameButton.Add_Click({
 
         }
     })
+
 $form.Controls.Add($applyRenameButton) 
 
 # Call the function to load and filter computers
