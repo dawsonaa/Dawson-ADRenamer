@@ -2006,7 +2006,7 @@ $form.Controls.Add($beforeChangeLabel)
 # Create label for newNamesListBox to show its filled with the manipulated names
 $afterChangeLabel = New-Object System.Windows.Forms.Label
 $afterChangeLabel.Text = "After Change"
-$afterChangeLabel.Location = New-Object System.Drawing.Point(590, 15)
+$afterChangeLabel.Location = New-Object System.Drawing.Point(610, 15)
 $afterChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
 $form.Controls.Add($afterChangeLabel)
 
