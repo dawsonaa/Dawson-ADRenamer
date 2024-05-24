@@ -1,7 +1,7 @@
 <#
-# Dawson's AD Computer Renamer 2.5.21
+# Dawson's AD Computer Renamer 3.5.24
 # Author: Dawson Adams (dawsonaa@ksu.edu)
-# Version: 2.5.21
+# Version: 3.5.24
 # Date: 5/21/2024
 # This script provides a comprehensive tool for renaming Active Directory (AD) computer objects. It includes functionalities to:
 
@@ -109,7 +109,6 @@ Add-Type -AssemblyName System.Drawing
 
 if (-not $online) {
     # Dummy data for computers # OFFLINE
-    # Dummy data for computers
     function Add-DummyComputers {
         param (
             [int]$numberOfDevices = 10
@@ -125,7 +124,7 @@ if (-not $online) {
         $dummyComputers = @()
         for ($i = 1; $i -le $numberOfDevices; $i++) {
             $dummyComputers += @{
-                Name          = "HL-CS-LOAN-$i"
+                Name          = "HL-CS-$i"
                 LastLogonDate = Get-RandomDate
             }
         }
@@ -213,7 +212,7 @@ public class CustomListBox : ListBox
 "@ -Language CSharp -ReferencedAssemblies System.Windows.Forms
 
 # Set text for version labels
-$Version = "2.5.21"
+$Version = "3.5.24"
 
 if ($online) {
     # Present initial login window # ONLINE
@@ -259,18 +258,7 @@ else {
 # This hash set will be used to ensure that new computer names are unique.
 $hashSet = [System.Collections.Generic.HashSet[string]]::new()
 
-# Updates all list boxes with computer names and their corresponding new names based on user-defined rules and custom names.
-# This function performs the following steps:
-# 1. Checks if any relevant checkboxes are checked.
-# 2. Clears existing items and lists.
-# 3. Iterates through the checked computer names and updates the selected computers list.
-# 4. Checks for custom names and applies them if found.
-# 5. Splits the computer names into parts and applies user-defined replacements for parts.
-# 6. Calculates the remaining length for parts based on total length limits and applies truncation if necessary.
-# 7. Swaps part0 and part1 if the swap checkbox is checked.
-# 8. Constructs new names and validates them based on length and uniqueness constraints.
-# 9. Adds valid and invalid names to the respective lists and updates the new names list box with appropriate labels.
-# 10. Enables or disables the ApplyRenameButton based on the presence of valid names and checked conditions.
+# Change object to store different types of rename operations
 class Change {
     [string[]]$ComputerNames
     [string]$Part0
@@ -295,7 +283,7 @@ class Change {
     }
 }
 
-
+# Initialize
 $script:changesList = New-Object System.Collections.ArrayList
 $script:newNamesList = @()
 
@@ -541,10 +529,6 @@ function ProcessCommittedChanges {
     UpdateColors #>
 }
 
-
-
-
-
 # Function for setting individual custom names
 function Show-InputBox {
     param (
@@ -700,7 +684,7 @@ function Show-EmailDrafts {
 
     $emailForm.BackColor = $catDark
     $emailForm.ForeColor = $white
-    $emailForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+    # $emailForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
     
     # Create labels for each ListBox
     $labelOldName = New-Object System.Windows.Forms.Label
@@ -1132,8 +1116,6 @@ $catYellow = [System.Drawing.Color]::FromArgb(254, 162, 2)
 $catLightYellow = [System.Drawing.Color]::FromArgb(255, 249, 227)
 $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 
-
-
 # Create main form
 $form = New-Object System.Windows.Forms.Form
 $form.Size = New-Object System.Drawing.Size(830, 530) # 785, 520
@@ -1164,6 +1146,7 @@ if (Test-Path $iconPath) {
 else {
     Write-Host "icon not found at path $iconPath"
 }
+
 
 # Initialize script-scope variables
 $script:invalidNamesList = @()
@@ -1941,67 +1924,6 @@ $menuRemoveAll.Add_Click({
         Write-Host "All devices removed from the list"
     })
 
-
-# Create context menu item for adding a custom name if one item in the selectedCheckedListBox is selected
-$menuAddCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
-$menuAddCustomName.Text = "Set/Change Custom rename"
-$menuAddCustomName.Enabled = $false
-$menuAddCustomName.Add_Click({
-        $selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
-        $tempList = $script:customNamesList
-        $script:customNamesList = @()
-
-        # Preserve existing items in customNamesList
-        foreach ($tempItem in $tempList) {
-            $isSelected = $false
-            foreach ($selectedItem in $selectedItems) {
-                if ($tempItem -match "^$selectedItem\s*->") {
-                    $isSelected = $true
-                    break
-                }
-            }
-            if (-not $isSelected) {
-                $script:customNamesList += $tempItem
-            }
-        }    
-
-        foreach ($item in $selectedItems) {
-            # Prompt for a custom name
-            $customItem = Show-InputBox -message "Enter custom name for $item :" -title "Custom Name" -defaultText $item
-    
-            if ($customItem -and $customItem -ne "") {
-                # Add the new custom name
-                $script:customNamesList += "$item -> $customItem"
-                # Write-Host "$item -> $customItem" # for debugging
-            }
-        }
-        # UpdateAllListBoxes
-    })
-
-# Create context menu item for removing the custom names attached to selected items within the selectedCheckedListBox
-$menuRemoveCustomName = [System.Windows.Forms.ToolStripMenuItem]::new()
-$menuRemoveCustomName.Text = "Remove Custom rename"
-$menuRemoveCustomName.Enabled = $false
-$menuRemoveCustomName.Add_Click({
-        $selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
-        $tempList = $script:customNamesList
-        $script:customNamesList = @()
-
-        foreach ($tempItem in $tempList) {
-            $isSelected = $false
-            foreach ($selectedItem in $selectedItems) {
-                if ($tempItem -match "^$selectedItem\s*->") {
-                    $isSelected = $true
-                    break
-                }
-            }
-            if (-not $isSelected) {
-                $script:customNamesList += $tempItem
-            }
-        }
-        # UpdateAllListBoxes
-    })
-
 # Event handler for when the context menu is opening
 $contextMenu.add_Opening({
         # Check if there are any items
@@ -2010,42 +1932,18 @@ $contextMenu.add_Opening({
 
         if ($itemsInBox.Count -gt 0) {
             $menuRemoveAll.Enabled = $true
-            $menuFindAndReplace.Enabled = $true
         }
         else {
             $menuRemoveAll.Enabled = $false
-            $menuFindAndReplace.Enabled = $false
         }
 
         if ($selectedItems.Count -gt 0) {
             $menuRemove.Enabled = $true  # Enable the menu item if items are checked
 
-            # Check if all checked items are in customNamesList
-            $allInCustomNamesList = $true
-            foreach ($item in $selectedItems) {
-                if (-not ($script:customNamesList | Where-Object { $_ -match "^$item\s*->" })) {
-                    $allInCustomNamesList = $false
-                    break
-                }
-            }
-        
-            if ($allInCustomNamesList) {
-                $menuRemoveCustomName.Enabled = $true
-            }
-            else {
-                $menuRemoveCustomName.Enabled = $false
-            }
-
-            if ($selectedItems.Count -eq 1) {
-                $menuAddCustomName.Enabled = $true
-            }
-            else {
-                $menuAddCustomName.Enabled = $false
-            }         
+ 
         }
         else {
             $menuRemove.Enabled = $false  # Disable the menu item if no items are checked
-            $menuRemoveCustomName.Enabled = $false
         }
     })
 
@@ -2058,60 +1956,10 @@ $selectedCheckedListBox.add_KeyDown({
         }
     })
 
-# Create menu context item for finding and replacing strings within selected computers
-$menuFindAndReplace = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuFindAndReplace.Text = "Find and Replace"
-$menuFindAndReplace.Add_Click({
-        $searchString = Show-InputBox -message "Enter the string to search for (max 15 chars):" -title "Find and Replace"
-        if (-not $searchString) { return }
-
-        $replaceString = Show-InputBox -message "Enter the string to replace with (max 15 chars):" -title "Find and Replace"
-        if (-not $replaceString) { return }
-
-        $listBoxItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
-        $tempList = $script:customNamesList
-        $script:customNamesList = @()
-
-        # Preserve existing items in customNamesList that do not match the searchString
-        foreach ($tempItem in $tempList) {
-            $computerName, $newName = $tempItem -split ' -> '
-            if ($newName -notmatch [regex]::Escape($searchString)) {
-                $script:customNamesList += $tempItem
-            }
-        }
-
-        foreach ($entry in $listBoxItems) {
-            $computerName, $newName = $entry -split ' -> '
-
-            # Write-Host "Checking $computerName for $searchString" # for debugging
-            if ($computerName -match [regex]::Escape($searchString)) {
-                # Write-Host "Original newName: $newName" # for debugging
-                $newName = $computerName -replace [regex]::Escape($searchString), $replaceString
-                # Write-Host "Newname after replace: $newName" # for debugging
-
-                # Ensure the new name is still valid (max length 15 characters)
-                if ($newName.Length -le 15) {
-                    $script:customNamesList += "$computerName -> $newName"
-                    # Write-Host "$computerName -> $newName" # for debugging
-                }
-                else {
-                    Write-Host "$computerName ignored in find and replace, exceeds 15 characters"
-                }
-            }
-            else {
-                Write-Host "$computerName does not contain $searchString"
-            }
-        
-        }
-        ProcessCommittedChanges
-    })
 
 # Add the right click menu options to the context menu
 $contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemove) | Out-Null
 $contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveAll) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuAddCustomName) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuRemoveCustomName) | Out-Null
-$contextMenu.Items.Add([System.Windows.Forms.ToolStripItem]$menuFindAndReplace) | Out-Null
 
 # Attach the context menu to the CheckedListBox
 $selectedCheckedListBox.ContextMenuStrip = $contextMenu
@@ -2954,145 +2802,10 @@ $applyRenameButton.Add_Click({
 
 $form.Controls.Add($applyRenameButton) 
 
-# Create the root context menu
-$formContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-
-# Create main menu items
-$menuItemRemoveAll = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemRemoveAll.Text = "Remove All"
-
-$menuItemRemoveSelected = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemRemoveSelected.Text = "Remove Selected"
-
-$menuItemRemoveGroup = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuItemRemoveGroup.Text = "Remove items of group"
-
-# Add the main menu items to the context menu
-$formContextMenu.Items.Add($menuItemRemoveAll)
-$formContextMenu.Items.Add($menuItemRemoveSelected)
-$formContextMenu.Items.Add($menuItemRemoveGroup)
-
-# Assign the context menu to the form
-$form.ContextMenuStrip = $formContextMenu
-
-# Define the functions for menu actions
-function RemoveItemsOfGroup {
-    param (
-        [CustomColor]$groupColor
-    )
-
-    $itemsToRemove = @()
-    foreach ($change in $script:changesList) {
-        if ($change.GroupColor -eq $groupColor) {
-            $itemsToRemove += $change.ComputerNames
-        }
-    }
-
-    foreach ($item in $itemsToRemove) {
-        $script:checkedItems.Remove($item)
-        $selectedCheckedListBox.Items.Remove($item)
-
-        $newName = $script:originalToNewNameMap[$item]
-        if ($newName) {
-            $newNamesListBox.Items.Remove($newName)
-        }
-
-        # Remove the item from changesList
-        $tempChangesToRemove = @()
-        foreach ($change in $script:changesList) {
-            if ($change.ComputerNames -contains $item) {
-                $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
-                if ($change.ComputerNames.Count -eq 0) {
-                    $tempChangesToRemove += $change
-                }
-            }
-        }
-        foreach ($changeToRemove in $tempChangesToRemove) {
-            $script:changesList.Remove($changeToRemove)
-        }
-    }
-    Write-Host "Items with the specified color removed."
-}
-
-function CreateColorSubmenuItems {
-    param (
-        [System.Windows.Forms.ToolStripMenuItem]$parentMenuItem,
-        [System.Collections.Hashtable]$groupColors
-    )
-
-    # Clear existing submenu items
-    $parentMenuItem.DropDownItems.Clear()
-
-    foreach ($group in $groupColors.Keys) {
-        $color = $groupColors[$group]
-        $submenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
-        $submenuItem.Text = "$group ($color)"
-        $submenuItem.BackColor = [System.Drawing.Color]::FromArgb($color.R, $color.G, $color.B)
-
-        # Add event handler for the submenu item
-        $submenuItem.Add_Click({
-                RemoveItemsOfGroup -groupColor $color
-            })
-
-        $parentMenuItem.DropDownItems.Add($submenuItem)
-    }
-}
-
-# Populate the context menu with color-based group items on form load
-$form.add_Load({
-        $groupColors = @{}
-        foreach ($change in $script:changesList) {
-            $colorKey = "$($change.GroupColor.R),$($change.GroupColor.G),$($change.GroupColor.B)"
-            if (-not $groupColors.ContainsKey($colorKey)) {
-                $groupColors[$colorKey] = $change.GroupColor
-            }
-        }
-        CreateColorSubmenuItems -parentMenuItem $menuItemRemoveGroup -groupColors $groupColors
-    })
-
-# Define other menu item actions
-$menuItemRemoveAll.Add_Click({
-        $script:checkedItems.Clear()
-        $selectedCheckedListBox.Items.Clear()
-        $newNamesListBox.Items.Clear()
-        $script:changesList.Clear()
-        Write-Host "All items removed."
-    })
-
-$menuItemRemoveSelected.Add_Click({
-        $selectedItems = @($selectedCheckedListBox.CheckedItems | ForEach-Object { $_ })
-
-        foreach ($item in $selectedItems) {
-            $script:checkedItems.Remove($item)
-            $selectedCheckedListBox.Items.Remove($item)
-        
-            $newName = $script:originalToNewNameMap[$item]
-            if ($newName) {
-                $newNamesListBox.Items.Remove($newName)
-            }
-
-            # Remove the item from changesList
-            $tempChangesToRemove = @()
-            foreach ($change in $script:changesList) {
-                if ($change.ComputerNames -contains $item) {
-                    $change.ComputerNames = $change.ComputerNames | Where-Object { $_ -ne $item }
-                    if ($change.ComputerNames.Count -eq 0) {
-                        $tempChangesToRemove += $change
-                    }
-                }
-            }
-            foreach ($changeToRemove in $tempChangesToRemove) {
-                $script:changesList.Remove($changeToRemove)
-            }
-        }
-        Write-Host "Selected items removed."
-    })
-
 # Call the function to load and filter computers
 LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
     
 # Show the form
-# $form.Add_Shown({ $form.Activate() })
 $form.ShowDialog()
 
 
