@@ -370,14 +370,14 @@ function ProcessCommittedChanges {
     $script:validNamesList = @()
     $script:invalidNamesList = @()
 
-    Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
+    # Write-Host "Checked items: $($script:checkedItems.Keys -join ', ')"
 
     # Track attempted names to identify duplicates
     $attemptedNamesTracker = @{}
 
     # Process selected checked items
     foreach ($computerName in $script:selectedCheckedItems.Keys) {
-        Write-Host "Processing computer: $computerName"
+        # Write-Host "Processing computer: $computerName"
         
         $parts = $computerName -split '-'
         $part0 = $parts[0]
@@ -385,14 +385,14 @@ function ProcessCommittedChanges {
         $part2 = if ($parts.Count -ge 3) { $parts[2] } else { $null }
         $part3 = if ($parts.Count -ge 4) { $parts[3..($parts.Count - 1)] -join '-' } else { $null }
 
-        Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkBlue
+        # Write-Host "Initial parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkBlue
 
         $part0InputValue = if (-not $part0Input.ReadOnly) { $part0Input.Text } else { $null }
         $part1InputValue = if (-not $part1Input.ReadOnly) { $part1Input.Text } else { $null }
         $part2InputValue = if (-not $part2Input.ReadOnly) { $part2Input.Text } else { $null }
         $part3InputValue = if (-not $part3Input.ReadOnly) { $part3Input.Text } else { $null }
 
-        Write-Host "Input values: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
+        # Write-Host "Input values: Part0: $part0InputValue, Part1: $part1InputValue, Part2: $part2InputValue, Part3: $part3InputValue"
 
         if ($part0InputValue) { $part0 = $part0InputValue }
         if ($part1InputValue) { $part1 = $part1InputValue }
@@ -421,7 +421,7 @@ function ProcessCommittedChanges {
         if ($part2 -match "(?i)dept") { $part2 = Get-DepartmentString($computerName) }
         if ($part3 -match "(?i)dept") { $part3 = Get-DepartmentString($computerName) }
 
-        Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
+        # Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
 
         if ($part3) {
             $newName = "$part0-$part1-$part2-$part3"
@@ -433,7 +433,7 @@ function ProcessCommittedChanges {
             $newName = "$part0-$part1"
         }
 
-        Write-Host "New name: $newName"
+        # Write-Host "New name: $newName"
         $isValid = $newName.Length -le 15
         $isDuplicate = $attemptedNamesTracker.ContainsKey($newName)
         
@@ -473,7 +473,7 @@ function ProcessCommittedChanges {
             $validComparison = ($change.Valid -eq $isValid)
 
             if ($part0Comparison -and $part1Comparison -and $part2Comparison -and $part3Comparison -and $validComparison) {
-                Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
+                # Write-Host "Found matching change for parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
                 $existingChange = $change
                 break
             }
@@ -519,7 +519,7 @@ function ProcessCommittedChanges {
     # Enable or disable the ApplyRenameButton based on valid names count and checkbox states
     $commitChangesButton.Enabled = ($anyCheckboxChecked -and ($script:validNamesList.Count -gt 0)) -or ($script:customNamesList.Count -gt 0)
 
-    # Print the changesList for debugging
+    <# Print the changesList for debugging
     Write-Host "`nChanges List:" -ForegroundColor red
     foreach ($change in $script:changesList) {
         Write-Host "Change Parts: Part0: $($change.Part0), Part1: $($change.Part1), Part2: $($change.Part2), Part3: $($change.Part3), Valid: $($change.Valid)" -ForegroundColor DarkRed
@@ -529,7 +529,7 @@ function ProcessCommittedChanges {
     }
 
     # Update the colors in the selectedCheckedListBox and colorPanel
-    UpdateColors
+    UpdateColors #>
 }
 
 
@@ -2150,7 +2150,7 @@ function New-CustomTextBox {
     $textBox.Size = $size
     $textBox.ForeColor = [System.Drawing.Color]::Gray
     $textBox.BackColor = [System.Drawing.Color]::LightGray
-    $textBox.Text = "Change $defaultText"
+    $textBox.Text = $defaultText
     $textBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
     $textBox.ReadOnly = $true
     $textBox.MaxLength = [Math]::Min(15, $maxLength)
@@ -2175,7 +2175,7 @@ function New-CustomTextBox {
                 $s.BackColor = [System.Drawing.Color]::White
                 $s.ForeColor = [System.Drawing.Color]::Black
                 $s.Focus()
-                if ($s.Text -eq "Change $defaultText") {
+                if ($s.Text -eq $defaultText) {
                     $s.Text = ''
                 }
             }
@@ -2185,7 +2185,7 @@ function New-CustomTextBox {
     $textBox.Add_Enter({
             param($s, $e)
             $defaultText = $s.Tag
-            if ($s.Text -eq "Change $defaultText") {
+            if ($s.Text -eq $defaultText) {
                 $s.Text = ''
                 $s.BackColor = [System.Drawing.Color]::White
                 $s.ForeColor = [System.Drawing.Color]::Black
@@ -2198,7 +2198,7 @@ function New-CustomTextBox {
             $defaultText = $s.Tag
             if ($s.Text -eq '') {
                 $s.ReadOnly = $true
-                $s.Text = "Change $defaultText"
+                $s.Text = $defaultText
                 $s.ForeColor = [System.Drawing.Color]::Gray
                 $s.BackColor = [System.Drawing.Color]::LightGray
             }
@@ -2215,7 +2215,7 @@ $form.add_MouseDown({
         function SetReadOnlyIfNotFocused($textBox) {
             $textBox.ReadOnly = $true
             if ($textBox.Text -eq '') {
-                $textBox.Text = "Change $($textBox.Tag)"
+                $textBox.Text = "$($textBox.Tag)"
                 $textBox.ForeColor = [System.Drawing.Color]::Gray
                 $textBox.BackColor = [System.Drawing.Color]::LightGray
                 $textbox.Enabled = $false
@@ -2243,22 +2243,22 @@ $totalWidth = (4 * $textBoxSize.Width) + (3 * $gap) # 3 gaps between 4 text boxe
 # Determine the starting X-coordinate to center the group of text boxes
 $startX = [Math]::Max(($form.ClientSize.Width - $totalWidth) / 2, 0)
 
-$script:part0DefaultText = "part0Input"
-$script:part1DefaultText = "part1Input"
-$script:part2DefaultText = "part2Input"
-$script:part3DefaultText = "part3Input"
+$script:part0DefaultText = "Change part0Name"
+$script:part1DefaultText = "Change part1Name"
+$script:part2DefaultText = "Change part2Name"
+$script:part3DefaultText = "Change part3Name"
 
 # Create and add the text boxes, setting their X-coordinates based on the starting point
-$part0Input = New-CustomTextBox -name $script:part0DefaultText -defaultText $script:part0DefaultText -x $startX -y 400 -size $textBoxSize -maxLength 15
+$part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y 400 -size $textBoxSize -maxLength 15
 $form.Controls.Add($part0Input)
 
-$part1Input = New-CustomTextBox -name "part1Input" -defaultText "part1Name" -x ($startX + $textBoxSize.Width + $gap) -y 400 -size $textBoxSize -maxLength 20
+$part1Input = New-CustomTextBox -name "part1Input" -defaultText $script:part1DefaultText -x ($startX + $textBoxSize.Width + $gap) -y 400 -size $textBoxSize -maxLength 20
 $form.Controls.Add($part1Input)
 
-$part2Input = New-CustomTextBox -name "part2Input" -defaultText "part2Name" -x ($startX + 2 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
+$part2Input = New-CustomTextBox -name "part2Input" -defaultText $script:part2DefaultText -x ($startX + 2 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
 $form.Controls.Add($part2Input)
 
-$part3Input = New-CustomTextBox -name "part3Input" -defaultText "part3Name" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
+$part3Input = New-CustomTextBox -name "part3Input" -defaultText $script:part3DefaultText -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
 $form.Controls.Add($part3Input)
 
 $part0Input.Add_TextChanged({
@@ -2350,24 +2350,31 @@ $commitChangesButton.Add_Click({
         $script:globalTopIndex = 0
 
         # Reset part#Input TextBoxes to default text and ReadOnly status
-        function ResetTextBox($textBox) {
-            $textBox.Text = "Change $($textBox.Tag)"
+        function ResetTextBox($textBox, $defaultText) {
+            $textBox.Text = $defaultText
             $textBox.ForeColor = [System.Drawing.Color]::Gray
             $textBox.BackColor = [System.Drawing.Color]::LightGray
             $textBox.ReadOnly = $true
         }
 
-        ResetTextBox $part0Input
-        ResetTextBox $part1Input
-        ResetTextBox $part2Input
-        ResetTextBox $part3Input
+        ResetTextBox $part0Input $script:part0DefaultText
+        ResetTextBox $part1Input $script:part1DefaultText
+        ResetTextBox $part2Input $script:part2DefaultText
+        ResetTextBox $part3Input $script:part3DefaultText
+
+
+        # Set checked status for all selectedCheckedListBox items
+        foreach ($index in 0..($selectedCheckedListBox.Items.Count - 1)) {
+            $selectedCheckedListBox.SetItemChecked($index, $false)
+        }
 
         $commitChangesButton.Enabled = $false
         $ApplyRenameButton.Enabled = $true
         $form.Enabled = $true
-
     })
+
 $form.Controls.Add($commitChangesButton)
+
 
 # Add button to refresh or select a new OU to manage
 $refreshButton = New-StyledButton -text "Refresh OU" -x 195 -y 10 -width 88 -height 25 -enabled $true
