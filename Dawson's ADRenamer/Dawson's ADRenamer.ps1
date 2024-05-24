@@ -330,38 +330,52 @@ $colors = @(
 $global:nextColorIndex = 0
 
 # Function to get the department string
-function Get-DepartmentString($deviceName) {
+function Get-DepartmentString($deviceName, $part) {
     # Get the OU location of the device
-
     if ($online) {
         $device = Get-ADComputer -Identity $deviceName -Properties CanonicalName
         $ouLocation = $device.CanonicalName -replace "^CN=[^,]+,", ""
 
         # Extract the string directly after "Dept/"
         if ($ouLocation -match "Dept/([^/]+)") {
-            return $matches[1]
+            $deptString = $matches[1]
         }
         else {
-            return "deptnotfound"
+            $deptString = "deptnotfound"
         }
     }
     else {
-
         $ouLocation = "/Dept/OFFLN/Workstations/"
-
-        # Extract the string directly after "Dept/"
         if ($ouLocation -match "Dept/([^/]+)") {
-            return $matches[1]
+            $deptString = $matches[1]
         }
         else {
-            return "deptnotfound"
+            $deptString = "deptnotfound"
         }
     }
+
+    # Apply truncation logic if part contains numbers before or after "dept"
+    if ($part -match "(?i)(\d*)dept(\d*)") {
+        $prefixLength = if ($matches[1] -and $matches[1] -ge 2 -and $matches[1] -le 5) { [int]::Parse($matches[1]) } else { $null }
+        $suffixLength = if ($matches[2] -and $matches[2] -ge 2 -and $matches[2] -le 5) { [int]::Parse($matches[2]) } else { $null }
+
+        if ($suffixLength) {
+            # If the number is after "dept", truncate from the left
+            return $deptString.Substring(0, [Math]::Min($deptString.Length, $suffixLength))
+        }
+        elseif ($prefixLength) {
+            # If the number is before "dept", truncate from the right
+            $startIndex = [Math]::Max(0, $deptString.Length - $prefixLength)
+            return $deptString.Substring($startIndex, $prefixLength)
+        }
+    }
+
+    return $deptString
 }
 
-# Update the ProcessCommittedChanges function to update the name map
-function ProcessCommittedChanges {
 
+# ProcessCommittedChanges function to update the name map
+function ProcessCommittedChanges {
     # Clear existing items and lists except for the new names list
     $hashSet.Clear()
     $script:newNamesListBox.Items.Clear()
@@ -413,11 +427,11 @@ function ProcessCommittedChanges {
             }
         }
 
-        # Check if any part contains "dept" (case insensitive) and replace with $deptString
-        if ($part0 -match "(?i)dept") { $part0 = Get-DepartmentString($computerName) }
-        if ($part1 -match "(?i)dept") { $part1 = Get-DepartmentString($computerName) }
-        if ($part2 -match "(?i)dept") { $part2 = Get-DepartmentString($computerName) }
-        if ($part3 -match "(?i)dept") { $part3 = Get-DepartmentString($computerName) }
+        # Check if any part contains "dept" (case insensitive) and replace with $deptString with truncation logic
+        if ($part0 -match "(?i)dept") { $part0 = Get-DepartmentString $computerName $part0 }
+        if ($part1 -match "(?i)dept") { $part1 = Get-DepartmentString $computerName $part1 }
+        if ($part2 -match "(?i)dept") { $part2 = Get-DepartmentString $computerName $part2 }
+        if ($part3 -match "(?i)dept") { $part3 = Get-DepartmentString $computerName $part3 }
 
         # Write-Host "Updated parts: Part0: $part0, Part1: $part1, Part2: $part2, Part3: $part3" -ForegroundColor DarkRed
 
@@ -526,6 +540,7 @@ function ProcessCommittedChanges {
     # Update the colors in the selectedCheckedListBox and colorPanel
     UpdateColors #>
 }
+
 
 
 
