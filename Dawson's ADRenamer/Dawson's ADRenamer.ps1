@@ -879,6 +879,9 @@ function Select-OU {
     }
 }
 
+# Initialize the $script:filteredComputers variable as an empty array
+$script:filteredComputers = @()
+
 <#
 .SYNOPSIS
     Loads and filters computer objects from Active Directory (AD) or offline data source and updates the provided CheckedListBox with the filtered computer names.
@@ -944,6 +947,9 @@ function LoadAndFilterComputers {
 
         # Define the cutoff date for filtering computers based on their last logon date
         $cutoffDate = (Get-Date).AddDays(-180)
+        
+        # Clear array
+        $script:filteredComputers = @()
 
         if ($online) {
             # Query Active Directory for computers within the selected OU and retrieve their last logon date
