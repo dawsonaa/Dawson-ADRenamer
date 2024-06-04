@@ -522,6 +522,8 @@ function ConvertTo-EmailAddress {
     return $email
 }
 
+
+
 # Function to create an Outlook web draft email
 function Update-OutlookWebDraft {
     param (
@@ -547,13 +549,19 @@ Best regards,
 IT Support Team
 "@
 
+    # Helper function to replace '+' with '%20'
+    function EncodeSpaces($string) {
+        return [System.Uri]::EscapeDataString($string) -replace '\+', '%20'
+    }
+
     # Construct the Outlook web URL for creating a draft
-    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + [System.Uri]::EscapeDataString($emailAddress) + "&subject=" + [System.Uri]::EscapeDataString($subject) + "&body=" + [System.Uri]::EscapeDataString($body)
+    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + (EncodeSpaces($emailAddress)) + "&subject=" + (EncodeSpaces($subject)) + "&body=" + (EncodeSpaces($body))
 
     # Open the URL in the default browser
     Start-Process $url
     Write-Host "Draft email created for $emailAddress" -ForegroundColor Green
-} # FIX - adds +'s sometimes. Had it do it on the first try and not on the second.
+}
+
 
 # Function to prompt user to create email drafts using three synchronized ListBox controls
 function Show-EmailDrafts {
