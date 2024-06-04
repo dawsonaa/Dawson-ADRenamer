@@ -2120,6 +2120,7 @@ function New-CustomTextBox {
             param($s, $e)
             $defaultText = $s.Tag
             if ($s.Text -eq $defaultText) {
+                $s.ReadOnly = $false
                 $s.Text = ''
                 $s.BackColor = [System.Drawing.Color]::White
                 $s.ForeColor = [System.Drawing.Color]::Black
