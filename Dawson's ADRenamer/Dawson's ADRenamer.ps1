@@ -522,6 +522,8 @@ function ConvertTo-EmailAddress {
     return $email
 }
 
+
+
 # Function to create an Outlook web draft email
 function Update-OutlookWebDraft {
     param (
@@ -547,13 +549,19 @@ Best regards,
 IT Support Team
 "@
 
+    # Helper function to replace '+' with '%20'
+    function EncodeSpaces($string) {
+        return [System.Uri]::EscapeDataString($string) -replace '\+', '%20'
+    }
+
     # Construct the Outlook web URL for creating a draft
-    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + [System.Uri]::EscapeDataString($emailAddress) + "&subject=" + [System.Uri]::EscapeDataString($subject) + "&body=" + [System.Uri]::EscapeDataString($body)
+    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + (EncodeSpaces($emailAddress)) + "&subject=" + (EncodeSpaces($subject)) + "&body=" + (EncodeSpaces($body))
 
     # Open the URL in the default browser
     Start-Process $url
     Write-Host "Draft email created for $emailAddress" -ForegroundColor Green
-} # FIX - adds +'s sometimes. Had it do it on the first try and not on the second.
+}
+
 
 # Function to prompt user to create email drafts using three synchronized ListBox controls
 function Show-EmailDrafts {
@@ -871,6 +879,9 @@ function Select-OU {
     }
 }
 
+# Initialize the $script:filteredComputers variable as an empty array
+$script:filteredComputers = @()
+
 <#
 .SYNOPSIS
     Loads and filters computer objects from Active Directory (AD) or offline data source and updates the provided CheckedListBox with the filtered computer names.
@@ -936,6 +947,9 @@ function LoadAndFilterComputers {
 
         # Define the cutoff date for filtering computers based on their last logon date
         $cutoffDate = (Get-Date).AddDays(-180)
+        
+        # Clear array
+        $script:filteredComputers = @()
 
         if ($online) {
             # Query Active Directory for computers within the selected OU and retrieve their last logon date
@@ -2112,6 +2126,7 @@ function New-CustomTextBox {
             param($s, $e)
             $defaultText = $s.Tag
             if ($s.Text -eq $defaultText) {
+                $s.ReadOnly = $false
                 $s.Text = ''
                 $s.BackColor = [System.Drawing.Color]::White
                 $s.ForeColor = [System.Drawing.Color]::Black
@@ -2725,6 +2740,20 @@ $applyRenameButton.Add_Click({
             # Create the LOGS folder if it doesn't exist
             if (-not (Test-Path -Path $logsFolderPath)) {
                 New-Item -Path $logsFolderPath -ItemType Directory | Out-Null
+            }
+
+            # Iterate through the script:changesList items and output each change object with its connected devices
+            foreach ($change in $script:changesList) {
+                Write-Host "Change Object:" -ForegroundColor Green
+                Write-Host ("Part0: {0}, Part1: {1}, Part2: {2}, Part3: {3}" -f $change.Part0, $change.Part1, $change.Part2, $change.Part3) -ForegroundColor Green
+                foreach ($i in 0..($change.ComputerNames.Length - 1)) {
+                    $computerName = $change.ComputerNames[$i]
+                    $attemptedName = $change.AttemptedNames[$i]
+                    $isValid = $change.Valid[$i]
+                    $isDuplicate = $change.Duplicate[$i]
+                    Write-Host ("{0}, attemptedname: {1}, valid: {2}, duplicate: {3}" -f $computerName, $attemptedName, $isValid, $isDuplicate) -ForegroundColor Blue
+                }
+                Write-Host " "
             }
 
             # Create the CSV file
