@@ -2735,6 +2735,20 @@ $applyRenameButton.Add_Click({
                 New-Item -Path $logsFolderPath -ItemType Directory | Out-Null
             }
 
+            # Iterate through the script:changesList items and output each change object with its connected devices
+            foreach ($change in $script:changesList) {
+                Write-Host "Change Object:" -ForegroundColor Green
+                Write-Host ("Part0: {0}, Part1: {1}, Part2: {2}, Part3: {3}" -f $change.Part0, $change.Part1, $change.Part2, $change.Part3) -ForegroundColor Green
+                foreach ($i in 0..($change.ComputerNames.Length - 1)) {
+                    $computerName = $change.ComputerNames[$i]
+                    $attemptedName = $change.AttemptedNames[$i]
+                    $isValid = $change.Valid[$i]
+                    $isDuplicate = $change.Duplicate[$i]
+                    Write-Host ("{0}, attemptedname: {1}, valid: {2}, duplicate: {3}" -f $computerName, $attemptedName, $isValid, $isDuplicate) -ForegroundColor Blue
+                }
+                Write-Host " "
+            }
+
             # Create the CSV file
             $csvData = @()
 
