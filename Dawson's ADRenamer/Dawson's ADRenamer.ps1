@@ -57,6 +57,68 @@ $online = $false
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Create a form for selecting Online, Offline, or Cancel
+$modeSelectionForm = New-Object System.Windows.Forms.Form
+$modeSelectionForm.Text = "ADRenamer Mode Selection"
+$modeSelectionForm.Size = New-Object System.Drawing.Size(300,150)
+$modeSelectionForm.StartPosition = "CenterScreen"
+
+$label = New-Object System.Windows.Forms.Label
+$label.Text = "Do you want to use ADRenamer in Online or Offline mode?"
+$label.Size = New-Object System.Drawing.Size(280,30)
+$label.Location = New-Object System.Drawing.Point(10,20)
+$modeSelectionForm.Controls.Add($label)
+
+$buttonOnline = New-Object System.Windows.Forms.Button
+$buttonOnline.Text = "Online"
+$buttonOnline.Location = New-Object System.Drawing.Point(10,70)
+$buttonOnline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOnline.Add_Click({
+    $global:choice = "Online"
+    $modeSelectionForm.Close()
+})
+$modeSelectionForm.Controls.Add($buttonOnline)
+
+$buttonOffline = New-Object System.Windows.Forms.Button
+$buttonOffline.Text = "Offline"
+$buttonOffline.Location = New-Object System.Drawing.Point(100,70)
+$buttonOffline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOffline.Add_Click({
+    $global:choice = "Offline"
+    $modeSelectionForm.Close()
+})
+$modeSelectionForm.Controls.Add($buttonOffline)
+
+$buttonCancel = New-Object System.Windows.Forms.Button
+$buttonCancel.Text = "Cancel"
+$buttonCancel.Location = New-Object System.Drawing.Point(190,70)
+$buttonCancel.Size = New-Object System.Drawing.Size(75,30)
+$buttonCancel.Add_Click({
+    $global:choice = "Cancel"
+    $modeSelectionForm.Close()
+})
+$modeSelectionForm.Controls.Add($buttonCancel)
+
+# Show the form
+$modeSelectionForm.ShowDialog() | Out-Null
+
+# Set the $online variable based on the selection or exit if canceled
+switch ($global:choice) {
+    "Online" {
+        $online = $true
+        Write-Host "Selected Online mode." -ForegroundColor Green
+    }
+    "Offline" {
+        $online = $false
+        Write-Host "Selected Offline mode." -ForegroundColor Yellow
+    }
+    "Cancel" {
+        Write-Host "Operation canceled by user." -ForegroundColor Red
+        exit
+    }
+}
+
+
 if (-not $online) {
     # Dummy data for computers # OFFLINE
     function Add-DummyComputers {
