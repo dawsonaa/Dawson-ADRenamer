@@ -48,11 +48,6 @@
 
 # All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
 
-# IMPORTANT
-# $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
-# $true will run the application with imported AD modules and will request credentials to be used for actual AD device name manipulation
-$online = $false
-
 # Load required assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -106,18 +101,14 @@ $modeSelectionForm.ShowDialog() | Out-Null
 switch ($global:choice) {
     "Online" {
         $online = $true
-        Write-Host "Selected Online mode." -ForegroundColor Green
     }
     "Offline" {
         $online = $false
-        Write-Host "Selected Offline mode." -ForegroundColor Yellow
     }
     "Cancel" {
-        Write-Host "Operation canceled by user." -ForegroundColor Red
         exit
     }
 }
-
 
 if (-not $online) {
     # Dummy data for computers # OFFLINE
@@ -224,7 +215,7 @@ public class CustomListBox : ListBox
 "@ -Language CSharp -ReferencedAssemblies System.Windows.Forms
 
 # Set text for version labels
-$Version = "3.5.24"
+$Version = "11.14.24"
 
 if ($online) {
     # Present initial login window # ONLINE
@@ -258,14 +249,11 @@ if ($online) {
             $errorMessage = "Invalid credentials or insufficient permissions. Please try again."
         }
     }
-}
-
-if ($online) {
     Write-Host "ONLINE MODE - Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
-}
-else {
+}else {
     Write-Host "OFFLINE MODE - No credentials are needed." -ForegroundColor Green
 }
+
 # Initialize a new hash set to store unique strings.
 # This hash set will be used to ensure that new computer names are unique.
 $hashSet = [System.Collections.Generic.HashSet[string]]::new()
@@ -1118,13 +1106,10 @@ $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontSty
 # Make sure user knows what mode they are in
 if ($online) {
     $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in ONLINE mode. Set the variable $online to $false for OFFLINE mode. (Line 54)' -ForegroundColor Yellow
 }
 else {
     $form.Text = "OFFLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in OFFLINE mode. Set the variable $online to $true for ONLINE mode. (Line 54)' -ForegroundColor Yellow
 }
-
 
 # Set the icon for the form
 $iconPath = Join-Path $PSScriptRoot "icon.ico"
