@@ -2844,10 +2844,17 @@ $applyRenameButton.Add_Click({
             }
 
             if ($online) {
-                # Send the HTTP POST request to trigger the flow
-                Invoke-RestMethod -Uri $flowUrl -Method Post -Headers $headers -Body $jsonBody
-                Write-Host "Triggered Power Automate flow to upload the log files to SharePoint" -ForegroundColor Yellow
-                Write-Host " "
+                try {
+                    # Send the HTTP POST request to trigger the flow
+                    Invoke-RestMethod -Uri $flowUrl -Method Post -Headers $headers -Body $jsonBody
+                    Write-Host "Triggered Power Automate flow to upload the log files to SharePoint" -ForegroundColor Yellow
+                    Write-Host " "
+                }
+                catch {
+                    # Catch block to handle any exceptions from Invoke-RestMethod
+                    Write-Host "Failed to trigger Power Automate flow: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Host " "
+                }
             }
             else {
                 # Send dummy write-host to emulate the real output
