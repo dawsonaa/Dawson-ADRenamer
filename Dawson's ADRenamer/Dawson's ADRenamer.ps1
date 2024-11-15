@@ -572,8 +572,6 @@ function ConvertTo-EmailAddress {
     return $email
 }
 
-
-
 # Function to create an Outlook web draft email
 function Update-OutlookWebDraft {
     param (
@@ -1130,7 +1128,7 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(710, 470)
+$versionLabel.Location = New-Object System.Drawing.Point(700, 470)
 $versionLabel.AutoSize = $true
 $versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -2396,7 +2394,7 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$refreshButton = New-StyledButton -text "Refresh OU" -x 195 -y 10 -width 88 -height 25 -enabled $true
+$refreshButton = New-StyledButton -text "Reselect OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
 $refreshButton.BackColor = $catBlue
 
 <#
