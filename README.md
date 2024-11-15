@@ -13,13 +13,10 @@ This script is a comprehensive tool for renaming Active Directory (AD) computer 
 3. **Shortcuts**: Shortcuts gets added to C:\Users\CurrentUser\Desktop and C:\Users\CurrentUser\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Dawson's ADRenamer
 
 ## Running the Script
-1. **Run as Administrator**:
+**Run as Administrator**:
    - Windows search for "Dawson's ADRenamer" and open the shorcut. This shorcut uses Set-ExecutionPolicy to get around script warnings.
    - Alternatively you can right-click on the script file and select "Run with PowerShell". If you encounter permission issues, right-click the script file, select "Run as Administrator", and then run the script again.
    - The script will check if it is running with elevated privileges and restart itself with elevated privileges if necessary.
-
-2. **Initial Setup**:
-   - By default the script will be set to run in offline mode ($online = $false). This can be changed by altering the variable $online to $true for online (Line 54).
 
 ## Features
 
