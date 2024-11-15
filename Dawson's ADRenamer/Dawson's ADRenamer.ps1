@@ -48,14 +48,67 @@
 
 # All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
 
-# IMPORTANT
-# $false will run the applicatiion with dummy devices and will not connect to AD or ask for cred's
-# $true will run the application with imported AD modules and will request credentials to be used for actual AD device name manipulation
-$online = $false
-
 # Load required assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+
+# Create a form for selecting Online, Offline, or Cancel
+$modeSelectionForm = New-Object System.Windows.Forms.Form
+$modeSelectionForm.Text = "ADRenamer Mode Selection"
+$modeSelectionForm.Size = New-Object System.Drawing.Size(300,150)
+$modeSelectionForm.StartPosition = "CenterScreen"
+
+$label = New-Object System.Windows.Forms.Label
+$label.Text = "Do you want to use ADRenamer in Online or Offline mode?"
+$label.Size = New-Object System.Drawing.Size(280,30)
+$label.Location = New-Object System.Drawing.Point(10,20)
+$modeSelectionForm.Controls.Add($label)
+
+$buttonOnline = New-Object System.Windows.Forms.Button
+$buttonOnline.Text = "Online"
+$buttonOnline.Location = New-Object System.Drawing.Point(10,70)
+$buttonOnline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOnline.Add_Click({
+    $global:choice = "Online"
+    $modeSelectionForm.Close()
+})
+$modeSelectionForm.Controls.Add($buttonOnline)
+
+$buttonOffline = New-Object System.Windows.Forms.Button
+$buttonOffline.Text = "Offline"
+$buttonOffline.Location = New-Object System.Drawing.Point(100,70)
+$buttonOffline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOffline.Add_Click({
+    $global:choice = "Offline"
+    $modeSelectionForm.Close()
+})
+$modeSelectionForm.Controls.Add($buttonOffline)
+
+$buttonCancel = New-Object System.Windows.Forms.Button
+$buttonCancel.Text = "Cancel"
+$buttonCancel.Location = New-Object System.Drawing.Point(190,70)
+$buttonCancel.Size = New-Object System.Drawing.Size(75,30)
+$buttonCancel.Add_Click({
+    $global:choice = "Cancel"
+    $modeSelectionForm.Close()
+})
+$modeSelectionForm.Controls.Add($buttonCancel)
+
+# Show the form
+$modeSelectionForm.ShowDialog() | Out-Null
+
+# Set the $online variable based on the selection or exit if canceled
+switch ($global:choice) {
+    "Online" {
+        $online = $true
+    }
+    "Offline" {
+        $online = $false
+    }
+    "Cancel" {
+        exit
+    }
+}
 
 if (-not $online) {
     # Dummy data for computers # OFFLINE
@@ -162,7 +215,7 @@ public class CustomListBox : ListBox
 "@ -Language CSharp -ReferencedAssemblies System.Windows.Forms
 
 # Set text for version labels
-$Version = "3.5.24"
+$Version = "11.14.24"
 
 if ($online) {
     # Present initial login window # ONLINE
@@ -196,14 +249,11 @@ if ($online) {
             $errorMessage = "Invalid credentials or insufficient permissions. Please try again."
         }
     }
-}
-
-if ($online) {
     Write-Host "ONLINE MODE - Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
-}
-else {
+}else {
     Write-Host "OFFLINE MODE - No credentials are needed." -ForegroundColor Green
 }
+
 # Initialize a new hash set to store unique strings.
 # This hash set will be used to ensure that new computer names are unique.
 $hashSet = [System.Collections.Generic.HashSet[string]]::new()
@@ -521,8 +571,6 @@ function ConvertTo-EmailAddress {
     $email = $emailLocalPart + "@ksu.edu"
     return $email
 }
-
-
 
 # Function to create an Outlook web draft email
 function Update-OutlookWebDraft {
@@ -1056,13 +1104,10 @@ $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontSty
 # Make sure user knows what mode they are in
 if ($online) {
     $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in ONLINE mode. Set the variable $online to $false for OFFLINE mode. (Line 54)' -ForegroundColor Yellow
 }
 else {
     $form.Text = "OFFLINE - Dawson's AD Computer Renamer $Version"
-    Write-Host 'You have started this application in OFFLINE mode. Set the variable $online to $true for ONLINE mode. (Line 54)' -ForegroundColor Yellow
 }
-
 
 # Set the icon for the form
 $iconPath = Join-Path $PSScriptRoot "icon.ico"
@@ -1083,7 +1128,7 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(710, 470)
+$versionLabel.Location = New-Object System.Drawing.Point(700, 470)
 $versionLabel.AutoSize = $true
 $versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -2349,7 +2394,7 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$refreshButton = New-StyledButton -text "Refresh OU" -x 195 -y 10 -width 88 -height 25 -enabled $true
+$refreshButton = New-StyledButton -text "Reselect OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
 $refreshButton.BackColor = $catBlue
 
 <#
@@ -2844,10 +2889,17 @@ $applyRenameButton.Add_Click({
             }
 
             if ($online) {
-                # Send the HTTP POST request to trigger the flow
-                Invoke-RestMethod -Uri $flowUrl -Method Post -Headers $headers -Body $jsonBody
-                Write-Host "Triggered Power Automate flow to upload the log files to SharePoint" -ForegroundColor Yellow
-                Write-Host " "
+                try {
+                    # Send the HTTP POST request to trigger the flow
+                    Invoke-RestMethod -Uri $flowUrl -Method Post -Headers $headers -Body $jsonBody
+                    Write-Host "Triggered Power Automate flow to upload the log files to SharePoint" -ForegroundColor Yellow
+                    Write-Host " "
+                }
+                catch {
+                    # Catch block to handle any exceptions from Invoke-RestMethod
+                    Write-Host "Failed to trigger Power Automate flow: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Host " "
+                }
             }
             else {
                 # Send dummy write-host to emulate the real output

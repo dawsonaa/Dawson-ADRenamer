@@ -19,7 +19,7 @@ Section "Install Dawson's ADRenamer"
     File "Dawson's ADRenamer.ps1"
 
     File "LICENSE"
-    File "README.txt"
+    File "README.md"
 
 CreateDirectory "$SMPROGRAMS\Dawson's ADRenamer"
 
