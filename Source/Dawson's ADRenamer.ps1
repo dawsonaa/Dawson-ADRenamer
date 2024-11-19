@@ -1109,7 +1109,7 @@ function LoadAndFilterComputers {
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
-$form.Size = New-Object System.Drawing.Size(830, 530) # 785, 520
+$form.Size = New-Object System.Drawing.Size(830, 490) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
@@ -1136,7 +1136,7 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(700, 470)
+$versionLabel.Location = New-Object System.Drawing.Point(700, 430)
 $versionLabel.AutoSize = $true
 $versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -1150,7 +1150,7 @@ $form.Controls.Add($versionLabel)
 # Create label to display author information
 $authorLabel = New-Object System.Windows.Forms.Label
 $authorLabel.Text = "Author: Dawson Adams (dawsonaa@ksu.edu)"
-$authorLabel.Location = New-Object System.Drawing.Point(10, 470)
+$authorLabel.Location = New-Object System.Drawing.Point(10, 430)
 $authorLabel.AutoSize = $true
 $authorLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -2016,7 +2016,7 @@ $colorPanel2.BringToFront()
 # Search Text Box with Enter Key Event
 $searchBox = New-Object System.Windows.Forms.TextBox
 $searchBox.Location = New-Object System.Drawing.Point(10, 10)
-$searchBox.Size = New-Object System.Drawing.Size(180, 20)
+$searchBox.Size = New-Object System.Drawing.Size(133, 20)
 $searchBox.ForeColor = [System.Drawing.Color]::Gray
 $searchBox.BackColor = [System.Drawing.Color]::LightGray
 $searchBox.Text = "Search"
@@ -2077,20 +2077,6 @@ $searchBox.Add_KeyDown({
         }
     })
 $form.Controls.Add($searchBox)
-
-# Create label for selectedCheckedListBox to show its filled with the original names
-$beforeChangeLabel = New-Object System.Windows.Forms.Label
-$beforeChangeLabel.Text = "Before Change"
-$beforeChangeLabel.Location = New-Object System.Drawing.Point(340, 15)
-$beforeChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
-$form.Controls.Add($beforeChangeLabel)
-
-# Create label for newNamesListBox to show its filled with the manipulated names
-$afterChangeLabel = New-Object System.Windows.Forms.Label
-$afterChangeLabel.Text = "After Change"
-$afterChangeLabel.Location = New-Object System.Drawing.Point(610, 15)
-$afterChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
-$form.Controls.Add($afterChangeLabel)
 
 <#
 .SYNOPSIS
@@ -2363,7 +2349,8 @@ function New-StyledButton {
 
     return $button
 }
-$commitChangesButton = New-StyledButton -text "Commit Changes" -x $startX -y 430 -width 150 -height 30 -enabled $false
+#$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y 10 -width $listBoxWidth -height 25 -enabled $false
 $commitChangesButton.BackColor = $catPurple
 
 # Event handler for clicking the Commit Changes button
@@ -2403,7 +2390,7 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$loadButton = New-StyledButton -text "Load OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
+$loadButton = New-StyledButton -text "Load OU" -x 148 -y 10 -width 94 -height 25 -enabled $true
 $loadButton.BackColor = $catBlue
 $loadButton.Enabled = $online
 
@@ -2434,7 +2421,7 @@ $loadButton.Add_Click({
     })
 $form.Controls.Add($loadButton)
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 430 -width 150 -height 30 -enabled $false
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y 10 -width $listBoxWidth -height 25 -enabled $false
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $white
 
