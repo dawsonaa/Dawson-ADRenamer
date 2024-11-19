@@ -944,7 +944,7 @@ function Select-OU {
 
             if ($parentDN -eq 'DC=users,DC=campus') {
                 $treeView.Nodes.Add($node)
-            } 
+            }
 
             $nodeHashTable[$ou.DistinguishedName] = $node
         }
@@ -2972,16 +2972,10 @@ $applyRenameButton.Add_Click({
             Write-Host " "
         }
     })
-
-
 $form.Controls.Add($applyRenameButton)
 
-Select-OU | Out-Null
-
-# Call the function to load and filter computers
 LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
 
-# Show the form
 $form.ShowDialog()
 
 
