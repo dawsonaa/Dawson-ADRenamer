@@ -672,7 +672,7 @@ function Show-EmailDrafts {
 
     # Create a textbox for the email subject
     $emailSubjectTextBox = New-Object System.Windows.Forms.TextBox
-    $emailSubjectTextBox.Text = "Action Required: Restart Your Device"  # Default email subject
+    $emailSubjectTextBox.Text = "IT Support - Computer [oldName] renamed to [newName]"  # Default email subject
     $emailSubjectTextBox.Location = New-Object System.Drawing.Point(10, 340)
     $emailSubjectTextBox.Size = New-Object System.Drawing.Size(560, 20)
     $emailSubjectTextBox.Font = New-Object System.Drawing.Font("Arial", 9, [System.Drawing.FontStyle]::Regular)
@@ -693,7 +693,7 @@ function Show-EmailDrafts {
     $emailBodyTextBox.Text = @"
 Dear [Username],
 
-Your computer has been renamed from $oldName to $newName as part of a maintenance operation. To avoid device name syncing issues, please restart your device as soon as possible. If you face any issues, please contact IT support.
+Your computer has been renamed from [oldName] to [newName] as part of a maintenance operation. To avoid device name syncing issues, please restart your device as soon as possible. If you face any issues, please contact IT support.
 
 Best regards,
 IT Support Team
@@ -852,11 +852,17 @@ IT Support Team
             if ($deviceInfo) {
                 $emailAddress = ConvertTo-EmailAddress $deviceInfo.UserName
 
-                # Replace placeholders in the email body
-                $customBody = $emailBody -replace '\[Username\]', $userName
+                # Replace placeholders in the subject and body
+                $customSubject = $emailSubject -replace '\[oldName\]', $oldName `
+                                            -replace '\[newName\]', $newName `
+                                            -replace '\[Username\]', $userName
+
+                $customBody = $emailBody -replace '\[oldName\]', $oldName `
+                                     -replace '\[newName\]', $newName `
+                                     -replace '\[Username\]', $userName
 
                 # Pass the custom subject and body
-                Update-OutlookWebDraft -oldName $deviceInfo.OldName -newName $deviceInfo.NewName -emailAddress $emailAddress -emailSubject $emailSubject -emailBody $customBody
+                Update-OutlookWebDraft -oldName $deviceInfo.OldName -newName $deviceInfo.NewName -emailAddress $emailAddress -emailSubject $customSubject -emailBody $customBody
             }
         }
         $emailForm.Close()
