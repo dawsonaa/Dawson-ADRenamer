@@ -45,18 +45,42 @@
     # Run the script
     .\Dawson's ADRenamer.ps1
 #>
-
 # All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
 
-# Load required assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+$Version = "11.18.24"
+$iconPath = Join-Path $PSScriptRoot "icon2.ico"
+
+# COLOR PALETTE
+$visualStudioBlue = [System.Drawing.Color]::FromArgb(78, 102, 221) # RGB values for Visual Studio blue
+$kstateDarkPurple = [System.Drawing.Color]::FromArgb(64, 1, 111)
+$kstateLightPurple = [System.Drawing.Color]::FromArgb(115, 25, 184)
+$white = [System.Drawing.Color]::FromArgb(255, 255, 255)
+$black = [System.Drawing.Color]::FromArgb(0, 0, 0)
+$red = [System.Drawing.Color]::FromArgb(218, 25, 25)
+$lightGray = [System.Drawing.Color]::FromArgb(45, 45, 45)
+$grayBlue = [System.Drawing.Color]::FromArgb(75, 75, 140)
+$catBlue = [System.Drawing.Color]::FromArgb(3, 106, 199)
+$catPurple = [System.Drawing.Color]::FromArgb(170, 13, 206)
+$catRed = [System.Drawing.Color]::FromArgb(255, 27, 82)
+$catYellow = [System.Drawing.Color]::FromArgb(254, 162, 2)
+$catLightYellow = [System.Drawing.Color]::FromArgb(255, 249, 227)
+$catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
+
 # Create a form for selecting Online, Offline, or Cancel
 $modeSelectionForm = New-Object System.Windows.Forms.Form
-$modeSelectionForm.Text = "ADRenamer Mode Selection"
+$modeSelectionForm.Text = "Select ADR Mode"
 $modeSelectionForm.Size = New-Object System.Drawing.Size(300,150)
+$modeSelectionForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+$modeSelectionForm.MaximizeBox = $false
 $modeSelectionForm.StartPosition = "CenterScreen"
+$modeSelectionForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
+
+$modeSelectionForm.BackColor = $lightGray
+$modeSelectionForm.ForeColor = [System.Drawing.Color]::LightGray
+$modeSelectionForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 $label = New-Object System.Windows.Forms.Label
 $label.Text = "Do you want to use ADRenamer in Online or Offline mode?"
@@ -64,12 +88,15 @@ $label.Size = New-Object System.Drawing.Size(280,30)
 $label.Location = New-Object System.Drawing.Point(10,20)
 $modeSelectionForm.Controls.Add($label)
 
+$global:formClosedByButton = $false
+
 $buttonOnline = New-Object System.Windows.Forms.Button
 $buttonOnline.Text = "Online"
 $buttonOnline.Location = New-Object System.Drawing.Point(10,70)
 $buttonOnline.Size = New-Object System.Drawing.Size(75,30)
 $buttonOnline.Add_Click({
     $global:choice = "Online"
+    $global:formClosedByButton = $true
     $modeSelectionForm.Close()
 })
 $modeSelectionForm.Controls.Add($buttonOnline)
@@ -80,6 +107,7 @@ $buttonOffline.Location = New-Object System.Drawing.Point(100,70)
 $buttonOffline.Size = New-Object System.Drawing.Size(75,30)
 $buttonOffline.Add_Click({
     $global:choice = "Offline"
+    $global:formClosedByButton = $true
     $modeSelectionForm.Close()
 })
 $modeSelectionForm.Controls.Add($buttonOffline)
@@ -93,6 +121,14 @@ $buttonCancel.Add_Click({
     $modeSelectionForm.Close()
 })
 $modeSelectionForm.Controls.Add($buttonCancel)
+
+$modeSelectionForm.Add_FormClosing({
+    param($sender, $e)
+    if ($e.CloseReason -eq [System.Windows.Forms.CloseReason]::UserClosing -and -not $global:formClosedByButton) {
+        # Terminate the entire script because the form is closing due to the user pressing 'X'
+        [Environment]::Exit(0)
+    }
+})
 
 # Show the form
 $modeSelectionForm.ShowDialog() | Out-Null
@@ -214,9 +250,6 @@ public class CustomListBox : ListBox
 }
 "@ -Language CSharp -ReferencedAssemblies System.Windows.Forms
 
-# Set text for version labels
-$Version = "11.14.24"
-
 if ($online) {
     # Present initial login window # ONLINE
     while (-not $connectionSuccess) {
@@ -225,10 +258,10 @@ if ($online) {
         }
 
         if ($username -ne "") {
-            $cred = Get-Credential -Message "Please enter AD admin credentials" -UserName $username
+            $cred = Get-Credential -Message "Please enter Active Directory admin credentials" -UserName $username
         }
         else {
-            $cred = Get-Credential -Message "Please enter AD admin credentials"
+            $cred = Get-Credential -Message "Please enter Active Directory admin credentials"
         }
 
         if (-not $cred) {
@@ -360,7 +393,6 @@ function Get-DepartmentString($deviceName, $part) {
 
     return $deptString
 }
-
 
 <#
 .SYNOPSIS
@@ -803,13 +835,14 @@ function Select-OU {
     # Create and configure the form
     $ouForm = New-Object System.Windows.Forms.Form
     $ouForm.Text = "Select Organizational Unit"
-    $ouForm.Size = New-Object System.Drawing.Size(400, 600)
+    $ouForm.Size = New-Object System.Drawing.Size(400, 590)
     $ouForm.MaximizeBox = $false
     $ouForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $ouForm.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $ouForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 
-    $ouForm.BackColor = $catDark
-    $ouForm.ForeColor = $white
+    $ouForm.BackColor = $lightGray
+    $ouForm.ForeColor = [System.Drawing.Color]::LightGray
     $ouForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
     # Add a handler for the FormClosing event to exit the script if the form is closed using the red X button
@@ -825,15 +858,16 @@ function Select-OU {
     $treeView = New-Object System.Windows.Forms.TreeView
     $treeView.Size = New-Object System.Drawing.Size(365, 500)
     $treeView.Location = New-Object System.Drawing.Point(10, 10)
+    $treeView.BackColor = [System.Drawing.Color]::LightGray
     $treeView.Visible = $true
 
     # Add "OK"(selectedOU) button for OU selection
     $selectedOUButton = New-Object System.Windows.Forms.Button
     $selectedOUButton.Text = "No OU selected"
-    $selectedOUButton.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+    $selectedOUButton.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
     $selectedOUButton.Enabled = $false
-    $selectedOUButton.Size = New-Object System.Drawing.Size(75, 23)
-    $selectedOUButton.Location = New-Object System.Drawing.Point(200, 520)
+    $selectedOUButton.Size = New-Object System.Drawing.Size(190, 23)
+    $selectedOUButton.Location = New-Object System.Drawing.Point(10, 520)
     $selectedOUButton.Add_Click({
             $ouForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
             $ouForm.Close()
@@ -842,8 +876,9 @@ function Select-OU {
     # Add "Cancel"(defaultOU) button for OU selection
     $defaultOUButton = New-Object System.Windows.Forms.Button
     $defaultOUButton.Text = "DC=users,DC=campus"
-    $defaultOUButton.Size = New-Object System.Drawing.Size(75, 23)
-    $defaultOUButton.Location = New-Object System.Drawing.Point(290, 520)
+    $defaultOUButton.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $defaultOUButton.Size = New-Object System.Drawing.Size(165, 23)
+    $defaultOUButton.Location = New-Object System.Drawing.Point(210, 520)
     $defaultOUButton.Add_Click({
             $ouForm.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
             $ouForm.Close()
@@ -909,7 +944,7 @@ function Select-OU {
 
             if ($parentDN -eq 'DC=users,DC=campus') {
                 $treeView.Nodes.Add($node)
-            } 
+            }
 
             $nodeHashTable[$ou.DistinguishedName] = $node
         }
@@ -1073,51 +1108,25 @@ function LoadAndFilterComputers {
     }
 }
 
-# COLOR PALETTE
-$visualStudioBlue = [System.Drawing.Color]::FromArgb(78, 102, 221) # RGB values for Visual Studio blue
-$kstateDarkPurple = [System.Drawing.Color]::FromArgb(64, 1, 111)
-$kstateLightPurple = [System.Drawing.Color]::FromArgb(115, 25, 184) 
-$white = [System.Drawing.Color]::FromArgb(255, 255, 255)
-$black = [System.Drawing.Color]::FromArgb(0, 0, 0)
-$red = [System.Drawing.Color]::FromArgb(218, 25, 25)
-$lightGray = [System.Drawing.Color]::FromArgb(45, 45, 45)
-$grayBlue = [System.Drawing.Color]::FromArgb(75, 75, 140)
-
-$catBlue = [System.Drawing.Color]::FromArgb(3, 106, 199)
-$catPurple = [System.Drawing.Color]::FromArgb(170, 13, 206)
-$catRed = [System.Drawing.Color]::FromArgb(255, 27, 82)
-$catYellow = [System.Drawing.Color]::FromArgb(254, 162, 2)
-$catLightYellow = [System.Drawing.Color]::FromArgb(255, 249, 227)
-$catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
-
 # Create main form
 $form = New-Object System.Windows.Forms.Form
-$form.Size = New-Object System.Drawing.Size(830, 530) # 785, 520
+$form.Size = New-Object System.Drawing.Size(830, 490) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
+$form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 
-$form.BackColor = $catDark
-$form.ForeColor = $white
+$form.BackColor = $lightGray
+$form.ForeColor = [System.Drawing.Color]::LightGray
 $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 # Make sure user knows what mode they are in
 if ($online) {
-    $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
+    $form.Text = "ADRenamer - Online"
 }
 else {
-    $form.Text = "OFFLINE - Dawson's AD Computer Renamer $Version"
+    $form.Text = "ADRenamer - Offline"
 }
-
-# Set the icon for the form
-$iconPath = Join-Path $PSScriptRoot "icon.ico"
-if (Test-Path $iconPath) {
-    $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
-}
-else {
-    Write-Host "icon not found at path $iconPath"
-}
-
 
 # Initialize script-scope variables
 $script:invalidNamesList = @()
@@ -1128,7 +1137,7 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(700, 470)
+$versionLabel.Location = New-Object System.Drawing.Point(700, 430)
 $versionLabel.AutoSize = $true
 $versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -1142,7 +1151,7 @@ $form.Controls.Add($versionLabel)
 # Create label to display author information
 $authorLabel = New-Object System.Windows.Forms.Label
 $authorLabel.Text = "Author: Dawson Adams (dawsonaa@ksu.edu)"
-$authorLabel.Location = New-Object System.Drawing.Point(10, 470)
+$authorLabel.Location = New-Object System.Drawing.Point(10, 430)
 $authorLabel.AutoSize = $true
 $authorLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -1302,10 +1311,10 @@ function UpdateAndSyncListBoxes {
 
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
+$computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 10)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 $computerCheckedListBox.IntegralHeight = $false
-$computerCheckedListBox.BackColor = $catLightYellow
+$computerCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
 
 $script:computerCtrlA = 1
 
@@ -1460,11 +1469,11 @@ $form.Controls.Add($computerCheckedListBox)
 
 # Create a new checked list box for displaying selected computers
 $selectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
+$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 10)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$selectedCheckedListBox.BackColor = $catLightYellow
+$selectedCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
 
 $script:selectedCtrlA = 1
 
@@ -1668,22 +1677,22 @@ $colorPanelBack = $catDark
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel3 = New-Object System.Windows.Forms.Panel
-$colorPanel3.Location = New-Object System.Drawing.Point(240, 40) # 530, 40
+$colorPanel3.Location = New-Object System.Drawing.Point(240, 10) # 530, 40
 $colorPanel3.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel3.AutoScroll = $true
-$colorPanel3.BackColor = $colorPanelBack
+$colorPanel3.BackColor = $lightGray
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel = New-Object System.Windows.Forms.Panel
-$colorPanel.Location = New-Object System.Drawing.Point(510, 40) # 260, 40
+$colorPanel.Location = New-Object System.Drawing.Point(510, 10) # 260, 40
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
-$colorPanel.BackColor = $colorPanelBack
+$colorPanel.BackColor = $lightGray
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel2 = New-Object System.Windows.Forms.Panel
-$colorPanel2.Location = New-Object System.Drawing.Point(780, 40) # 530, 40
+$colorPanel2.Location = New-Object System.Drawing.Point(780, 10) # 530, 40
 $colorPanel2.Size = New-Object System.Drawing.Size(20, 350)
-$colorPanel2.BackColor = $colorPanelBack
+$colorPanel2.BackColor = $lightGray
 
 # Handle the Paint event for the color panel
 $colorPanel.add_Paint({
@@ -1736,10 +1745,10 @@ $colorPanel3.add_Paint({
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object System.Windows.Forms.ListBox
 $newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$newNamesListBox.Location = New-Object System.Drawing.Point(530, 40)
+$newNamesListBox.Location = New-Object System.Drawing.Point(530, 10)
 $newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
-$newNamesListBox.BackColor = $catLightYellow
+$newNamesListBox.BackColor = [System.Drawing.Color]::LightGray
 
 # Define the MeasureItem event handler
 $measureItemHandler = {
@@ -2007,10 +2016,12 @@ $colorPanel2.BringToFront()
 
 # Search Text Box with Enter Key Event
 $searchBox = New-Object System.Windows.Forms.TextBox
-$searchBox.Location = New-Object System.Drawing.Point(10, 10)
-$searchBox.Size = New-Object System.Drawing.Size(180, 20)
+$searchBox.Location = New-Object System.Drawing.Point(10, 365)
+$searchBox.Size = New-Object System.Drawing.Size(133, 20)
 $searchBox.ForeColor = [System.Drawing.Color]::Gray
-$searchBox.Text = "Search for computer"
+$searchBox.BackColor = [System.Drawing.Color]::LightGray
+$searchBox.Text = "Search"
+$searchBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
 $searchBox.add_KeyDown({
         param($s, $e)
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
@@ -2022,7 +2033,7 @@ $searchBox.add_KeyDown({
 
 # Clear placeholder text when the text box gains focus
 $searchBox.Add_Enter({
-        if ($this.Text -eq "Search for computer") {
+        if ($this.Text -eq "Search") {
             $this.Text = ''
             $this.ForeColor = [System.Drawing.Color]::Black
         }
@@ -2031,7 +2042,7 @@ $searchBox.Add_Enter({
 # Restore placeholder text when the text box loses focus and is empty
 $searchBox.Add_Leave({
         if ($this.Text -eq '') {
-            $this.Text = "Search for computer"
+            $this.Text = "Search"
             $this.ForeColor = [System.Drawing.Color]::Gray
         }
     })
@@ -2067,20 +2078,6 @@ $searchBox.Add_KeyDown({
         }
     })
 $form.Controls.Add($searchBox)
-
-# Create label for selectedCheckedListBox to show its filled with the original names
-$beforeChangeLabel = New-Object System.Windows.Forms.Label
-$beforeChangeLabel.Text = "Before Change"
-$beforeChangeLabel.Location = New-Object System.Drawing.Point(340, 15)
-$beforeChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
-$form.Controls.Add($beforeChangeLabel)
-
-# Create label for newNamesListBox to show its filled with the manipulated names
-$afterChangeLabel = New-Object System.Windows.Forms.Label
-$afterChangeLabel.Text = "After Change"
-$afterChangeLabel.Location = New-Object System.Drawing.Point(610, 15)
-$afterChangeLabel.Size = New-Object System.Drawing.Size(110, 25)
-$form.Controls.Add($afterChangeLabel)
 
 <#
 .SYNOPSIS
@@ -2220,19 +2217,18 @@ $form.add_MouseDown({
     })
 
 $textBoxSize = New-Object System.Drawing.Size(150, 20)
-
-$gap = 30 # set space between bottom buttons
+$gap = 35 # set space between bottom buttons
 
 # Calculate the total width occupied by the text boxes and their distances
-$totalWidth = (4 * $textBoxSize.Width) + (3 * $gap) # 3 gaps between 4 text boxes, each gap is 20 pixels
+$totalWidth = (4 * $textBoxSize.Width) + (3 * $gap)
 
 # Determine the starting X-coordinate to center the group of text boxes
-$startX = [Math]::Max(($form.ClientSize.Width - $totalWidth) / 2, 0)
+$startX = [Math]::Max((($form.ClientSize.Width - $totalWidth) / 2) - 12, 0)
 
-$script:part0DefaultText = "Change part0Name"
-$script:part1DefaultText = "Change part1Name"
-$script:part2DefaultText = "Change part2Name"
-$script:part3DefaultText = "Change part3Name"
+$script:part0DefaultText = "X-O-O-O"
+$script:part1DefaultText = "O-X-O-O"
+$script:part2DefaultText = "O-O-X-O"
+$script:part3DefaultText = "O-O-O-X"
 
 # Create and add the text boxes, setting their X-coordinates based on the starting point
 $part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y 400 -size $textBoxSize -maxLength 15
@@ -2354,7 +2350,8 @@ function New-StyledButton {
 
     return $button
 }
-$commitChangesButton = New-StyledButton -text "Commit Changes" -x $startX -y 430 -width 150 -height 30 -enabled $false
+#$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
 $commitChangesButton.BackColor = $catPurple
 
 # Event handler for clicking the Commit Changes button
@@ -2394,8 +2391,9 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$refreshButton = New-StyledButton -text "Reselect OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
-$refreshButton.BackColor = $catBlue
+$loadButton = New-StyledButton -text "Load OU" -x 148 -y 365 -width 94 -height 25 -enabled $true
+$loadButton.BackColor = $catBlue
+$loadButton.Enabled = $online
 
 <#
 .SYNOPSIS
@@ -2414,7 +2412,7 @@ $refreshButton.BackColor = $catBlue
     - The function ensures that all current selections and items are cleared before reloading the computer list.
     - The LoadAndFilterComputers function is responsible for repopulating the computerCheckedListBox with the updated data.
 #>
-$refreshButton.Add_Click({
+$loadButton.Add_Click({
         $computerCheckedListBox.Items.Clear()
         $selectedCheckedListBox.Items.Clear()
         $newNamesListBox.Items.Clear()
@@ -2422,9 +2420,9 @@ $refreshButton.Add_Click({
 
         LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
     })
-$form.Controls.Add($refreshButton)
+$form.Controls.Add($loadButton)
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 430 -width 150 -height 30 -enabled $false
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $white
 
@@ -2960,14 +2958,10 @@ $applyRenameButton.Add_Click({
             Write-Host " "
         }
     })
+$form.Controls.Add($applyRenameButton)
 
-
-$form.Controls.Add($applyRenameButton) 
-
-# Call the function to load and filter computers
 LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
-    
-# Show the form
+
 $form.ShowDialog()
 
 
