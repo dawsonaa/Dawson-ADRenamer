@@ -79,7 +79,7 @@ $modeSelectionForm.StartPosition = "CenterScreen"
 $modeSelectionForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 
 $modeSelectionForm.BackColor = $lightGray
-$modeSelectionForm.ForeColor = $catLightYellow
+$modeSelectionForm.ForeColor = [System.Drawing.Color]::LightGray
 $modeSelectionForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 $label = New-Object System.Windows.Forms.Label
@@ -831,7 +831,7 @@ function Select-OU {
     $ouForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 
     $ouForm.BackColor = $lightGray
-    $ouForm.ForeColor = $catLightYellow
+    $ouForm.ForeColor = [System.Drawing.Color]::LightGray
     $ouForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
     # Add a handler for the FormClosing event to exit the script if the form is closed using the red X button
@@ -847,7 +847,7 @@ function Select-OU {
     $treeView = New-Object System.Windows.Forms.TreeView
     $treeView.Size = New-Object System.Drawing.Size(365, 500)
     $treeView.Location = New-Object System.Drawing.Point(10, 10)
-    $treeView.BackColor = $catLightYellow
+    $treeView.BackColor = [System.Drawing.Color]::LightGray
     $treeView.Visible = $true
 
     # Add "OK"(selectedOU) button for OU selection
@@ -857,9 +857,6 @@ function Select-OU {
     $selectedOUButton.Enabled = $false
     $selectedOUButton.Size = New-Object System.Drawing.Size(190, 23)
     $selectedOUButton.Location = New-Object System.Drawing.Point(10, 520)
-    #$selectedOUButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $selectedOUButton.FlatAppearance.BorderColor = $catLightYellow  # Change to desired border color
-    #$selectedOUButton.FlatAppearance.BorderSize = 2  # Change border size as needed
     $selectedOUButton.Add_Click({
             $ouForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
             $ouForm.Close()
@@ -1109,7 +1106,7 @@ $form.StartPosition = 'CenterScreen'
 $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 
 $form.BackColor = $lightGray
-$form.ForeColor = $catLightYellow
+$form.ForeColor = [System.Drawing.Color]::LightGray
 $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 # Make sure user knows what mode they are in
@@ -1306,7 +1303,7 @@ $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 $computerCheckedListBox.IntegralHeight = $false
-$computerCheckedListBox.BackColor = $catLightYellow
+$computerCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
 
 $script:computerCtrlA = 1
 
@@ -1465,7 +1462,7 @@ $selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$selectedCheckedListBox.BackColor = $catLightYellow
+$selectedCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
 
 $script:selectedCtrlA = 1
 
@@ -1740,7 +1737,7 @@ $newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $newNamesListBox.Location = New-Object System.Drawing.Point(530, 40)
 $newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
-$newNamesListBox.BackColor = $catLightYellow
+$newNamesListBox.BackColor = [System.Drawing.Color]::LightGray
 
 # Define the MeasureItem event handler
 $measureItemHandler = {
