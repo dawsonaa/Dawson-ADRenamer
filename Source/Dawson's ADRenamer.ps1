@@ -257,10 +257,10 @@ if ($online) {
         }
 
         if ($username -ne "") {
-            $cred = Get-Credential -Message "Please enter AD admin credentials" -UserName $username
+            $cred = Get-Credential -Message "Please enter Active Directory admin credentials" -UserName $username
         }
         else {
-            $cred = Get-Credential -Message "Please enter AD admin credentials"
+            $cred = Get-Credential -Message "Please enter Active Directory admin credentials"
         }
 
         if (-not $cred) {
@@ -392,7 +392,6 @@ function Get-DepartmentString($deviceName, $part) {
 
     return $deptString
 }
-
 
 <#
 .SYNOPSIS
