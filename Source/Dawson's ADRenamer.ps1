@@ -50,8 +50,8 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$Version = "11.14.24"
-$iconPath = Join-Path $PSScriptRoot "icon.ico"
+$Version = "11.18.24"
+$iconPath = Join-Path $PSScriptRoot "icon2.ico"
 
 # COLOR PALETTE
 $visualStudioBlue = [System.Drawing.Color]::FromArgb(78, 102, 221) # RGB values for Visual Studio blue
@@ -73,6 +73,7 @@ $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 $modeSelectionForm = New-Object System.Windows.Forms.Form
 $modeSelectionForm.Text = "Select ADR Mode"
 $modeSelectionForm.Size = New-Object System.Drawing.Size(300,150)
+$modeSelectionForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $modeSelectionForm.MaximizeBox = $false
 $modeSelectionForm.StartPosition = "CenterScreen"
 $modeSelectionForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
@@ -1121,10 +1122,10 @@ $form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontSty
 
 # Make sure user knows what mode they are in
 if ($online) {
-    $form.Text = "ONLINE - Dawson's AD Computer Renamer $Version"
+    $form.Text = "ADRenamer - Online"
 }
 else {
-    $form.Text = "OFFLINE - Dawson's AD Computer Renamer $Version"
+    $form.Text = "ADRenamer - Offline"
 }
 
 # Initialize script-scope variables
@@ -1310,10 +1311,11 @@ function UpdateAndSyncListBoxes {
 
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 40)
+$computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 10)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 $computerCheckedListBox.IntegralHeight = $false
 $computerCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
+$computerCheckedListBox.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 $script:computerCtrlA = 1
 
@@ -1468,7 +1470,7 @@ $form.Controls.Add($computerCheckedListBox)
 
 # Create a new checked list box for displaying selected computers
 $selectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 40)
+$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 10)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
@@ -1676,20 +1678,20 @@ $colorPanelBack = $catDark
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel3 = New-Object System.Windows.Forms.Panel
-$colorPanel3.Location = New-Object System.Drawing.Point(240, 40) # 530, 40
+$colorPanel3.Location = New-Object System.Drawing.Point(240, 10) # 530, 40
 $colorPanel3.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel3.AutoScroll = $true
 $colorPanel3.BackColor = $lightGray
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel = New-Object System.Windows.Forms.Panel
-$colorPanel.Location = New-Object System.Drawing.Point(510, 40) # 260, 40
+$colorPanel.Location = New-Object System.Drawing.Point(510, 10) # 260, 40
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel.BackColor = $lightGray
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel2 = New-Object System.Windows.Forms.Panel
-$colorPanel2.Location = New-Object System.Drawing.Point(780, 40) # 530, 40
+$colorPanel2.Location = New-Object System.Drawing.Point(780, 10) # 530, 40
 $colorPanel2.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel2.BackColor = $lightGray
 
@@ -1744,7 +1746,7 @@ $colorPanel3.add_Paint({
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object System.Windows.Forms.ListBox
 $newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$newNamesListBox.Location = New-Object System.Drawing.Point(530, 40)
+$newNamesListBox.Location = New-Object System.Drawing.Point(530, 10)
 $newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
 $newNamesListBox.BackColor = [System.Drawing.Color]::LightGray
@@ -2015,7 +2017,7 @@ $colorPanel2.BringToFront()
 
 # Search Text Box with Enter Key Event
 $searchBox = New-Object System.Windows.Forms.TextBox
-$searchBox.Location = New-Object System.Drawing.Point(10, 10)
+$searchBox.Location = New-Object System.Drawing.Point(10, 365)
 $searchBox.Size = New-Object System.Drawing.Size(133, 20)
 $searchBox.ForeColor = [System.Drawing.Color]::Gray
 $searchBox.BackColor = [System.Drawing.Color]::LightGray
@@ -2224,10 +2226,10 @@ $totalWidth = (4 * $textBoxSize.Width) + (3 * $gap)
 # Determine the starting X-coordinate to center the group of text boxes
 $startX = [Math]::Max((($form.ClientSize.Width - $totalWidth) / 2) - 12, 0)
 
-$script:part0DefaultText = "X-0-0-0"
-$script:part1DefaultText = "0-X-0-0"
-$script:part2DefaultText = "0-0-X-0"
-$script:part3DefaultText = "0-0-0-X"
+$script:part0DefaultText = "X-O-O-O"
+$script:part1DefaultText = "O-X-O-O"
+$script:part2DefaultText = "O-O-X-O"
+$script:part3DefaultText = "O-O-O-X"
 
 # Create and add the text boxes, setting their X-coordinates based on the starting point
 $part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y 400 -size $textBoxSize -maxLength 15
@@ -2350,7 +2352,7 @@ function New-StyledButton {
     return $button
 }
 #$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
-$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y 10 -width $listBoxWidth -height 25 -enabled $false
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
 $commitChangesButton.BackColor = $catPurple
 
 # Event handler for clicking the Commit Changes button
@@ -2390,7 +2392,7 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$loadButton = New-StyledButton -text "Load OU" -x 148 -y 10 -width 94 -height 25 -enabled $true
+$loadButton = New-StyledButton -text "Load OU" -x 148 -y 365 -width 94 -height 25 -enabled $true
 $loadButton.BackColor = $catBlue
 $loadButton.Enabled = $online
 
@@ -2421,7 +2423,7 @@ $loadButton.Add_Click({
     })
 $form.Controls.Add($loadButton)
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y 10 -width $listBoxWidth -height 25 -enabled $false
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $white
 
