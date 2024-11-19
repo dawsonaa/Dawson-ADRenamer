@@ -282,9 +282,9 @@ if ($online) {
             $errorMessage = "Invalid credentials or insufficient permissions. Please try again."
         }
     }
-    Write-Host "ONLINE MODE - Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
+    Write-Host "ONLINE MODE - Version $Version - Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
 }else {
-    Write-Host "OFFLINE MODE - No credentials are needed." -ForegroundColor Green
+    Write-Host "OFFLINE MODE - Version $Version - No credentials are needed." -ForegroundColor Green
 }
 
 # Initialize a new hash set to store unique strings.
@@ -651,15 +651,16 @@ function Show-EmailDrafts {
 
     # Create a new form
     $emailForm = New-Object System.Windows.Forms.Form
-    $emailForm.Text = "Devices to Create Email Drafts (Right Click to Remove)"
+    $emailForm.Text = "Generate Email Drafts"
     $emailForm.Size = New-Object System.Drawing.Size(600, 420)
     $emailForm.MaximizeBox = $false
     $emailForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $emailForm.StartPosition = "CenterScreen"
+    $emailForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 
-    $emailForm.BackColor = $catDark
-    $emailForm.ForeColor = $white
-    # $emailForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+    $emailForm.BackColor = $lightGray
+    $emailForm.ForeColor = [System.Drawing.Color]::LightGray
+    $emailForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
     
     # Create labels for each ListBox
     $labelOldName = New-Object System.Windows.Forms.Label
