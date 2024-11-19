@@ -611,7 +611,8 @@ function Update-OutlookWebDraft {
         [string]$oldName,
         [string]$newName,
         [string]$emailAddress,
-        [string]$supportTicketLink
+        [string]$emailSubject,
+        [string]$emailBody
     )
 
     # Extract the username from the email address
@@ -640,8 +641,8 @@ IT Support Team
 
     # Construct the Outlook web URL for creating a draft
     $url = "https://outlook.office.com/mail/deeplink/compose?to=" + (EncodeURL($emailAddress)) +
-            "&subject=" + (EncodeURL($subject)) +
-            "&body=" + (EncodeURL($body))
+            "&subject=" + (EncodeURL($emailSubject)) +
+            "&body=" + (EncodeURL($emailBody))
 
     # Open the URL in the default browser
     Start-Process $url
@@ -659,7 +660,7 @@ function Show-EmailDrafts {
     # Create a new form
     $emailForm = New-Object System.Windows.Forms.Form
     $emailForm.Text = "Generate Email Drafts"
-    $emailForm.Size = New-Object System.Drawing.Size(600, 460)
+    $emailForm.Size = New-Object System.Drawing.Size(600, 620)
     $emailForm.MaximizeBox = $false
     $emailForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $emailForm.StartPosition = "CenterScreen"
@@ -668,7 +669,52 @@ function Show-EmailDrafts {
     $emailForm.BackColor = $lightGray
     $emailForm.ForeColor = [System.Drawing.Color]::LightGray
     $emailForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
-    
+
+    # Create a textbox for the email subject
+    $emailSubjectTextBox = New-Object System.Windows.Forms.TextBox
+    $emailSubjectTextBox.Text = "Action Required: Restart Your Device"  # Default email subject
+    $emailSubjectTextBox.Location = New-Object System.Drawing.Point(10, 340)
+    $emailSubjectTextBox.Size = New-Object System.Drawing.Size(560, 20)
+    $emailSubjectTextBox.Font = New-Object System.Drawing.Font("Arial", 9, [System.Drawing.FontStyle]::Regular)
+
+    # Add Ctrl+A functionality for the subject textbox
+    $emailSubjectTextBox.add_KeyDown({
+        param($s, $e)
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+            $emailSubjectTextBox.SelectAll()
+            $e.SuppressKeyPress = $true
+            $e.Handled = $true
+        }
+    })
+    $emailForm.Controls.Add($emailSubjectTextBox)
+
+    # Create a multiline textbox for the email body
+    $emailBodyTextBox = New-Object System.Windows.Forms.TextBox
+    $emailBodyTextBox.Text = @"
+Dear [Username],
+
+Your computer has been renamed from $oldName to $newName as part of a maintenance operation. To avoid device name syncing issues, please restart your device as soon as possible. If you face any issues, please contact IT support.
+
+Best regards,
+IT Support Team
+"@
+    $emailBodyTextBox.Location = New-Object System.Drawing.Point(10, 370)
+    $emailBodyTextBox.Size = New-Object System.Drawing.Size(560, 140)
+    $emailBodyTextBox.Multiline = $true
+    $emailBodyTextBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
+    $emailBodyTextBox.Font = New-Object System.Drawing.Font("Arial", 9, [System.Drawing.FontStyle]::Regular)
+
+    # Add Ctrl+A functionality for the body textbox
+    $emailBodyTextBox.add_KeyDown({
+        param($s, $e)
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+            $emailBodyTextBox.SelectAll()
+            $e.SuppressKeyPress = $true
+            $e.Handled = $true
+        }
+    })
+    $emailForm.Controls.Add($emailBodyTextBox)
+
     # Create labels for each ListBox
     $labelOldName = New-Object System.Windows.Forms.Label
     $labelOldName.Text = "Old Name"
@@ -789,49 +835,32 @@ function Show-EmailDrafts {
     $listBoxNewName.ContextMenu = $contextMenu
     $listBoxUserName.ContextMenu = $contextMenu
 
-    # Create a label for the support link
-    $supportLinkLabel = New-Object System.Windows.Forms.Label
-    $supportLinkLabel.Text = "Support Link:"
-    $supportLinkLabel.Location = New-Object System.Drawing.Point(10, 340)
-    $supportLinkLabel.Size = New-Object System.Drawing.Size(80, 20)
-    $emailForm.Controls.Add($supportLinkLabel)
-
-    # Create a textbox for the support link
-    $supportLinkTextBox = New-Object System.Windows.Forms.TextBox
-    $supportLinkTextBox.Text = $defaultSupportTicketLink
-    $supportLinkTextBox.Location = New-Object System.Drawing.Point(90, 340) 
-    $supportLinkTextBox.Size = New-Object System.Drawing.Size(340, 20)
-
-    # Handle key down event to enable Ctrl+A functionality
-    $supportLinkTextBox.add_KeyDown({
-            param($s, $e)
-            if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
-                $supportLinkTextBox.SelectAll()
-                $e.SuppressKeyPress = $true
-                $e.Handled = $true
-            }
-        })
-    $emailForm.Controls.Add($supportLinkTextBox)
-
     # Create a button to create drafts
     $createButton = New-Object System.Windows.Forms.Button
-    $createButton.Text = "Create Email Drafts"
-    $createButton.Size = New-Object System.Drawing.Size(120, 30)
-    $createButton.Location = New-Object System.Drawing.Point(440, 340)
+    $createButton.Text = "Open Email Drafts"
+    $createButton.Size = New-Object System.Drawing.Size(90, 45)
+    $createButton.Location = New-Object System.Drawing.Point(480, 520)
     $createButton.Add_Click({
-            $supportTicketLink = $supportLinkTextBox.Text
-            for ($i = 0; $i -lt $listBoxOldName.Items.Count; $i++) {
-                $oldName = $listBoxOldName.Items[$i]
-                $newName = $listBoxNewName.Items[$i]
-                $userName = $listBoxUserName.Items[$i]
-                $deviceInfo = $loggedOnDevices | Where-Object { $_.OldName -eq $oldName -and $_.NewName -eq $newName -and $_.UserName -eq $userName }
-                if ($deviceInfo) {
-                    $emailAddress = ConvertTo-EmailAddress $deviceInfo.UserName
-                    Update-OutlookWebDraft -oldName $deviceInfo.OldName -newName $deviceInfo.NewName -emailAddress $emailAddress -supportTicketLink $supportTicketLink
-                }
+        $emailSubject = $emailSubjectTextBox.Text
+        $emailBody = $emailBodyTextBox.Text
+
+        for ($i = 0; $i -lt $listBoxOldName.Items.Count; $i++) {
+            $oldName = $listBoxOldName.Items[$i]
+            $newName = $listBoxNewName.Items[$i]
+            $userName = $listBoxUserName.Items[$i]
+            $deviceInfo = $loggedOnDevices | Where-Object { $_.OldName -eq $oldName -and $_.NewName -eq $newName -and $_.UserName -eq $userName }
+            if ($deviceInfo) {
+                $emailAddress = ConvertTo-EmailAddress $deviceInfo.UserName
+
+                # Replace placeholders in the email body
+                $customBody = $emailBody -replace '\[Username\]', $userName
+
+                # Pass the custom subject and body
+                Update-OutlookWebDraft -oldName $deviceInfo.OldName -newName $deviceInfo.NewName -emailAddress $emailAddress -emailSubject $emailSubject -emailBody $customBody
             }
-            $emailForm.Close()
-        })
+        }
+        $emailForm.Close()
+    })
     $emailForm.Controls.Add($createButton)
 
     # Show the form
