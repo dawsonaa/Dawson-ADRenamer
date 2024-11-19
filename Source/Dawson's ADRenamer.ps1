@@ -1315,7 +1315,6 @@ $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 10)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 $computerCheckedListBox.IntegralHeight = $false
 $computerCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
-$computerCheckedListBox.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
 
 $script:computerCtrlA = 1
 
