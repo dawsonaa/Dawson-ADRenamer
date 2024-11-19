@@ -605,6 +605,7 @@ function ConvertTo-EmailAddress {
 }
 
 # Function to create an Outlook web draft email
+# Function to create an Outlook web draft email
 function Update-OutlookWebDraft {
     param (
         [string]$oldName,
@@ -629,18 +630,24 @@ Best regards,
 IT Support Team
 "@
 
-    # Helper function to replace '+' with '%20'
-    function EncodeSpaces($string) {
-        return [System.Uri]::EscapeDataString($string) -replace '\+', '%20'
+    # Helper function to encode spaces as '%20' and ensure proper URL encoding
+    function EncodeURL($string) {
+        # Fully URL encode the string
+        $encodedString = [System.Uri]::EscapeDataString($string)
+        # Replace '+' with '%20' to match desired formatting
+        return $encodedString -replace '\+', '%20'
     }
 
     # Construct the Outlook web URL for creating a draft
-    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + (EncodeSpaces($emailAddress)) + "&subject=" + (EncodeSpaces($subject)) + "&body=" + (EncodeSpaces($body))
+    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + (EncodeURL($emailAddress)) +
+            "&subject=" + (EncodeURL($subject)) +
+            "&body=" + (EncodeURL($body))
 
     # Open the URL in the default browser
     Start-Process $url
     Write-Host "Draft email created for $emailAddress" -ForegroundColor Green
 }
+
 
 
 # Function to prompt user to create email drafts using three synchronized ListBox controls
@@ -652,7 +659,7 @@ function Show-EmailDrafts {
     # Create a new form
     $emailForm = New-Object System.Windows.Forms.Form
     $emailForm.Text = "Generate Email Drafts"
-    $emailForm.Size = New-Object System.Drawing.Size(600, 420)
+    $emailForm.Size = New-Object System.Drawing.Size(600, 460)
     $emailForm.MaximizeBox = $false
     $emailForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $emailForm.StartPosition = "CenterScreen"
@@ -2960,6 +2967,8 @@ $applyRenameButton.Add_Click({
         }
     })
 $form.Controls.Add($applyRenameButton)
+
+Show-EmailDrafts | Out-Null
 
 LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
 
