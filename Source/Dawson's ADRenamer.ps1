@@ -2230,14 +2230,13 @@ $form.add_MouseDown({
     })
 
 $textBoxSize = New-Object System.Drawing.Size(150, 20)
-
-$gap = 30 # set space between bottom buttons
+$gap = 35 # set space between bottom buttons
 
 # Calculate the total width occupied by the text boxes and their distances
-$totalWidth = (4 * $textBoxSize.Width) + (3 * $gap) # 3 gaps between 4 text boxes, each gap is 20 pixels
+$totalWidth = (4 * $textBoxSize.Width) + (3 * $gap)
 
 # Determine the starting X-coordinate to center the group of text boxes
-$startX = [Math]::Max(($form.ClientSize.Width - $totalWidth) / 2, 0)
+$startX = [Math]::Max((($form.ClientSize.Width - $totalWidth) / 2) - 12, 0)
 
 $script:part0DefaultText = "X-0-0-0"
 $script:part1DefaultText = "0-X-0-0"
