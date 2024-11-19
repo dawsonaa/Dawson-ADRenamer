@@ -2405,9 +2405,9 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$refreshButton = New-StyledButton -text "Load OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
-$refreshButton.BackColor = $catBlue
-$refreshButton.Enabled = $online
+$loadButton = New-StyledButton -text "Load OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
+$loadButton.BackColor = $catBlue
+$loadButton.Enabled = $online
 
 <#
 .SYNOPSIS
@@ -2426,7 +2426,7 @@ $refreshButton.Enabled = $online
     - The function ensures that all current selections and items are cleared before reloading the computer list.
     - The LoadAndFilterComputers function is responsible for repopulating the computerCheckedListBox with the updated data.
 #>
-$refreshButton.Add_Click({
+$loadButton.Add_Click({
         $computerCheckedListBox.Items.Clear()
         $selectedCheckedListBox.Items.Clear()
         $newNamesListBox.Items.Clear()
@@ -2434,7 +2434,7 @@ $refreshButton.Add_Click({
 
         LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
     })
-$form.Controls.Add($refreshButton)
+$form.Controls.Add($loadButton)
 
 $applyRenameButton = New-StyledButton -text "Apply Rename" -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 430 -width 150 -height 30 -enabled $false
 $applyRenameButton.BackColor = $catRed
