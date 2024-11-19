@@ -62,7 +62,6 @@ $black = [System.Drawing.Color]::FromArgb(0, 0, 0)
 $red = [System.Drawing.Color]::FromArgb(218, 25, 25)
 $lightGray = [System.Drawing.Color]::FromArgb(45, 45, 45)
 $grayBlue = [System.Drawing.Color]::FromArgb(75, 75, 140)
-
 $catBlue = [System.Drawing.Color]::FromArgb(3, 106, 199)
 $catPurple = [System.Drawing.Color]::FromArgb(170, 13, 206)
 $catRed = [System.Drawing.Color]::FromArgb(255, 27, 82)
@@ -88,12 +87,15 @@ $label.Size = New-Object System.Drawing.Size(280,30)
 $label.Location = New-Object System.Drawing.Point(10,20)
 $modeSelectionForm.Controls.Add($label)
 
+$global:formClosedByButton = $false
+
 $buttonOnline = New-Object System.Windows.Forms.Button
 $buttonOnline.Text = "Online"
 $buttonOnline.Location = New-Object System.Drawing.Point(10,70)
 $buttonOnline.Size = New-Object System.Drawing.Size(75,30)
 $buttonOnline.Add_Click({
     $global:choice = "Online"
+    $global:formClosedByButton = $true
     $modeSelectionForm.Close()
 })
 $modeSelectionForm.Controls.Add($buttonOnline)
@@ -104,6 +106,7 @@ $buttonOffline.Location = New-Object System.Drawing.Point(100,70)
 $buttonOffline.Size = New-Object System.Drawing.Size(75,30)
 $buttonOffline.Add_Click({
     $global:choice = "Offline"
+    $global:formClosedByButton = $true
     $modeSelectionForm.Close()
 })
 $modeSelectionForm.Controls.Add($buttonOffline)
@@ -117,6 +120,14 @@ $buttonCancel.Add_Click({
     $modeSelectionForm.Close()
 })
 $modeSelectionForm.Controls.Add($buttonCancel)
+
+$modeSelectionForm.Add_FormClosing({
+    param($sender, $e)
+    if ($e.CloseReason -eq [System.Windows.Forms.CloseReason]::UserClosing -and -not $global:formClosedByButton) {
+        # Terminate the entire script because the form is closing due to the user pressing 'X'
+        [Environment]::Exit(0)
+    }
+})
 
 # Show the form
 $modeSelectionForm.ShowDialog() | Out-Null
@@ -2009,7 +2020,8 @@ $searchBox.Location = New-Object System.Drawing.Point(10, 10)
 $searchBox.Size = New-Object System.Drawing.Size(180, 20)
 $searchBox.ForeColor = [System.Drawing.Color]::Gray
 $searchBox.BackColor = [System.Drawing.Color]::LightGray
-$searchBox.Text = "Search for computer"
+$searchBox.Text = "Search"
+$searchBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
 $searchBox.add_KeyDown({
         param($s, $e)
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
@@ -2021,7 +2033,7 @@ $searchBox.add_KeyDown({
 
 # Clear placeholder text when the text box gains focus
 $searchBox.Add_Enter({
-        if ($this.Text -eq "Search for computer") {
+        if ($this.Text -eq "Search") {
             $this.Text = ''
             $this.ForeColor = [System.Drawing.Color]::Black
         }
@@ -2030,7 +2042,7 @@ $searchBox.Add_Enter({
 # Restore placeholder text when the text box loses focus and is empty
 $searchBox.Add_Leave({
         if ($this.Text -eq '') {
-            $this.Text = "Search for computer"
+            $this.Text = "Search"
             $this.ForeColor = [System.Drawing.Color]::Gray
         }
     })
@@ -2228,10 +2240,10 @@ $totalWidth = (4 * $textBoxSize.Width) + (3 * $gap) # 3 gaps between 4 text boxe
 # Determine the starting X-coordinate to center the group of text boxes
 $startX = [Math]::Max(($form.ClientSize.Width - $totalWidth) / 2, 0)
 
-$script:part0DefaultText = "Change part0Name"
-$script:part1DefaultText = "Change part1Name"
-$script:part2DefaultText = "Change part2Name"
-$script:part3DefaultText = "Change part3Name"
+$script:part0DefaultText = "X-0-0-0"
+$script:part1DefaultText = "0-X-0-0"
+$script:part2DefaultText = "0-0-X-0"
+$script:part3DefaultText = "0-0-0-X"
 
 # Create and add the text boxes, setting their X-coordinates based on the starting point
 $part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y 400 -size $textBoxSize -maxLength 15
@@ -2393,8 +2405,9 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$refreshButton = New-StyledButton -text "Reselect OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
+$refreshButton = New-StyledButton -text "Load OU" -x 195 -y 10 -width 94 -height 25 -enabled $true
 $refreshButton.BackColor = $catBlue
+$refreshButton.Enabled = $online
 
 <#
 .SYNOPSIS
