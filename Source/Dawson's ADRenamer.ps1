@@ -68,7 +68,7 @@ $catYellow = [System.Drawing.Color]::FromArgb(254, 162, 2)
 $catLightYellow = [System.Drawing.Color]::FromArgb(255, 249, 227)
 $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 
-$style = 2
+$style = 1
 
 if ($style -eq 1) { # Default style config
     $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
@@ -95,8 +95,8 @@ $companyName = "KSU"
 
 # Create a form for selecting Online, Offline, or Cancel
 $modeSelectionForm = New-Object System.Windows.Forms.Form
-$modeSelectionForm.Text = "Select ADR Mode"
-$modeSelectionForm.Size = New-Object System.Drawing.Size(300,150)
+$modeSelectionForm.Text = "Dawson's ADRenamer"
+$modeSelectionForm.Size = New-Object System.Drawing.Size(290,130)
 $modeSelectionForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $modeSelectionForm.MaximizeBox = $false
 $modeSelectionForm.StartPosition = "CenterScreen"
@@ -107,17 +107,20 @@ $modeSelectionForm.ForeColor = $defaultForeColor
 $modeSelectionForm.Font = $defaultFont
 
 $labelMode = New-Object System.Windows.Forms.Label
-$labelMode.Text = "Do you want to use ADRenamer in Online or Offline mode?"
+#$labelMode.Text = "Do you want to use ADRenamer in Online or Offline mode?"
+$labelMode.Text = "Select ADRenamer Mode"
+$labelMode.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $labelMode.Size = New-Object System.Drawing.Size(280,30)
-$labelMode.Location = New-Object System.Drawing.Point(10,20)
+$labelMode.Location = New-Object System.Drawing.Point(0,10)
 $modeSelectionForm.Controls.Add($labelMode)
 
 $global:formClosedByButton = $false
 
 $buttonOnline = New-Object System.Windows.Forms.Button
 $buttonOnline.Text = "Online"
-$buttonOnline.Location = New-Object System.Drawing.Point(10,70)
+$buttonOnline.Location = New-Object System.Drawing.Point(10,50)
 $buttonOnline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOnline.BackColor = $catBlue
 $buttonOnline.Add_Click({
     $global:choice = "Online"
     $global:formClosedByButton = $true
@@ -127,8 +130,10 @@ $modeSelectionForm.Controls.Add($buttonOnline)
 
 $buttonOffline = New-Object System.Windows.Forms.Button
 $buttonOffline.Text = "Offline"
-$buttonOffline.Location = New-Object System.Drawing.Point(100,70)
+$buttonOffline.Location = New-Object System.Drawing.Point(100,50)
 $buttonOffline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOffline.BackColor = $defaultBoxBackColor
+$buttonOffline.ForeColor = $defaultListForeColor
 $buttonOffline.Add_Click({
     $global:choice = "Offline"
     $global:formClosedByButton = $true
@@ -138,8 +143,9 @@ $modeSelectionForm.Controls.Add($buttonOffline)
 
 $buttonCancel = New-Object System.Windows.Forms.Button
 $buttonCancel.Text = "Cancel"
-$buttonCancel.Location = New-Object System.Drawing.Point(190,70)
+$buttonCancel.Location = New-Object System.Drawing.Point(190,50)
 $buttonCancel.Size = New-Object System.Drawing.Size(75,30)
+$buttonCancel.BackColor = $catRed
 $buttonCancel.Add_Click({
     $global:choice = "Cancel"
     $modeSelectionForm.Close()
