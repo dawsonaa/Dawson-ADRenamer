@@ -50,17 +50,16 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$Version = "11.18.24"
-$iconPath = Join-Path $PSScriptRoot "icon2.ico"
-
 # COLOR PALETTE
+$darkGray = [System.Drawing.Color]::FromArgb(45, 45, 45)
+$lightGray = [System.Drawing.Color]::LightGray
+$gray = [System.Drawing.Color]::Gray
 $visualStudioBlue = [System.Drawing.Color]::FromArgb(78, 102, 221) # RGB values for Visual Studio blue
 $kstateDarkPurple = [System.Drawing.Color]::FromArgb(64, 1, 111)
 $kstateLightPurple = [System.Drawing.Color]::FromArgb(115, 25, 184)
 $white = [System.Drawing.Color]::FromArgb(255, 255, 255)
 $black = [System.Drawing.Color]::FromArgb(0, 0, 0)
 $red = [System.Drawing.Color]::FromArgb(218, 25, 25)
-$lightGray = [System.Drawing.Color]::FromArgb(45, 45, 45)
 $grayBlue = [System.Drawing.Color]::FromArgb(75, 75, 140)
 $catBlue = [System.Drawing.Color]::FromArgb(3, 106, 199)
 $catPurple = [System.Drawing.Color]::FromArgb(170, 13, 206)
@@ -69,31 +68,59 @@ $catYellow = [System.Drawing.Color]::FromArgb(254, 162, 2)
 $catLightYellow = [System.Drawing.Color]::FromArgb(255, 249, 227)
 $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 
+$style = 1
+
+if ($style -eq 1) { # Default style config
+    $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
+    $defaultBackColor = $darkGray
+    $defaultForeColor = $white
+    $defaultBoxBackColor = $lightGray
+    $defaultBoxForeColor = $gray
+    $defaultListForeColor = $black
+} elseif ($style -eq 2) { # Default style config
+    $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
+    $defaultBackColor = $catDark
+    $defaultForeColor = $white
+    $defaultBoxBackColor = $catLightYellow
+    $defaultBoxForeColor = $gray
+    $defaultListForeColor = $black
+}
+
+# Program specific variables
+$Version = "11.20.24"
+$iconPath = Join-Path $PSScriptRoot "icon2.ico"
+$icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
+$renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
+$companyName = "KSU"
+
 # Create a form for selecting Online, Offline, or Cancel
 $modeSelectionForm = New-Object System.Windows.Forms.Form
-$modeSelectionForm.Text = "Select ADR Mode"
-$modeSelectionForm.Size = New-Object System.Drawing.Size(300,150)
+$modeSelectionForm.Text = "Dawson's ADRenamer"
+$modeSelectionForm.Size = New-Object System.Drawing.Size(290,130)
 $modeSelectionForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $modeSelectionForm.MaximizeBox = $false
 $modeSelectionForm.StartPosition = "CenterScreen"
-$modeSelectionForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
+$modeSelectionForm.Icon = $icon
 
-$modeSelectionForm.BackColor = $lightGray
-$modeSelectionForm.ForeColor = [System.Drawing.Color]::LightGray
-$modeSelectionForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+$modeSelectionForm.BackColor = $defaultBackColor
+$modeSelectionForm.ForeColor = $defaultForeColor
+$modeSelectionForm.Font = $defaultFont
 
-$label = New-Object System.Windows.Forms.Label
-$label.Text = "Do you want to use ADRenamer in Online or Offline mode?"
-$label.Size = New-Object System.Drawing.Size(280,30)
-$label.Location = New-Object System.Drawing.Point(10,20)
-$modeSelectionForm.Controls.Add($label)
+$labelMode = New-Object System.Windows.Forms.Label
+#$labelMode.Text = "Do you want to use ADRenamer in Online or Offline mode?"
+$labelMode.Text = "Select ADRenamer Mode"
+$labelMode.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$labelMode.Size = New-Object System.Drawing.Size(280,30)
+$labelMode.Location = New-Object System.Drawing.Point(0,10)
+$modeSelectionForm.Controls.Add($labelMode)
 
 $global:formClosedByButton = $false
 
 $buttonOnline = New-Object System.Windows.Forms.Button
 $buttonOnline.Text = "Online"
-$buttonOnline.Location = New-Object System.Drawing.Point(10,70)
+$buttonOnline.Location = New-Object System.Drawing.Point(10,50)
 $buttonOnline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOnline.BackColor = $catBlue
 $buttonOnline.Add_Click({
     $global:choice = "Online"
     $global:formClosedByButton = $true
@@ -103,8 +130,10 @@ $modeSelectionForm.Controls.Add($buttonOnline)
 
 $buttonOffline = New-Object System.Windows.Forms.Button
 $buttonOffline.Text = "Offline"
-$buttonOffline.Location = New-Object System.Drawing.Point(100,70)
+$buttonOffline.Location = New-Object System.Drawing.Point(100,50)
 $buttonOffline.Size = New-Object System.Drawing.Size(75,30)
+$buttonOffline.BackColor = $defaultBoxBackColor
+$buttonOffline.ForeColor = $defaultListForeColor
 $buttonOffline.Add_Click({
     $global:choice = "Offline"
     $global:formClosedByButton = $true
@@ -114,8 +143,9 @@ $modeSelectionForm.Controls.Add($buttonOffline)
 
 $buttonCancel = New-Object System.Windows.Forms.Button
 $buttonCancel.Text = "Cancel"
-$buttonCancel.Location = New-Object System.Drawing.Point(190,70)
+$buttonCancel.Location = New-Object System.Drawing.Point(190,50)
 $buttonCancel.Size = New-Object System.Drawing.Size(75,30)
+$buttonCancel.BackColor = $catRed
 $buttonCancel.Add_Click({
     $global:choice = "Cancel"
     $modeSelectionForm.Close()
@@ -130,8 +160,84 @@ $modeSelectionForm.Add_FormClosing({
     }
 })
 
-# Show the form
 $modeSelectionForm.ShowDialog() | Out-Null
+
+# Create a form for showing a message with Yes, No, Cancel options
+$invalidRenameForm = New-Object System.Windows.Forms.Form
+$invalidRenameForm.Text = ""
+$invalidRenameForm.Size = New-Object System.Drawing.Size(385, 295)
+$invalidRenameForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog  # Small border for dragging
+$invalidRenameForm.ControlBox = $false  # Removes the Close (X) button and title bar controls
+$invalidRenameForm.MaximizeBox = $false
+$invalidRenameForm.StartPosition = "CenterScreen"
+
+$invalidRenameForm.BackColor = $defaultBackColor
+$invalidRenameForm.ForeColor = $defaultForeColor
+$invalidRenameForm.Font = $defaultFont
+$invalidRenameForm.Icon = $icon
+
+$invalidRenameLabel = New-Object System.Windows.Forms.Label
+$invalidRenameLabel.Text = "The below invalid renames will not be completed"
+$invalidRenameLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$invalidRenameLabel.Location = New-Object System.Drawing.Point(10, 5)
+$invalidRenameLabel.Size = New-Object System.Drawing.Size(359, 20)
+$invalidRenameForm.Controls.Add($invalidRenameLabel)
+
+# Create a ListBox for invalid names
+$listBoxInvalidNames = New-Object System.Windows.Forms.ListBox
+$listBoxInvalidNames.Size = New-Object System.Drawing.Size(359, 180)
+$listBoxInvalidNames.Location = New-Object System.Drawing.Point(10,30)
+$listBoxInvalidNames.SelectionMode = [System.Windows.Forms.SelectionMode]::MultiExtended
+$listBoxInvalidNames.BackColor = $defaultBoxBackColor
+$listBoxInvalidNames.ForeColor = $defaultListForeColor
+$invalidRenameForm.Controls.Add($listBoxInvalidNames)
+
+# Define a method to refresh the ListBox contents
+function RefreshInvalidNamesListBox {
+    # Clear the current items
+    $listBoxInvalidNames.Items.Clear()
+
+    # Repopulate the ListBox with the current items in $script:invalidNamesList
+    foreach ($invalidName in $script:invalidNamesList) {
+        $listBoxInvalidNames.Items.Add($invalidName)
+    }
+}
+
+# Global variable to track the choice
+$global:formResult = $null
+
+$buttonOpenGuide = New-Object System.Windows.Forms.Button
+$buttonOpenGuide.Text = "Open $companyName Renaming Guidelines"
+$buttonOpenGuide.Location = New-Object System.Drawing.Point(10, 220)
+$buttonOpenGuide.Size = New-Object System.Drawing.Size(113, 60)
+$buttonOpenGuide.BackColor = $catPurple
+$buttonOpenGuide.Add_Click({
+    $global:formResult = "Yes"
+    $invalidRenameForm.Close()
+})
+$invalidRenameForm.Controls.Add($buttonOpenGuide)
+
+$buttonContinue = New-Object System.Windows.Forms.Button
+$buttonContinue.Text = "Continue"
+$buttonContinue.Location = New-Object System.Drawing.Point(133, 220)
+$buttonContinue.Size = New-Object System.Drawing.Size(113, 60)
+$buttonContinue.BackColor = $catBlue
+$buttonContinue.Add_Click({
+    $global:formResult = "No"
+    $invalidRenameForm.Close()
+})
+$invalidRenameForm.Controls.Add($buttonContinue)
+
+$buttonCancel = New-Object System.Windows.Forms.Button
+$buttonCancel.Text = "Cancel Rename Operation"
+$buttonCancel.Location = New-Object System.Drawing.Point(256, 220)
+$buttonCancel.Size = New-Object System.Drawing.Size(113, 60)
+$buttonCancel.BackColor = $catRed
+$buttonCancel.Add_Click({
+    $global:formResult = "Cancel"
+    $invalidRenameForm.Close()
+})
+$invalidRenameForm.Controls.Add($buttonCancel)
 
 # Set the $online variable based on the selection or exit if canceled
 switch ($global:choice) {
@@ -282,9 +388,9 @@ if ($online) {
             $errorMessage = "Invalid credentials or insufficient permissions. Please try again."
         }
     }
-    Write-Host "ONLINE MODE - Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
+    Write-Host "ONLINE MODE - Version $Version - Sufficient Credentials Provided. Logged on as $username." -ForegroundColor Green
 }else {
-    Write-Host "OFFLINE MODE - No credentials are needed." -ForegroundColor Green
+    Write-Host "OFFLINE MODE - Version $Version - No credentials are needed." -ForegroundColor Green
 }
 
 # Initialize a new hash set to store unique strings.
@@ -605,12 +711,14 @@ function ConvertTo-EmailAddress {
 }
 
 # Function to create an Outlook web draft email
+# Function to create an Outlook web draft email
 function Update-OutlookWebDraft {
     param (
         [string]$oldName,
         [string]$newName,
         [string]$emailAddress,
-        [string]$supportTicketLink
+        [string]$emailSubject,
+        [string]$emailBody
     )
 
     # Extract the username from the email address
@@ -629,18 +737,24 @@ Best regards,
 IT Support Team
 "@
 
-    # Helper function to replace '+' with '%20'
-    function EncodeSpaces($string) {
-        return [System.Uri]::EscapeDataString($string) -replace '\+', '%20'
+    # Helper function to encode spaces as '%20' and ensure proper URL encoding
+    function EncodeURL($string) {
+        # Fully URL encode the string
+        $encodedString = [System.Uri]::EscapeDataString($string)
+        # Replace '+' with '%20' to match desired formatting
+        return $encodedString -replace '\+', '%20'
     }
 
     # Construct the Outlook web URL for creating a draft
-    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + (EncodeSpaces($emailAddress)) + "&subject=" + (EncodeSpaces($subject)) + "&body=" + (EncodeSpaces($body))
+    $url = "https://outlook.office.com/mail/deeplink/compose?to=" + (EncodeURL($emailAddress)) +
+            "&subject=" + (EncodeURL($emailSubject)) +
+            "&body=" + (EncodeURL($emailBody))
 
     # Open the URL in the default browser
     Start-Process $url
     Write-Host "Draft email created for $emailAddress" -ForegroundColor Green
 }
+
 
 
 # Function to prompt user to create email drafts using three synchronized ListBox controls
@@ -651,16 +765,62 @@ function Show-EmailDrafts {
 
     # Create a new form
     $emailForm = New-Object System.Windows.Forms.Form
-    $emailForm.Text = "Devices to Create Email Drafts (Right Click to Remove)"
-    $emailForm.Size = New-Object System.Drawing.Size(600, 420)
+    $emailForm.Text = "Generate Email Drafts"
+    $emailForm.Size = New-Object System.Drawing.Size(600, 620)
     $emailForm.MaximizeBox = $false
     $emailForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $emailForm.StartPosition = "CenterScreen"
+    $emailForm.Icon = $icon
 
-    $emailForm.BackColor = $catDark
-    $emailForm.ForeColor = $white
-    # $emailForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
-    
+    $emailForm.BackColor = $defaultBackColor
+    $emailForm.ForeColor = $defaultForeColor
+    $emailForm.Font = $defaultFont
+
+    # Create a textbox for the email subject
+    $emailSubjectTextBox = New-Object System.Windows.Forms.TextBox
+    $emailSubjectTextBox.Text = "IT Support - Computer [oldName] renamed to [newName]"  # Default email subject
+    $emailSubjectTextBox.Location = New-Object System.Drawing.Point(10, 340)
+    $emailSubjectTextBox.Size = New-Object System.Drawing.Size(560, 20)
+    $emailSubjectTextBox.Font = New-Object System.Drawing.Font("Arial", 9, [System.Drawing.FontStyle]::Regular)
+
+    # Add Ctrl+A functionality for the subject textbox
+    $emailSubjectTextBox.add_KeyDown({
+        param($s, $e)
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+            $emailSubjectTextBox.SelectAll()
+            $e.SuppressKeyPress = $true
+            $e.Handled = $true
+        }
+    })
+    $emailForm.Controls.Add($emailSubjectTextBox)
+
+    # Create a multiline textbox for the email body
+    $emailBodyTextBox = New-Object System.Windows.Forms.TextBox
+    $emailBodyTextBox.Text = @"
+Dear [Username],
+
+Your computer has been renamed from [oldName] to [newName] as part of a maintenance operation. To avoid device name syncing issues, please restart your device as soon as possible. If you face any issues, please contact IT support.
+
+Best regards,
+IT Support Team
+"@
+    $emailBodyTextBox.Location = New-Object System.Drawing.Point(10, 370)
+    $emailBodyTextBox.Size = New-Object System.Drawing.Size(560, 140)
+    $emailBodyTextBox.Multiline = $true
+    $emailBodyTextBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
+    $emailBodyTextBox.Font = New-Object System.Drawing.Font("Arial", 9, [System.Drawing.FontStyle]::Regular)
+
+    # Add Ctrl+A functionality for the body textbox
+    $emailBodyTextBox.add_KeyDown({
+        param($s, $e)
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+            $emailBodyTextBox.SelectAll()
+            $e.SuppressKeyPress = $true
+            $e.Handled = $true
+        }
+    })
+    $emailForm.Controls.Add($emailBodyTextBox)
+
     # Create labels for each ListBox
     $labelOldName = New-Object System.Windows.Forms.Label
     $labelOldName.Text = "Old Name"
@@ -781,49 +941,38 @@ function Show-EmailDrafts {
     $listBoxNewName.ContextMenu = $contextMenu
     $listBoxUserName.ContextMenu = $contextMenu
 
-    # Create a label for the support link
-    $supportLinkLabel = New-Object System.Windows.Forms.Label
-    $supportLinkLabel.Text = "Support Link:"
-    $supportLinkLabel.Location = New-Object System.Drawing.Point(10, 340)
-    $supportLinkLabel.Size = New-Object System.Drawing.Size(80, 20)
-    $emailForm.Controls.Add($supportLinkLabel)
-
-    # Create a textbox for the support link
-    $supportLinkTextBox = New-Object System.Windows.Forms.TextBox
-    $supportLinkTextBox.Text = $defaultSupportTicketLink
-    $supportLinkTextBox.Location = New-Object System.Drawing.Point(90, 340) 
-    $supportLinkTextBox.Size = New-Object System.Drawing.Size(340, 20)
-
-    # Handle key down event to enable Ctrl+A functionality
-    $supportLinkTextBox.add_KeyDown({
-            param($s, $e)
-            if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
-                $supportLinkTextBox.SelectAll()
-                $e.SuppressKeyPress = $true
-                $e.Handled = $true
-            }
-        })
-    $emailForm.Controls.Add($supportLinkTextBox)
-
     # Create a button to create drafts
     $createButton = New-Object System.Windows.Forms.Button
-    $createButton.Text = "Create Email Drafts"
-    $createButton.Size = New-Object System.Drawing.Size(120, 30)
-    $createButton.Location = New-Object System.Drawing.Point(440, 340)
+    $createButton.Text = "Open Email Drafts"
+    $createButton.Size = New-Object System.Drawing.Size(90, 45)
+    $createButton.Location = New-Object System.Drawing.Point(480, 520)
     $createButton.Add_Click({
-            $supportTicketLink = $supportLinkTextBox.Text
-            for ($i = 0; $i -lt $listBoxOldName.Items.Count; $i++) {
-                $oldName = $listBoxOldName.Items[$i]
-                $newName = $listBoxNewName.Items[$i]
-                $userName = $listBoxUserName.Items[$i]
-                $deviceInfo = $loggedOnDevices | Where-Object { $_.OldName -eq $oldName -and $_.NewName -eq $newName -and $_.UserName -eq $userName }
-                if ($deviceInfo) {
-                    $emailAddress = ConvertTo-EmailAddress $deviceInfo.UserName
-                    Update-OutlookWebDraft -oldName $deviceInfo.OldName -newName $deviceInfo.NewName -emailAddress $emailAddress -supportTicketLink $supportTicketLink
-                }
+        $emailSubject = $emailSubjectTextBox.Text
+        $emailBody = $emailBodyTextBox.Text
+
+        for ($i = 0; $i -lt $listBoxOldName.Items.Count; $i++) {
+            $oldName = $listBoxOldName.Items[$i]
+            $newName = $listBoxNewName.Items[$i]
+            $userName = $listBoxUserName.Items[$i]
+            $deviceInfo = $loggedOnDevices | Where-Object { $_.OldName -eq $oldName -and $_.NewName -eq $newName -and $_.UserName -eq $userName }
+            if ($deviceInfo) {
+                $emailAddress = ConvertTo-EmailAddress $deviceInfo.UserName
+
+                # Replace placeholders in the subject and body
+                $customSubject = $emailSubject -replace '\[oldName\]', $oldName `
+                                            -replace '\[newName\]', $newName `
+                                            -replace '\[Username\]', $userName
+
+                $customBody = $emailBody -replace '\[oldName\]', $oldName `
+                                     -replace '\[newName\]', $newName `
+                                     -replace '\[Username\]', $userName
+
+                # Pass the custom subject and body
+                Update-OutlookWebDraft -oldName $deviceInfo.OldName -newName $deviceInfo.NewName -emailAddress $emailAddress -emailSubject $customSubject -emailBody $customBody
             }
-            $emailForm.Close()
-        })
+        }
+        $emailForm.Close()
+    })
     $emailForm.Controls.Add($createButton)
 
     # Show the form
@@ -839,11 +988,11 @@ function Select-OU {
     $ouForm.MaximizeBox = $false
     $ouForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $ouForm.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-    $ouForm.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
+    $ouForm.Icon = $icon
 
-    $ouForm.BackColor = $lightGray
-    $ouForm.ForeColor = [System.Drawing.Color]::LightGray
-    $ouForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+    $ouForm.BackColor = $defaultBackColor
+    $ouForm.ForeColor = $defaultForeColor
+    $ouForm.Font = $defaultFont
 
     # Add a handler for the FormClosing event to exit the script if the form is closed using the red X button
     $ouForm.Add_FormClosing({
@@ -858,7 +1007,8 @@ function Select-OU {
     $treeView = New-Object System.Windows.Forms.TreeView
     $treeView.Size = New-Object System.Drawing.Size(365, 500)
     $treeView.Location = New-Object System.Drawing.Point(10, 10)
-    $treeView.BackColor = [System.Drawing.Color]::LightGray
+    $treeView.BackColor = $defaultBoxBackColor
+    $treeView.ForeColor = $defaultListForeColor
     $treeView.Visible = $true
 
     # Add "OK"(selectedOU) button for OU selection
@@ -1114,11 +1264,11 @@ $form.Size = New-Object System.Drawing.Size(830, 490) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
-$form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
+$form.Icon = $icon
 
-$form.BackColor = $lightGray
-$form.ForeColor = [System.Drawing.Color]::LightGray
-$form.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+$form.BackColor = $defaultBackColor
+$form.ForeColor = $defaultForeColor
+$form.Font = $defaultFont
 
 # Make sure user knows what mode they are in
 if ($online) {
@@ -1314,7 +1464,8 @@ $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
 $computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 10)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 $computerCheckedListBox.IntegralHeight = $false
-$computerCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
+$computerCheckedListBox.BackColor = $defaultBoxBackColor
+$computerCheckedListBox.ForeColor = $defaultListForeColor
 
 $script:computerCtrlA = 1
 
@@ -1473,7 +1624,7 @@ $selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 10)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$selectedCheckedListBox.BackColor = [System.Drawing.Color]::LightGray
+$selectedCheckedListBox.BackColor = $defaultBoxBackColor
 
 $script:selectedCtrlA = 1
 
@@ -1680,19 +1831,19 @@ $colorPanel3 = New-Object System.Windows.Forms.Panel
 $colorPanel3.Location = New-Object System.Drawing.Point(240, 10) # 530, 40
 $colorPanel3.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel3.AutoScroll = $true
-$colorPanel3.BackColor = $lightGray
+$colorPanel3.BackColor = $defaultBackColor
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel = New-Object System.Windows.Forms.Panel
 $colorPanel.Location = New-Object System.Drawing.Point(510, 10) # 260, 40
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
-$colorPanel.BackColor = $lightGray
+$colorPanel.BackColor = $defaultBackColor
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel2 = New-Object System.Windows.Forms.Panel
 $colorPanel2.Location = New-Object System.Drawing.Point(780, 10) # 530, 40
 $colorPanel2.Size = New-Object System.Drawing.Size(20, 350)
-$colorPanel2.BackColor = $lightGray
+$colorPanel2.BackColor = $defaultBackColor
 
 # Handle the Paint event for the color panel
 $colorPanel.add_Paint({
@@ -1748,7 +1899,7 @@ $newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $newNamesListBox.Location = New-Object System.Drawing.Point(530, 10)
 $newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
-$newNamesListBox.BackColor = [System.Drawing.Color]::LightGray
+$newNamesListBox.BackColor = $defaultBoxBackColor
 
 # Define the MeasureItem event handler
 $measureItemHandler = {
@@ -2018,8 +2169,8 @@ $colorPanel2.BringToFront()
 $searchBox = New-Object System.Windows.Forms.TextBox
 $searchBox.Location = New-Object System.Drawing.Point(10, 365)
 $searchBox.Size = New-Object System.Drawing.Size(133, 20)
-$searchBox.ForeColor = [System.Drawing.Color]::Gray
-$searchBox.BackColor = [System.Drawing.Color]::LightGray
+$searchBox.ForeColor = $defaultBoxForeColor
+$searchBox.BackColor = $defaultBoxBackColor
 $searchBox.Text = "Search"
 $searchBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
 $searchBox.add_KeyDown({
@@ -2036,6 +2187,7 @@ $searchBox.Add_Enter({
         if ($this.Text -eq "Search") {
             $this.Text = ''
             $this.ForeColor = [System.Drawing.Color]::Black
+            $this.BackColor = [System.Drawing.Color]::White
         }
     })
 
@@ -2043,7 +2195,8 @@ $searchBox.Add_Enter({
 $searchBox.Add_Leave({
         if ($this.Text -eq '') {
             $this.Text = "Search"
-            $this.ForeColor = [System.Drawing.Color]::Gray
+            $this.ForeColor = $defaultBoxForeColor
+            $this.BackColor = $defaultBoxBackColor
         }
     })
 
@@ -2077,6 +2230,7 @@ $searchBox.Add_KeyDown({
             Write-Host ""
         }
     })
+
 $form.Controls.Add($searchBox)
 
 <#
@@ -2130,8 +2284,8 @@ function New-CustomTextBox {
     $textBox.Name = $name
     $textBox.Location = New-Object System.Drawing.Point($x, $y)
     $textBox.Size = $size
-    $textBox.ForeColor = [System.Drawing.Color]::Gray
-    $textBox.BackColor = [System.Drawing.Color]::LightGray
+    $textBox.ForeColor = $defaultBoxForeColor
+    $textBox.BackColor = $defaultBoxBackColor
     $textBox.Text = $defaultText
     $textBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
     $textBox.ReadOnly = $true
@@ -2182,8 +2336,8 @@ function New-CustomTextBox {
             if ($s.Text -eq '') {
                 $s.ReadOnly = $true
                 $s.Text = $defaultText
-                $s.ForeColor = [System.Drawing.Color]::Gray
-                $s.BackColor = [System.Drawing.Color]::LightGray
+                $s.ForeColor = $defaultBoxForeColor
+                $s.BackColor = $defaultBoxBackColor
             }
         })
 
@@ -2199,8 +2353,8 @@ $form.add_MouseDown({
             $textBox.ReadOnly = $true
             if ($textBox.Text -eq '') {
                 $textBox.Text = "$($textBox.Tag)"
-                $textBox.ForeColor = [System.Drawing.Color]::Gray
-                $textBox.BackColor = [System.Drawing.Color]::LightGray
+                $textBox.ForeColor = $defaultBoxForeColor
+                $textBox.BackColor = $defaultBoxBackColor
                 $textbox.Enabled = $false
                 $textbox.Enabled = $true
             }
@@ -2353,6 +2507,7 @@ function New-StyledButton {
 #$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
 $commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
 $commitChangesButton.BackColor = $catPurple
+$commitChangesButton.ForeColor = $defaultForeColor
 
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
@@ -2367,8 +2522,8 @@ $commitChangesButton.Add_Click({
         # Reset part#Input TextBoxes to default text and ReadOnly status
         function ResetTextBox($textBox, $defaultText) {
             $textBox.Text = $defaultText
-            $textBox.ForeColor = [System.Drawing.Color]::Gray
-            $textBox.BackColor = [System.Drawing.Color]::LightGray
+            $textBox.ForeColor = $defaultBoxForeColor
+            $textBox.BackColor = $defaultBoxBackColor
             $textBox.ReadOnly = $true
         }
 
@@ -2393,6 +2548,7 @@ $form.Controls.Add($commitChangesButton)
 # Add button to refresh or select a new OU to manage
 $loadButton = New-StyledButton -text "Load OU" -x 148 -y 365 -width 94 -height 25 -enabled $true
 $loadButton.BackColor = $catBlue
+$loadButton.ForeColor = $defaultForeColor
 $loadButton.Enabled = $online
 
 <#
@@ -2424,7 +2580,7 @@ $form.Controls.Add($loadButton)
 
 $applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
 $applyRenameButton.BackColor = $catRed
-$applyRenameButton.ForeColor = $white
+$applyRenameButton.ForeColor = $defaultForeColor
 
 <#
 .SYNOPSIS
@@ -2456,13 +2612,13 @@ $applyRenameButton.Add_Click({
 
         # Create a string from the invalid names list
         if ($script:invalidNamesList.Count -gt 0) {
-            $url = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
-            $message = "The below invalid renames will be ignored:`n" + ($script:invalidNamesList -join "`n") + "`n`nDo you want to review the guidelines?" + "`n`n'Yes' = open guidelines, 'No' = continue, 'Cancel' = cancel rename"
-            $result = [System.Windows.Forms.MessageBox]::Show($message, "Invalid Renaming schemes found", [System.Windows.Forms.MessageBoxButtons]::YesNoCancel)
-            if ($result -eq 'Yes') {
-                Start-Process $url  # Open the guidelines URL
-            }
-            elseif ($result -eq 'Cancel') {
+            RefreshInvalidNamesListBox
+            $invalidRenameForm.ShowDialog() | Out-Null
+            # Handling the result
+            if ($global:formResult -eq "Yes") {
+                Start-Process $renameGuideURL  # Open the guidelines URL
+            } elseif ($global:formResult -eq "Cancel") {
+                $applyRenameButton.Enabled = $true
                 return  # Exit if the user cancels
             }
         }
@@ -2956,6 +3112,8 @@ $applyRenameButton.Add_Click({
             $form.Enabled = $true
             Write-Host "Form enabled"
             Write-Host " "
+        } else{
+            $applyRenameButton.Enabled = $true
         }
     })
 $form.Controls.Add($applyRenameButton)
