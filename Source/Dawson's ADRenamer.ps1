@@ -154,7 +154,6 @@ $modeSelectionForm.Add_FormClosing({
     }
 })
 
-# Show the form
 $modeSelectionForm.ShowDialog() | Out-Null
 
 # Create a form for showing a message with Yes, No, Cancel options
@@ -3112,8 +3111,6 @@ $applyRenameButton.Add_Click({
         }
     })
 $form.Controls.Add($applyRenameButton)
-
-$invalidRenameForm.ShowDialog() | Out-Null
 
 LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
 
