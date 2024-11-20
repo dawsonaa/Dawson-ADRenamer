@@ -694,9 +694,6 @@ function ProcessCommittedChanges {
     UpdateColors #>
 }
 
-# Initialize the link for submitting a ticket
-$defaultSupportTicketLink = "https://support.ksu.edu/TDClient/30/Portal/Requests/ServiceCatalog"
-
 # Function to format usernames into email addresses
 function ConvertTo-EmailAddress {
     param (
