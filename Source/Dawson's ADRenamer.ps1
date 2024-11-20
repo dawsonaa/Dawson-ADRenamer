@@ -758,6 +758,7 @@ IT Support Team
         $listBoxNewName.Items.Add($device.NewName)
         $listBoxUserName.Items.Add($device.UserName)
     }
+    $emailForm.Text = "Generate Email Drafts - Logged On Users"
 
     $emailForm.Controls.Add($listBoxOldName)
     $emailForm.Controls.Add($listBoxNewName)
@@ -2519,6 +2520,7 @@ $applyRenameButton.Add_Click({
         $successfulRestarts = @()
         $failedRestarts = @()
         $loggedOnUsers = @()
+        $lastLoggedOnDevices = @()
         $loggedOnDevices = @() # Array to store offline devices and their users
         $totalTime = [System.TimeSpan]::Zero
 
@@ -2701,6 +2703,17 @@ $applyRenameButton.Add_Click({
                                             # Output the time taken to check if user was logged on
                                             Write-Host "Time taken to check $oldName for logged on users: $($checkLoginTime.TotalSeconds) seconds" -ForegroundColor Blue
                                             $individualTime = $individualTime.Add($checkLoginTime)
+
+                                            $lastLoggedOnUser = Get-WmiObject -Class Win32_NetworkLoginProfile -ComputerName $oldName -Credential $cred |
+                                                    Where-Object { $_.LastLogon -ne $null } |
+                                                    Sort-Object LastLogon -Descending |
+                                                    Select-Object -First 1 -ExpandProperty Name
+
+                                            $lastLoggedOnDevices += [PSCustomObject]@{
+                                                OldName  = $oldName
+                                                NewName  = $newName
+                                                UserName = $lastLoggedOnUser
+                                            }
 
                                             Write-Host "Checking if $oldName restarted successfully..."
                                             Restart-Computer -ComputerName $oldName -Credential $cred -Force
