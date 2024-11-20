@@ -133,6 +133,66 @@ $modeSelectionForm.Add_FormClosing({
 # Show the form
 $modeSelectionForm.ShowDialog() | Out-Null
 
+# Create a form for showing a message with Yes, No, Cancel options
+$invalidRenameForm = New-Object System.Windows.Forms.Form
+$invalidRenameForm.Text = "Invalid Renaming Schemes Found"
+$invalidRenameForm.Size = New-Object System.Drawing.Size(400, 250)
+$invalidRenameForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+$invalidRenameForm.MaximizeBox = $false
+$invalidRenameForm.StartPosition = "CenterScreen"
+
+$invalidRenameForm.BackColor = $lightGray
+$invalidRenameForm.ForeColor = [System.Drawing.Color]::LightGray
+$invalidRenameForm.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold) # Arial, 10pt, Bold
+
+# Label for the message
+$invalidRenameLabel = New-Object System.Windows.Forms.Label
+$invalidRenameLabel.Text = "The below invalid renames will be ignored:`n" + ($script:invalidNamesList -join "`n") + "`n`nDo you want to review the guidelines?" + "`n`n'Yes' = open guidelines, 'No' = continue, 'Cancel' = cancel rename"
+$invalidRenameLabel.Size = New-Object System.Drawing.Size(380, 120)
+$invalidRenameLabel.Location = New-Object System.Drawing.Point(10, 10)
+$invalidRenameLabel.AutoSize = $true
+$invalidRenameForm.Controls.Add($invalidRenameLabel)
+
+# Global variable to track the choice
+$global:formResult = $null
+
+# "Yes" button
+$buttonYes = New-Object System.Windows.Forms.Button
+$buttonYes.Text = "Yes"
+$buttonYes.Location = New-Object System.Drawing.Point(50, 150)
+$buttonYes.Size = New-Object System.Drawing.Size(75, 30)
+$buttonYes.Add_Click({
+    $global:formResult = "Yes"
+    $invalidRenameForm.Close()
+})
+$invalidRenameForm.Controls.Add($buttonYes)
+
+# "No" button
+$buttonNo = New-Object System.Windows.Forms.Button
+$buttonNo.Text = "No"
+$buttonNo.Location = New-Object System.Drawing.Point(160, 150)
+$buttonNo.Size = New-Object System.Drawing.Size(75, 30)
+$buttonNo.Add_Click({
+    $global:formResult = "No"
+    $invalidRenameForm.Close()
+})
+$invalidRenameForm.Controls.Add($buttonNo)
+
+# "Cancel" button
+$buttonCancel = New-Object System.Windows.Forms.Button
+$buttonCancel.Text = "Cancel"
+$buttonCancel.Location = New-Object System.Drawing.Point(270, 150)
+$buttonCancel.Size = New-Object System.Drawing.Size(75, 30)
+$buttonCancel.Add_Click({
+    $global:formResult = "Cancel"
+    $invalidRenameForm.Close()
+})
+$invalidRenameForm.Controls.Add($buttonCancel)
+
+# Show the form
+$invalidRenameForm.ShowDialog()
+
+
 # Set the $online variable based on the selection or exit if canceled
 switch ($global:choice) {
     "Online" {
@@ -2499,6 +2559,8 @@ $applyRenameButton.Add_Click({
 
         # Create a string from the invalid names list
         if ($script:invalidNamesList.Count -gt 0) {
+            $invalidRenameLabel.Text = "The below invalid renames will be ignored:`n" + ($script:invalidNamesList -join "`n") + "`n`nDo you want to review the guidelines?" + "`n`n'Yes' = open guidelines, 'No' = continue, 'Cancel' = cancel rename"
+            $invalidRenameForm.ShowDialog()
             $url = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
             $message = "The below invalid renames will be ignored:`n" + ($script:invalidNamesList -join "`n") + "`n`nDo you want to review the guidelines?" + "`n`n'Yes' = open guidelines, 'No' = continue, 'Cancel' = cancel rename"
             $result = [System.Windows.Forms.MessageBox]::Show($message, "Invalid Renaming schemes found", [System.Windows.Forms.MessageBoxButtons]::YesNoCancel)
