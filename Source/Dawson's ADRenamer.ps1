@@ -1338,6 +1338,10 @@ else {
 
 # Create a MenuStrip
 $menuStrip = New-Object System.Windows.Forms.MenuStrip
+$menuStrip.BackColor = $defaultListForeColor
+$menuStrip.ForeColor = $defaultForeColor
+$menuStrip.Font = $defaultFont
+$menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
 
 # Create the "View" tab
 $viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
