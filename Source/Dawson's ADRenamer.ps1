@@ -1356,22 +1356,21 @@ $viewLogs.Add_Click({
     $logsForm.ForeColor = $defaultForeColor
 
     # Listbox to display .txt files
-    $listBox = New-Object System.Windows.Forms.ListBox
-    $listBox.Dock = [System.Windows.Forms.DockStyle]::Left
-    $listBox.Width = 200
+    $logsListBox = New-Object System.Windows.Forms.ListBox
+    $logsListBox.Dock = [System.Windows.Forms.DockStyle]::Left
+    $logsListBox.Width = 200
 
     # Textbox to display the content of a selected file
-    $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.Multiline = $true
-    $textBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
-    $textBox.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $textBox.ReadOnly = $true
+    $logsTextBox = New-Object System.Windows.Forms.TextBox
+    $logsTextBox.Multiline = $true
+    $logsTextBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
+    $logsTextBox.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $logsTextBox.ReadOnly = $true
 
     # Get the script's directory
     # Determine the script directory
     $scriptDirectory = Split-Path -Parent $PSCommandPath
     $logsFolder = Join-Path $scriptDirectory "LOGS"
-    Write-Host $logsFolder
     if (-Not (Test-Path $logsFolder)) {
         [System.Windows.Forms.MessageBox]::Show("No LOGS folder found in the current directory.")
         return
@@ -1379,23 +1378,24 @@ $viewLogs.Add_Click({
 
     # Add .txt file names to the listbox
     Get-ChildItem -Path $logsFolder -Filter "*.txt" | ForEach-Object {
-        $listBox.Items.Add($_.Name)
+        $logsListBox.Items.Add($_.Name)
     }
 
     # Event: Double-click on a file to view its content
-    $listBox.Add_MouseDoubleClick({
-        $selectedFile = $listBox.SelectedItem
+    $logsListBox.Add_MouseDoubleClick({
+        $selectedFile = $logsListBox.SelectedItem
         if ($selectedFile) {
             $filePath = Join-Path $logsFolder $selectedFile
-            $textBox.Lines = Get-Content -Path $filePath
+            # Read file line by line and set to TextBox
+            $logsTextBox.Lines = Get-Content -Path $filePath
         }
     })
 
     # Add controls to the logs form
-    $logsForm.Controls.Add($textBox)
-    $logsForm.Controls.Add($listBox)
+    $logsForm.Controls.Add($logsTextBox)
+    $logsForm.Controls.Add($logsListBox)
 
-    $logsForm.Show()
+    $logsForm.ShowDialog()
 })
 
 # Add the Logs option to the "View" tab
