@@ -87,11 +87,73 @@ if ($style -eq 1) { # Default style config
 }
 
 # Program specific variables
-$Version = "11.20.24"
+$Version = "24.11.22"
 $iconPath = Join-Path $PSScriptRoot "icon2.ico"
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
 $companyName = "KSU"
+$scriptDirectory = Split-Path -Parent $PSCommandPath
+
+function Set-FormState {
+    param (
+        [Parameter(Mandatory = $true)]
+        [bool]$IsEnabled,
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Forms.Form]$Form,
+        [bool]$Loading = $true
+    )
+
+    # Check if the overlay form exists
+    $global:OverlayForm = $global:OverlayForm -as [System.Windows.Forms.Form]
+
+    if ($IsEnabled) {
+        # Close the overlay form if it exists
+        $Form.Enabled = $true
+        $Form.BringToFront()
+        if ($global:OverlayForm) {
+            $global:OverlayForm.Close()
+            $global:OverlayForm.Dispose()
+            $global:OverlayForm = $null
+        }
+        #$Form.BringToFront() # Ensure the main form is brought to the front
+    } else {
+        # Create and display the overlay form
+        if (-not $global:OverlayForm) {
+            $global:OverlayForm = New-Object System.Windows.Forms.Form
+            $global:OverlayForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+            $global:OverlayForm.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
+            $global:OverlayForm.BackColor = $defaultBackColor
+            $global:OverlayForm.Opacity = 0.5
+            $global:OverlayForm.ShowInTaskbar = $false
+            #$global:OverlayForm.TopMost = $true
+            $global:OverlayForm.Size = $Form.Size
+            $global:OverlayForm.Location = $Form.Location
+
+            # Add "Loading..." label if Loading is true
+            if ($Loading) {
+                $loadingLabel = New-Object System.Windows.Forms.Label
+                $loadingLabel.Text = "Loading..."
+                $loadingLabel.Font = New-Object System.Drawing.Font("Arial", 30, [System.Drawing.FontStyle]::Bold)
+                $loadingLabel.ForeColor = $defaultForeColor
+                $loadingLabel.BackColor = [System.Drawing.Color]::Transparent
+                $loadingLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+                $loadingLabel.AutoSize = $false
+                $loadingLabel.Width = $global:OverlayForm.Width
+                $loadingLabel.Height = 30 # Set a fixed height for the label
+                $loadingLabel.Left = 0
+                $loadingLabel.Top = [int]($global:OverlayForm.Height / 2 - $loadingLabel.Height / 2)
+                $global:OverlayForm.Controls.Add($loadingLabel)
+            }
+
+            $global:OverlayForm.Show()
+            $global:OverlayForm.Enabled = $false # Prevent interaction
+            #$global:OverlayForm.BringToFront()
+        }
+        $Form.Enabled = $false
+    }
+}
+
+$formStartY = 30
 
 # Create a form for selecting Online, Offline, or Cancel
 $modeSelectionForm = New-Object System.Windows.Forms.Form
@@ -694,9 +756,6 @@ function ProcessCommittedChanges {
     UpdateColors #>
 }
 
-# Initialize the link for submitting a ticket
-$defaultSupportTicketLink = "https://support.ksu.edu/TDClient/30/Portal/Requests/ServiceCatalog"
-
 # Function to format usernames into email addresses
 function ConvertTo-EmailAddress {
     param (
@@ -1163,8 +1222,7 @@ function LoadAndFilterComputers {
         Write-Host "Selected OU Path: $script:ouPath"  # Debug message
 
         # Disable the form while loading data to prevent user interaction
-        $form.Enabled = $false
-        Write-Host "Form disabled for loading..."
+        Set-FormState -IsEnabled $false -Form $form
 
         if ($online) {
             Write-Host "Loading AD endpoints..."
@@ -1245,8 +1303,7 @@ function LoadAndFilterComputers {
         Write-Host "Filtered out $filteredOutCount endpoints due to 180 day offline exclusion"
         
         # Re-enable the form after loading is complete
-        $form.Enabled = $true
-        Write-Host "Form enabled."
+        Set-FormState -IsEnabled $true -Form $form
         Write-Host ""
     }
     catch {
@@ -1260,7 +1317,8 @@ function LoadAndFilterComputers {
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
-$form.Size = New-Object System.Drawing.Size(830, 490) # 785, 520
+$form.Opacity = 1
+$form.Size = New-Object System.Drawing.Size(830, 510) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
@@ -1278,6 +1336,132 @@ else {
     $form.Text = "ADRenamer - Offline"
 }
 
+# Create a MenuStrip
+$menuStrip = New-Object System.Windows.Forms.MenuStrip
+$menuStrip.BackColor = $defaultListForeColor
+$menuStrip.ForeColor = $defaultForeColor
+$menuStrip.Font = $defaultFont
+$menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
+
+# Create the "View" tab
+$viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$viewMenu.Text = "View"
+
+# Add "Logs" to the "View" tab
+$viewLogs = New-Object System.Windows.Forms.ToolStripMenuItem
+$viewLogs.Text = "Logs"
+$viewLogs.Add_Click({
+    # Create the "Logs" form
+    $logsForm = New-Object System.Windows.Forms.Form
+    $logsForm.Text = "ADRenamer Logs Viewer"
+    $logsForm.Size = New-Object System.Drawing.Size(830, 400)
+    $logsForm.Icon = $icon
+    $logsForm.StartPosition = "CenterScreen"
+    $logsForm.BackColor = $defaultBackColor
+    $logsForm.ForeColor = $defaultForeColor
+
+    # Listbox to display .txt files
+    $logsListBox = New-Object System.Windows.Forms.ListBox
+    $logsListBox.Dock = [System.Windows.Forms.DockStyle]::Left
+    $logsListBox.Width = 200
+
+    # Textbox to display the content of a selected file
+    $logsTextBox = New-Object System.Windows.Forms.TextBox
+    $logsTextBox.Multiline = $true
+    $logsTextBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
+    $logsTextBox.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $logsTextBox.ReadOnly = $true
+
+    $logsFolder = Join-Path $scriptDirectory "LOGS"
+    if (-Not (Test-Path $logsFolder)) {
+        [System.Windows.Forms.MessageBox]::Show("No LOGS folder found in the current directory.")
+        return
+    }
+
+    # Add .txt file names to the listbox
+    Get-ChildItem -Path $logsFolder -Filter "*.txt" | ForEach-Object {
+        $logsListBox.Items.Add($_.Name)
+    }
+
+    # Event: Double-click on a file to view its content
+    $logsListBox.Add_MouseDoubleClick({
+        $selectedFile = $logsListBox.SelectedItem
+        if ($selectedFile) {
+            $filePath = Join-Path $logsFolder $selectedFile
+            # Read file line by line and set to TextBox
+            $logsTextBox.Lines = Get-Content -Path $filePath
+        }
+    })
+
+    # Add controls to the logs form
+    $logsForm.Controls.Add($logsTextBox)
+    $logsForm.Controls.Add($logsListBox)
+
+    $logsForm.ShowDialog()
+})
+
+$viewResults = New-Object System.Windows.Forms.ToolStripMenuItem
+$viewResults.Text = "Results"
+$viewResults.Add_Click({
+    # Create the "Results" form
+    $resultsForm = New-Object System.Windows.Forms.Form
+    $resultsForm.Text = "Open Results File"
+    $resultsForm.Size = New-Object System.Drawing.Size(300, 400)
+    $resultsForm.icon = $icon
+    $resultsForm.StartPosition = "CenterScreen"
+    $resultsForm.BackColor = $defaultBackColor
+    $resultsForm.ForeColor = $defaultForeColor
+
+    # Listbox to display CSV files
+    $resultsListBox = New-Object System.Windows.Forms.ListBox
+    $resultsListBox.Dock = [System.Windows.Forms.DockStyle]::Fill
+
+    # Get the RESULTS folder
+    $resultsFolder = Join-Path $scriptDirectory "RESULTS"
+    Write-Host "Results Folder: $resultsFolder"
+
+    if (-Not (Test-Path $resultsFolder)) {
+        [System.Windows.Forms.MessageBox]::Show("No RESULTS folder found in the current directory.")
+        return
+    }
+
+    # Add CSV file names to the listbox
+    $csvFiles = Get-ChildItem -Path $resultsFolder -Filter "*.csv"
+    Write-Host "Files Found: $($csvFiles.Count)"
+    $csvFiles | ForEach-Object {
+        Write-Host "Adding file: $($_.Name)"
+        $resultsListBox.Items.Add($_.Name)
+    }
+
+    # Event: Double-click on a file to open it in Excel
+    $resultsListBox.Add_MouseDoubleClick({
+        $selectedFile = $resultsListBox.SelectedItem
+        if ($selectedFile) {
+            $filePath = Join-Path $resultsFolder $selectedFile
+            Write-Host "Opening file: $filePath"
+            Start-Process -FilePath $filePath
+        }
+    })
+
+    # Add the ListBox to the Results form
+    $resultsForm.Controls.Add($resultsListBox)
+
+    $resultsForm.ShowDialog()
+})
+
+# Add the Results option to the "View" tab
+$viewMenu.DropDownItems.Add($viewResults)
+
+# Add the Logs option to the "View" tab
+$viewMenu.DropDownItems.Add($viewLogs)
+
+# Add the "View" tab to the MenuStrip
+$menuStrip.Items.Add($viewMenu)
+
+# Attach the MenuStrip to the main form
+$form.MainMenuStrip = $menuStrip
+$form.Controls.Add($menuStrip)
+
 # Initialize script-scope variables
 $script:invalidNamesList = @()
 $script:validNamesList = @()
@@ -1287,7 +1471,7 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(700, 430)
+$versionLabel.Location = New-Object System.Drawing.Point(700,(420 + $formStartY))
 $versionLabel.AutoSize = $true
 $versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -1301,7 +1485,7 @@ $form.Controls.Add($versionLabel)
 # Create label to display author information
 $authorLabel = New-Object System.Windows.Forms.Label
 $authorLabel.Text = "Author: Dawson Adams (dawsonaa@ksu.edu)"
-$authorLabel.Location = New-Object System.Drawing.Point(10, 430)
+$authorLabel.Location = New-Object System.Drawing.Point(10, (420 + $formStartY))
 $authorLabel.AutoSize = $true
 $authorLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -1461,7 +1645,7 @@ function UpdateAndSyncListBoxes {
 
 # Create checked list box for computers
 $computerCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$computerCheckedListBox.Location = New-Object System.Drawing.Point(10, 10)
+$computerCheckedListBox.Location = New-Object System.Drawing.Point(10, $formStartY)
 $computerCheckedListBox.Size = New-Object System.Drawing.Size($listBoxWidth, $listBoxHeight)
 $computerCheckedListBox.IntegralHeight = $false
 $computerCheckedListBox.BackColor = $defaultBoxBackColor
@@ -1476,7 +1660,7 @@ $computerCheckedListBox.Add_KeyDown({
         # Check if Ctrl+A is pressed
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
             # Disable the form and controls to prevent interactions
-            $form.Enabled = $false
+            Set-FormState -IsEnabled $false -Form $form
             Write-Host "Ctrl+A pressed, toggling selection state, Form disabled for loading..."
 
             # Limit the number of items to select/unselect to 500
@@ -1523,8 +1707,7 @@ $computerCheckedListBox.Add_KeyDown({
             $selectedCheckedListBox.EndUpdate()
 
             # Enable the form and controls
-            $form.Enabled = $true
-            Write-Host "Form enabled"
+            Set-FormState -IsEnabled $true -Form $form
             Write-Host ""
 
             # Prevent default action
@@ -1620,7 +1803,7 @@ $form.Controls.Add($computerCheckedListBox)
 
 # Create a new checked list box for displaying selected computers
 $selectedCheckedListBox = New-Object System.Windows.Forms.CheckedListBox
-$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, 10)
+$selectedCheckedListBox.Location = New-Object System.Drawing.Point(260, $formStartY)
 $selectedCheckedListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
@@ -1828,20 +2011,20 @@ $colorPanelBack = $catDark
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel3 = New-Object System.Windows.Forms.Panel
-$colorPanel3.Location = New-Object System.Drawing.Point(240, 10) # 530, 40
+$colorPanel3.Location = New-Object System.Drawing.Point(240, $formStartY) # 530, 40
 $colorPanel3.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel3.AutoScroll = $true
 $colorPanel3.BackColor = $defaultBackColor
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel = New-Object System.Windows.Forms.Panel
-$colorPanel.Location = New-Object System.Drawing.Point(510, 10) # 260, 40
+$colorPanel.Location = New-Object System.Drawing.Point(510, $formStartY) # 260, 40
 $colorPanel.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel.BackColor = $defaultBackColor
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel2 = New-Object System.Windows.Forms.Panel
-$colorPanel2.Location = New-Object System.Drawing.Point(780, 10) # 530, 40
+$colorPanel2.Location = New-Object System.Drawing.Point(780, $formStartY) # 530, 40
 $colorPanel2.Size = New-Object System.Drawing.Size(20, 350)
 $colorPanel2.BackColor = $defaultBackColor
 
@@ -1896,7 +2079,7 @@ $colorPanel3.add_Paint({
 # Create a list box for displaying proposed new names
 $newNamesListBox = New-Object System.Windows.Forms.ListBox
 $newNamesListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
-$newNamesListBox.Location = New-Object System.Drawing.Point(530, 10)
+$newNamesListBox.Location = New-Object System.Drawing.Point(530, $formStartY)
 $newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
 $newNamesListBox.BackColor = $defaultBoxBackColor
@@ -2071,8 +2254,7 @@ $menuRemoveAll.Text = "Remove all device(s)"
 $menuRemoveAll.Enabled = $false
 $menuRemoveAll.Add_Click({
         $selectedItems = @($selectedCheckedListBox.Items | ForEach-Object { $_ })
-        $form.Enabled = $false
-        Write-Host "Form disabled for remove all"
+        Set-FormState -IsEnabled $false -Form $form
         $script:customNamesList = @()
 
         # Create a temporary list to store changes that need to be removed
@@ -2110,8 +2292,7 @@ $menuRemoveAll.Add_Click({
             $script:changesList.Remove($changeToRemove)
         }
 
-        $form.Enabled = $true
-        Write-Host "Form enabled"
+        Set-FormState -IsEnabled $true -Form $form
         Write-Host "All devices removed from the list"
     })
 
@@ -2167,7 +2348,7 @@ $colorPanel2.BringToFront()
 
 # Search Text Box with Enter Key Event
 $searchBox = New-Object System.Windows.Forms.TextBox
-$searchBox.Location = New-Object System.Drawing.Point(10, 365)
+$searchBox.Location = New-Object System.Drawing.Point(10,(355 + $formStartY))
 $searchBox.Size = New-Object System.Drawing.Size(133, 20)
 $searchBox.ForeColor = $defaultBoxForeColor
 $searchBox.BackColor = $defaultBoxBackColor
@@ -2204,8 +2385,7 @@ $searchBox.Add_Leave({
 $searchBox.Add_KeyDown({
         param($s, $e)
         if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
-            $form.Enabled = $false
-            Write-Host "Form disabled for search event, loading..."
+            Set-FormState -IsEnabled $false -Form $form
 
             $e.SuppressKeyPress = $true  # Prevent sound on enter press
             $e.Handled = $true
@@ -2225,8 +2405,7 @@ $searchBox.Add_KeyDown({
                 }
                 $computerCheckedListBox.Items.Add($computer.Name, $isChecked)
             }
-            $form.Enabled = $true
-            Write-Host "Form enabled"
+            Set-FormState -IsEnabled $true -Form $form
             Write-Host ""
         }
     })
@@ -2385,16 +2564,16 @@ $script:part2DefaultText = "O-O-X-O"
 $script:part3DefaultText = "O-O-O-X"
 
 # Create and add the text boxes, setting their X-coordinates based on the starting point
-$part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y 400 -size $textBoxSize -maxLength 15
+$part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y (390 + $formStartY) -size $textBoxSize -maxLength 15
 $form.Controls.Add($part0Input)
 
-$part1Input = New-CustomTextBox -name "part1Input" -defaultText $script:part1DefaultText -x ($startX + $textBoxSize.Width + $gap) -y 400 -size $textBoxSize -maxLength 20
+$part1Input = New-CustomTextBox -name "part1Input" -defaultText $script:part1DefaultText -x ($startX + $textBoxSize.Width + $gap) -y (390 + $formStartY) -size $textBoxSize -maxLength 20
 $form.Controls.Add($part1Input)
 
-$part2Input = New-CustomTextBox -name "part2Input" -defaultText $script:part2DefaultText -x ($startX + 2 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
+$part2Input = New-CustomTextBox -name "part2Input" -defaultText $script:part2DefaultText -x ($startX + 2 * ($textBoxSize.Width + $gap)) -y (390 + $formStartY) -size $textBoxSize -maxLength 20
 $form.Controls.Add($part2Input)
 
-$part3Input = New-CustomTextBox -name "part3Input" -defaultText $script:part3DefaultText -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y 400 -size $textBoxSize -maxLength 20
+$part3Input = New-CustomTextBox -name "part3Input" -defaultText $script:part3DefaultText -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y (390 + $formStartY) -size $textBoxSize -maxLength 20
 $form.Controls.Add($part3Input)
 
 $part0Input.Add_TextChanged({
@@ -2505,14 +2684,13 @@ function New-StyledButton {
     return $button
 }
 #$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
-$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 25 -enabled $false
 $commitChangesButton.BackColor = $catPurple
 $commitChangesButton.ForeColor = $defaultForeColor
 
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
-        $form.Enabled = $false
-        #$script:selectedItems.Clear()
+        Set-FormState -IsEnabled $false -Form $form
         $script:selectedCtrlA = 1
         ProcessCommittedChanges
         UpdateAndSyncListBoxes
@@ -2540,13 +2718,13 @@ $commitChangesButton.Add_Click({
 
         $commitChangesButton.Enabled = $false
         $ApplyRenameButton.Enabled = $true
-        $form.Enabled = $true
+        Set-FormState -IsEnabled $true -Form $form
     })
 
 $form.Controls.Add($commitChangesButton)
 
 # Add button to refresh or select a new OU to manage
-$loadButton = New-StyledButton -text "Load OU" -x 148 -y 365 -width 94 -height 25 -enabled $true
+$loadButton = New-StyledButton -text "Load OU" -x 148 -y (355 + $formStartY) -width 94 -height 25 -enabled $true
 $loadButton.BackColor = $catBlue
 $loadButton.ForeColor = $defaultForeColor
 $loadButton.Enabled = $online
@@ -2578,7 +2756,7 @@ $loadButton.Add_Click({
     })
 $form.Controls.Add($loadButton)
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y 365 -width ($listBoxWidth + 2) -height 25 -enabled $false
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 25 -enabled $false
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $defaultForeColor
 
@@ -2612,12 +2790,14 @@ $applyRenameButton.Add_Click({
 
         # Create a string from the invalid names list
         if ($script:invalidNamesList.Count -gt 0) {
+            Set-FormState -IsEnabled $false -Form $form
             RefreshInvalidNamesListBox
             $invalidRenameForm.ShowDialog() | Out-Null
             # Handling the result
             if ($global:formResult -eq "Yes") {
                 Start-Process $renameGuideURL  # Open the guidelines URL
             } elseif ($global:formResult -eq "Cancel") {
+                Set-FormState -IsEnabled $true -Form $form
                 $applyRenameButton.Enabled = $true
                 return  # Exit if the user cancels
             }
@@ -2632,7 +2812,7 @@ $applyRenameButton.Add_Click({
         $successfulRestarts = @()
         $failedRestarts = @()
         $loggedOnUsers = @()
-        $loggedOnDevices = @() # Array to store offline devices and their users
+        $loggedOnDevices = @()
         $totalTime = [System.TimeSpan]::Zero
 
         #  If user confirms they want to proceed with renaming
@@ -2663,8 +2843,7 @@ $applyRenameButton.Add_Click({
                 }
             }
 
-            $form.Enabled = $false
-            Write-Host "Form disabled for rename operation, loading..."
+            Set-FormState -IsEnabled $false -Form $form
             Write-Host " "
             Write-Host "Starting rename operation..."
             Write-Host " "
@@ -2924,12 +3103,9 @@ $applyRenameButton.Add_Click({
             }
             Write-Host " "
 
-            # Determine the script directory
-            $scriptDir = Split-Path -Parent $PSCommandPath
-
             # Define the RESULTS and LOGS folder paths
-            $resultsFolderPath = Join-Path -Path $scriptDir -ChildPath "RESULTS"
-            $logsFolderPath = Join-Path -Path $scriptDir -ChildPath "LOGS"
+            $resultsFolderPath = Join-Path -Path $scriptDirectory -ChildPath "RESULTS"
+            $logsFolderPath = Join-Path -Path $scriptDirectory -ChildPath "LOGS"
 
             # Create the RESULTS folder if it doesn't exist
             if (-not (Test-Path -Path $resultsFolderPath)) {
@@ -3109,10 +3285,10 @@ $applyRenameButton.Add_Click({
                 }
                 $computerCheckedListBox.Items.Add($computer.Name, $isChecked)
             }
-            $form.Enabled = $true
-            Write-Host "Form enabled"
+            Set-FormState -IsEnabled $true -Form $form
             Write-Host " "
         } else{
+            Set-FormState -IsEnabled $true -Form $form
             $applyRenameButton.Enabled = $true
         }
     })
