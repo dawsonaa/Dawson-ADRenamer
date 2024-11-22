@@ -93,6 +93,47 @@ $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
 $companyName = "KSU"
 
+function Set-FormState {
+    param (
+        [Parameter(Mandatory=$true)]
+        [bool]$IsEnabled,
+        [Parameter(Mandatory=$true)]
+        [System.Windows.Forms.Form]$Form
+    )
+
+    # Check if the overlay form exists
+    $global:OverlayForm = $global:OverlayForm -as [System.Windows.Forms.Form]
+
+    if ($IsEnabled) {
+        # Close the overlay form if it exists
+        if ($global:OverlayForm) {
+            $global:OverlayForm.Close()
+            $global:OverlayForm.Dispose()
+            $global:OverlayForm = $null
+        }
+        $Form.Enabled = $true
+        $Form.BringToFront()
+    } else {
+        # Create and display the overlay form
+        if (-not $global:OverlayForm) {
+            $global:OverlayForm = New-Object System.Windows.Forms.Form
+            #$global:OverlayForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+            $global:OverlayForm.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
+            $global:OverlayForm.BackColor = [System.Drawing.Color]::Gray
+            $global:OverlayForm.Opacity = 0.5
+            $global:OverlayForm.ShowInTaskbar = $false
+            #$global:OverlayForm.TopMost = $true
+            $global:OverlayForm.Size = $Form.Size
+            $global:OverlayForm.Location = $Form.Location
+            $global:OverlayForm.Enabled = $false # Prevent interaction
+            $global:OverlayForm.Show()
+        }
+        $Form.Enabled = $false
+    }
+}
+
+
+
 # Create a form for selecting Online, Offline, or Cancel
 $modeSelectionForm = New-Object System.Windows.Forms.Form
 $modeSelectionForm.Text = "Dawson's ADRenamer"
@@ -1160,8 +1201,7 @@ function LoadAndFilterComputers {
         Write-Host "Selected OU Path: $script:ouPath"  # Debug message
 
         # Disable the form while loading data to prevent user interaction
-        $form.Enabled = $false
-        Write-Host "Form disabled for loading..."
+        Set-FormState -IsEnabled $false -Form $form
 
         if ($online) {
             Write-Host "Loading AD endpoints..."
@@ -1242,8 +1282,7 @@ function LoadAndFilterComputers {
         Write-Host "Filtered out $filteredOutCount endpoints due to 180 day offline exclusion"
         
         # Re-enable the form after loading is complete
-        $form.Enabled = $true
-        Write-Host "Form enabled."
+        Set-FormState -IsEnabled $true -Form $form
         Write-Host ""
     }
     catch {
@@ -1257,6 +1296,7 @@ function LoadAndFilterComputers {
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
+$form.Opacity = 1
 $form.Size = New-Object System.Drawing.Size(830, 490) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
@@ -1473,7 +1513,7 @@ $computerCheckedListBox.Add_KeyDown({
         # Check if Ctrl+A is pressed
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
             # Disable the form and controls to prevent interactions
-            $form.Enabled = $false
+            Set-FormState -IsEnabled $false -Form $form
             Write-Host "Ctrl+A pressed, toggling selection state, Form disabled for loading..."
 
             # Limit the number of items to select/unselect to 500
@@ -1520,8 +1560,7 @@ $computerCheckedListBox.Add_KeyDown({
             $selectedCheckedListBox.EndUpdate()
 
             # Enable the form and controls
-            $form.Enabled = $true
-            Write-Host "Form enabled"
+            Set-FormState -IsEnabled $true -Form $form
             Write-Host ""
 
             # Prevent default action
@@ -2068,8 +2107,7 @@ $menuRemoveAll.Text = "Remove all device(s)"
 $menuRemoveAll.Enabled = $false
 $menuRemoveAll.Add_Click({
         $selectedItems = @($selectedCheckedListBox.Items | ForEach-Object { $_ })
-        $form.Enabled = $false
-        Write-Host "Form disabled for remove all"
+        Set-FormState -IsEnabled $false -Form $form
         $script:customNamesList = @()
 
         # Create a temporary list to store changes that need to be removed
@@ -2107,8 +2145,7 @@ $menuRemoveAll.Add_Click({
             $script:changesList.Remove($changeToRemove)
         }
 
-        $form.Enabled = $true
-        Write-Host "Form enabled"
+        Set-FormState -IsEnabled $true -Form $form
         Write-Host "All devices removed from the list"
     })
 
@@ -2201,8 +2238,7 @@ $searchBox.Add_Leave({
 $searchBox.Add_KeyDown({
         param($s, $e)
         if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
-            $form.Enabled = $false
-            Write-Host "Form disabled for search event, loading..."
+            Set-FormState -IsEnabled $false -Form $form
 
             $e.SuppressKeyPress = $true  # Prevent sound on enter press
             $e.Handled = $true
@@ -2222,8 +2258,7 @@ $searchBox.Add_KeyDown({
                 }
                 $computerCheckedListBox.Items.Add($computer.Name, $isChecked)
             }
-            $form.Enabled = $true
-            Write-Host "Form enabled"
+            Set-FormState -IsEnabled $true -Form $form
             Write-Host ""
         }
     })
@@ -2508,8 +2543,7 @@ $commitChangesButton.ForeColor = $defaultForeColor
 
 # Event handler for clicking the Commit Changes button
 $commitChangesButton.Add_Click({
-        $form.Enabled = $false
-        #$script:selectedItems.Clear()
+        Set-FormState -IsEnabled $false -Form $form
         $script:selectedCtrlA = 1
         ProcessCommittedChanges
         UpdateAndSyncListBoxes
@@ -2537,7 +2571,7 @@ $commitChangesButton.Add_Click({
 
         $commitChangesButton.Enabled = $false
         $ApplyRenameButton.Enabled = $true
-        $form.Enabled = $true
+        Set-FormState -IsEnabled $true -Form $form
     })
 
 $form.Controls.Add($commitChangesButton)
@@ -2609,6 +2643,7 @@ $applyRenameButton.Add_Click({
 
         # Create a string from the invalid names list
         if ($script:invalidNamesList.Count -gt 0) {
+            Set-FormState -IsEnabled $false -Form $form
             RefreshInvalidNamesListBox
             $invalidRenameForm.ShowDialog() | Out-Null
             # Handling the result
@@ -2660,8 +2695,7 @@ $applyRenameButton.Add_Click({
                 }
             }
 
-            $form.Enabled = $false
-            Write-Host "Form disabled for rename operation, loading..."
+            Set-FormState -IsEnabled $false -Form $form
             Write-Host " "
             Write-Host "Starting rename operation..."
             Write-Host " "
@@ -3106,8 +3140,7 @@ $applyRenameButton.Add_Click({
                 }
                 $computerCheckedListBox.Items.Add($computer.Name, $isChecked)
             }
-            $form.Enabled = $true
-            Write-Host "Form enabled"
+            Set-FormState -IsEnabled $true -Form $form
             Write-Host " "
         } else{
             $applyRenameButton.Enabled = $true
