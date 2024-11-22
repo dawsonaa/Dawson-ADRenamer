@@ -87,7 +87,7 @@ if ($style -eq 1) { # Default style config
 }
 
 # Program specific variables
-$Version = "11.20.24"
+$Version = "11.22.24"
 $iconPath = Join-Path $PSScriptRoot "icon2.ico"
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
@@ -95,10 +95,11 @@ $companyName = "KSU"
 
 function Set-FormState {
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [bool]$IsEnabled,
-        [Parameter(Mandatory=$true)]
-        [System.Windows.Forms.Form]$Form
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Forms.Form]$Form,
+        [bool]$Loading = $true
     )
 
     # Check if the overlay form exists
@@ -106,31 +107,51 @@ function Set-FormState {
 
     if ($IsEnabled) {
         # Close the overlay form if it exists
+        $Form.Enabled = $true
+        $Form.BringToFront()
         if ($global:OverlayForm) {
             $global:OverlayForm.Close()
             $global:OverlayForm.Dispose()
             $global:OverlayForm = $null
         }
-        $Form.Enabled = $true
-        $Form.BringToFront()
+        #$Form.BringToFront() # Ensure the main form is brought to the front
     } else {
         # Create and display the overlay form
         if (-not $global:OverlayForm) {
             $global:OverlayForm = New-Object System.Windows.Forms.Form
-            #$global:OverlayForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+            $global:OverlayForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
             $global:OverlayForm.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
-            $global:OverlayForm.BackColor = [System.Drawing.Color]::Gray
+            $global:OverlayForm.BackColor = $defaultBackColor
             $global:OverlayForm.Opacity = 0.5
             $global:OverlayForm.ShowInTaskbar = $false
             #$global:OverlayForm.TopMost = $true
             $global:OverlayForm.Size = $Form.Size
             $global:OverlayForm.Location = $Form.Location
-            $global:OverlayForm.Enabled = $false # Prevent interaction
+
+            # Add "Loading..." label if Loading is true
+            if ($Loading) {
+                $loadingLabel = New-Object System.Windows.Forms.Label
+                $loadingLabel.Text = "Loading..."
+                $loadingLabel.Font = New-Object System.Drawing.Font("Arial", 30, [System.Drawing.FontStyle]::Bold)
+                $loadingLabel.ForeColor = $defaultForeColor
+                $loadingLabel.BackColor = [System.Drawing.Color]::Transparent
+                $loadingLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+                $loadingLabel.AutoSize = $false
+                $loadingLabel.Width = $global:OverlayForm.Width
+                $loadingLabel.Height = 30 # Set a fixed height for the label
+                $loadingLabel.Left = 0
+                $loadingLabel.Top = [int]($global:OverlayForm.Height / 2 - $loadingLabel.Height / 2)
+                $global:OverlayForm.Controls.Add($loadingLabel)
+            }
+
             $global:OverlayForm.Show()
+            $global:OverlayForm.Enabled = $false # Prevent interaction
+            #$global:OverlayForm.BringToFront()
         }
         $Form.Enabled = $false
     }
 }
+
 
 
 
