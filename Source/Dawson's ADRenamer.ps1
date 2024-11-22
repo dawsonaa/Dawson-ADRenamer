@@ -1335,6 +1335,79 @@ else {
     $form.Text = "ADRenamer - Offline"
 }
 
+# Create a MenuStrip
+$menuStrip = New-Object System.Windows.Forms.MenuStrip
+
+# Create the "View" tab
+$viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$viewMenu.Text = "View"
+
+# Add "Logs" to the "View" tab
+$viewLogs = New-Object System.Windows.Forms.ToolStripMenuItem
+$viewLogs.Text = "Logs"
+$viewLogs.Add_Click({
+    # Create the "Logs" form
+    $logsForm = New-Object System.Windows.Forms.Form
+    $logsForm.Text = "ADRenamer Logs Viewer"
+    $logsForm.Size = New-Object System.Drawing.Size(830, 400)
+    $logsForm.Icon = $icon
+    $logsForm.StartPosition = "CenterScreen"
+    $logsForm.BackColor = $defaultBackColor
+    $logsForm.ForeColor = $defaultForeColor
+
+    # Listbox to display .txt files
+    $listBox = New-Object System.Windows.Forms.ListBox
+    $listBox.Dock = [System.Windows.Forms.DockStyle]::Left
+    $listBox.Width = 200
+
+    # Textbox to display the content of a selected file
+    $textBox = New-Object System.Windows.Forms.TextBox
+    $textBox.Multiline = $true
+    $textBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical
+    $textBox.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $textBox.ReadOnly = $true
+
+    # Get the script's directory
+    # Determine the script directory
+    $scriptDirectory = Split-Path -Parent $PSCommandPath
+    $logsFolder = Join-Path $scriptDirectory "LOGS"
+    Write-Host $logsFolder
+    if (-Not (Test-Path $logsFolder)) {
+        [System.Windows.Forms.MessageBox]::Show("No LOGS folder found in the current directory.")
+        return
+    }
+
+    # Add .txt file names to the listbox
+    Get-ChildItem -Path $logsFolder -Filter "*.txt" | ForEach-Object {
+        $listBox.Items.Add($_.Name)
+    }
+
+    # Event: Double-click on a file to view its content
+    $listBox.Add_MouseDoubleClick({
+        $selectedFile = $listBox.SelectedItem
+        if ($selectedFile) {
+            $filePath = Join-Path $logsFolder $selectedFile
+            $textBox.Lines = Get-Content -Path $filePath
+        }
+    })
+
+    # Add controls to the logs form
+    $logsForm.Controls.Add($textBox)
+    $logsForm.Controls.Add($listBox)
+
+    $logsForm.Show()
+})
+
+# Add the Logs option to the "View" tab
+$viewMenu.DropDownItems.Add($viewLogs)
+
+# Add the "View" tab to the MenuStrip
+$menuStrip.Items.Add($viewMenu)
+
+# Attach the MenuStrip to the main form
+$form.MainMenuStrip = $menuStrip
+$form.Controls.Add($menuStrip)
+
 # Initialize script-scope variables
 $script:invalidNamesList = @()
 $script:validNamesList = @()
