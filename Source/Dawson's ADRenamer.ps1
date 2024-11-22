@@ -87,11 +87,12 @@ if ($style -eq 1) { # Default style config
 }
 
 # Program specific variables
-$Version = "11.22.24"
+$Version = "24.11.22"
 $iconPath = Join-Path $PSScriptRoot "icon2.ico"
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
 $companyName = "KSU"
+$scriptDirectory = Split-Path -Parent $PSCommandPath
 
 function Set-FormState {
     param (
@@ -1367,9 +1368,6 @@ $viewLogs.Add_Click({
     $logsTextBox.Dock = [System.Windows.Forms.DockStyle]::Fill
     $logsTextBox.ReadOnly = $true
 
-    # Get the script's directory
-    # Determine the script directory
-    $scriptDirectory = Split-Path -Parent $PSCommandPath
     $logsFolder = Join-Path $scriptDirectory "LOGS"
     if (-Not (Test-Path $logsFolder)) {
         [System.Windows.Forms.MessageBox]::Show("No LOGS folder found in the current directory.")
@@ -1397,6 +1395,58 @@ $viewLogs.Add_Click({
 
     $logsForm.ShowDialog()
 })
+
+$viewResults = New-Object System.Windows.Forms.ToolStripMenuItem
+$viewResults.Text = "Results"
+$viewResults.Add_Click({
+    # Create the "Results" form
+    $resultsForm = New-Object System.Windows.Forms.Form
+    $resultsForm.Text = "Open Results File"
+    $resultsForm.Size = New-Object System.Drawing.Size(300, 400)
+    $resultsForm.icon = $icon
+    $resultsForm.StartPosition = "CenterScreen"
+    $resultsForm.BackColor = $defaultBackColor
+    $resultsForm.ForeColor = $defaultForeColor
+
+    # Listbox to display CSV files
+    $resultsListBox = New-Object System.Windows.Forms.ListBox
+    $resultsListBox.Dock = [System.Windows.Forms.DockStyle]::Fill
+
+    # Get the RESULTS folder
+    $resultsFolder = Join-Path $scriptDirectory "RESULTS"
+    Write-Host "Results Folder: $resultsFolder"
+
+    if (-Not (Test-Path $resultsFolder)) {
+        [System.Windows.Forms.MessageBox]::Show("No RESULTS folder found in the current directory.")
+        return
+    }
+
+    # Add CSV file names to the listbox
+    $csvFiles = Get-ChildItem -Path $resultsFolder -Filter "*.csv"
+    Write-Host "Files Found: $($csvFiles.Count)"
+    $csvFiles | ForEach-Object {
+        Write-Host "Adding file: $($_.Name)"
+        $resultsListBox.Items.Add($_.Name)
+    }
+
+    # Event: Double-click on a file to open it in Excel
+    $resultsListBox.Add_MouseDoubleClick({
+        $selectedFile = $resultsListBox.SelectedItem
+        if ($selectedFile) {
+            $filePath = Join-Path $resultsFolder $selectedFile
+            Write-Host "Opening file: $filePath"
+            Start-Process -FilePath $filePath
+        }
+    })
+
+    # Add the ListBox to the Results form
+    $resultsForm.Controls.Add($resultsListBox)
+
+    $resultsForm.ShowDialog()
+})
+
+# Add the Results option to the "View" tab
+$viewMenu.DropDownItems.Add($viewResults)
 
 # Add the Logs option to the "View" tab
 $viewMenu.DropDownItems.Add($viewLogs)
@@ -3049,12 +3099,9 @@ $applyRenameButton.Add_Click({
             }
             Write-Host " "
 
-            # Determine the script directory
-            $scriptDir = Split-Path -Parent $PSCommandPath
-
             # Define the RESULTS and LOGS folder paths
-            $resultsFolderPath = Join-Path -Path $scriptDir -ChildPath "RESULTS"
-            $logsFolderPath = Join-Path -Path $scriptDir -ChildPath "LOGS"
+            $resultsFolderPath = Join-Path -Path $scriptDirectory -ChildPath "RESULTS"
+            $logsFolderPath = Join-Path -Path $scriptDirectory -ChildPath "LOGS"
 
             # Create the RESULTS folder if it doesn't exist
             if (-not (Test-Path -Path $resultsFolderPath)) {
