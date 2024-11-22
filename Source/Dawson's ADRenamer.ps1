@@ -2671,6 +2671,7 @@ $applyRenameButton.Add_Click({
             if ($global:formResult -eq "Yes") {
                 Start-Process $renameGuideURL  # Open the guidelines URL
             } elseif ($global:formResult -eq "Cancel") {
+                Set-FormState -IsEnabled $true -Form $form
                 $applyRenameButton.Enabled = $true
                 return  # Exit if the user cancels
             }
@@ -3164,6 +3165,7 @@ $applyRenameButton.Add_Click({
             Set-FormState -IsEnabled $true -Form $form
             Write-Host " "
         } else{
+            Set-FormState -IsEnabled $true -Form $form
             $applyRenameButton.Enabled = $true
         }
     })
