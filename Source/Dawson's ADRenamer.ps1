@@ -133,14 +133,14 @@ function Apply-Style {
         [hashtable]$settings
     )
 
-    if ($settings["style"] -eq 1) {
+    if ($settings["style"] -eq 1) { # light
         $global:defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
-        $global:defaultBackColor = $global:catRed
-        $global:defaultForeColor = $global:white
-        $global:defaultBoxBackColor = $global:catLightYellow
+        $global:defaultBackColor = $global:catLightYellow
+        $global:defaultForeColor = $global:black
+        $global:defaultBoxBackColor = $global:lightGray
         $global:defaultBoxForeColor = $global:gray
         $global:defaultListForeColor = $global:catBlue
-    } elseif ($settings["style"] -eq 2) { # Default style config
+    } elseif ($settings["style"] -eq 2) { # dark
         $global:defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
         $global:defaultBackColor = $global:catDark
         $global:defaultForeColor = $global:white
@@ -190,7 +190,7 @@ function Set-FormState {
             $global:OverlayForm = New-Object System.Windows.Forms.Form
             $global:OverlayForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
             $global:OverlayForm.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
-            $global:OverlayForm.BackColor = $defaultBackColor
+            $global:OverlayForm.BackColor = $defaultListForeColor
             $global:OverlayForm.Opacity = 0.5
             $global:OverlayForm.ShowInTaskbar = $false
             #$global:OverlayForm.TopMost = $true
@@ -1428,7 +1428,7 @@ $settingsMenu.Add_Click({
     # Create the "Settings" form
     $settingsForm = New-Object System.Windows.Forms.Form
     $settingsForm.Text = "Edit Settings"
-    $settingsForm.Size = New-Object System.Drawing.Size(400, 250)
+    $settingsForm.Size = New-Object System.Drawing.Size(400, 270)
     $settingsForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $settingsForm.MaximizeBox = $false
     $settingsForm.StartPosition = "CenterScreen"
@@ -1479,20 +1479,22 @@ $settingsMenu.Add_Click({
     }
 
     # Create labels and dropdowns for each setting
-    $yPosition = 20
+    $yPosition = 10
     $dropdowns = @{}
 
     foreach ($key in $settings.Keys) {
         # Label
         $label = New-Object System.Windows.Forms.Label
-        $label.Location = New-Object System.Drawing.Point(20, $yPosition)
-        $label.Size = New-Object System.Drawing.Size(100, 30)
+        $label.Location = New-Object System.Drawing.Point(10, $yPosition)
+        $label.Size = New-Object System.Drawing.Size(400, 20)
+        #$label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
         $settingsForm.Controls.Add($label)
 
+        $yPosition += 20
         # Dropdown (ComboBox)
         $dropdown = New-Object System.Windows.Forms.ComboBox
-        $dropdown.Location = New-Object System.Drawing.Point(130, $yPosition)
-        $dropdown.Size = New-Object System.Drawing.Size(200, 20)
+        $dropdown.Location = New-Object System.Drawing.Point(10, $yPosition)
+        $dropdown.Size = New-Object System.Drawing.Size(80, 20)
         $dropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
 
         # Populate dropdown with appropriate options and set current selection
@@ -1507,11 +1509,28 @@ $settingsMenu.Add_Click({
                 $label.Text = "Online"
                 $dropdown.Items.AddRange($onlineOptions)
                 $dropdown.SelectedItem = $settings[$key]
+                if ($dropdowns["ask"].SelectedItem -eq "true")
+                {
+                    $dropdown.Enabled = $false
+                }
+                else
+                {
+                    $dropdown.Enabled = $true
+                }
             }
             "Ask" {
                 $label.Text = "Ask Mode on Startup"
                 $dropdown.Items.AddRange($askOptions)
                 $dropdown.SelectedItem = $settings[$key]
+
+                # Add an event handler to disable "online" dropdown when "ask" is true
+                $dropdown.Add_SelectedIndexChanged({
+                    if ($dropdowns["ask"].SelectedItem -eq "true") {
+                        $dropdowns["online"].Enabled = $false
+                    } else {
+                        $dropdowns["online"].Enabled = $true
+                    }
+                })
             }
         }
 
@@ -1552,15 +1571,40 @@ $settingsMenu.Add_Click({
         [System.Windows.Forms.MessageBox]::Show("Settings saved successfully.", "Settings")
         $settingsForm.Close()
 
-        #Chang the currently loaded values that arent dynamically loaded on open
+        # Change the currently loaded forms/controls
         $form.BackColor = $defaultBackColor
         $form.ForeColor = $defaultForeColor
         $form.Font = $defaultFont
         $menuStrip.BackColor = $defaultListForeColor
         $menuStrip.ForeColor = $defaultForeColor
+        $computerCheckedListBox.BackColor = $defaultBoxBackColor
+        $computerCheckedListBox.ForeColor = $defaultListForeColor
+        $selectedCheckedListBox.BackColor = $defaultBoxBackColor
+        $selectedCheckedListBox.ForeColor = $defaultListForeColor
+        $newNamesListBox.BackColor = $defaultBoxBackColor
+        $newNamesListBox.ForeColor = $defaultListForeColor
+        $searchBox.ForeColor = $defaultBoxForeColor
+        $searchBox.BackColor = $defaultBoxBackColor
+
+        $part0Input.BackColor = $defaultBoxBackColor
+        $part0Input.ForeColor = $defaultBoxForeColor
+        $part1Input.BackColor = $defaultBoxBackColor
+        $part1Input.ForeColor = $defaultBoxForeColor
+        $part2Input.BackColor = $defaultBoxBackColor
+        $part2Input.ForeColor = $defaultBoxForeColor
+        $part3Input.BackColor = $defaultBoxBackColor
+        $part3Input.ForeColor = $defaultBoxForeColor
+
+        $loadButton.ForeColor = $defaultForeColor
+        $commitChangesButton.ForeColor = $defaultForeColor
+        $applyRenameButton.ForeColor = $defaultForeColor
+
         $colorPanel3.BackColor = $defaultBackColor
         $colorPanel2.BackColor = $defaultBackColor
         $colorPanel.BackColor = $defaultBackColor
+
+        $authorLabel.ForeColor = $defaultForeColor
+        $versionLabel.ForeColor = $defaultForeColor
     })
 
     $settingsForm.Controls.Add($saveButton)
@@ -2038,6 +2082,7 @@ $selectedCheckedListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 2
 $selectedCheckedListBox.IntegralHeight = $false
 $selectedCheckedListBox.DrawMode = [System.Windows.Forms.DrawMode]::OwnerDrawVariable
 $selectedCheckedListBox.BackColor = $defaultBoxBackColor
+$selectedCheckedListBox.ForeColor = $defaultListForeColor
 
 $script:selectedCtrlA = 1
 
@@ -2313,6 +2358,7 @@ $newNamesListBox.Location = New-Object System.Drawing.Point(530, $formStartY)
 $newNamesListBox.Size = New-Object System.Drawing.Size(($listBoxWidth + 20), ($listBoxHeight))
 $newNamesListBox.IntegralHeight = $false
 $newNamesListBox.BackColor = $defaultBoxBackColor
+$newNamesListBox.ForeColor = $defaultListForeColor
 
 # Define the MeasureItem event handler
 $measureItemHandler = {
