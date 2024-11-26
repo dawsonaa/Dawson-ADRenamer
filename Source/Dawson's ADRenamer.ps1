@@ -68,31 +68,112 @@ $catYellow = [System.Drawing.Color]::FromArgb(254, 162, 2)
 $catLightYellow = [System.Drawing.Color]::FromArgb(255, 249, 227)
 $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 
+$scriptDirectory = Split-Path -Parent $PSCommandPath
+$settingsFilePath = Join-Path $scriptDirectory "settings.txt"
+$Version = "24.11.22"
+$iconPath = Join-Path $PSScriptRoot "icon2.ico"
+$icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
+$renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
+$companyName = "KSU"
+
 $style = 1
 
-if ($style -eq 1) { # Default style config
+function Load-Settings {
+    $settings = @{}  # Initialize an empty hashtable
+    if (Test-Path $settingsFilePath) {
+        Write-Host "Settings file found: $settingsFilePath" -ForegroundColor Green
+        $lines = Get-Content $settingsFilePath
+        foreach ($line in $lines) {
+            # Skip empty lines and comments
+            if (-not [string]::IsNullOrWhiteSpace($line) -and -not $line.Trim().StartsWith("#")) {
+                Write-Host "Processing line: $line" -ForegroundColor Cyan
+
+                # Split the line into key and value
+                $parts = $line -split '=', 2
+                if ($parts.Length -eq 2) {
+                    $key = $parts[0].Trim()
+                    $value = $parts[1].Trim()
+
+                    # Convert the value to the appropriate type
+                    if ($value -match '^(?i)(true|false)$') {
+                        $value = [bool]::Parse($value)
+                    } elseif ($value -match '^\d+(\.\d+)?$') {
+                        $value = [double]$value
+                    }
+
+                    # Add the key-value pair to the settings hashtable
+                    $settings[$key] = $value
+                    Write-Host "Set `$settings['$key'] = $value" -ForegroundColor Green
+                } else {
+                    Write-Host "Invalid line format, skipping: $line" -ForegroundColor Yellow
+                }
+            }
+        }
+        Write-Host "Settings loaded successfully." -ForegroundColor Green
+    } else {
+        Write-Host "Settings file not found. Using default values." -ForegroundColor Yellow
+    }
+    return $settings
+}
+
+
+function Save-Settings {
+    if ($settings -and $settings.Count -gt 0) {
+        Write-Host "Saving settings to: $settingsFilePath" -ForegroundColor Green
+        $lines = @()
+        foreach ($key in $settings.Keys) {
+            $lines += "$key=$($settings[$key])"
+        }
+        $lines | Set-Content $settingsFilePath
+        Write-Host "Settings saved successfully." -ForegroundColor Cyan
+    } else {
+        Write-Host "No settings to save." -ForegroundColor Yellow
+    }
+}
+
+$settings = Load-Settings
+
+# Access and display individual settings
+if ($settings.ContainsKey("style")) {
+    Write-Host "Style: $($settings["style"])" -ForegroundColor Green
+} else {
+    Write-Host "Style setting not found." -ForegroundColor Yellow
+}
+
+if ($settings.ContainsKey("online")) {
+    Write-Host "Online: $($settings["online"])" -ForegroundColor Green
+} else {
+    Write-Host "Online setting not found." -ForegroundColor Yellow
+}
+
+if ($settings.ContainsKey("ask")) {
+    Write-Host "ask: $($settings["ask"])" -ForegroundColor Green
+} else {
+    Write-Host "ask setting not found." -ForegroundColor Yellow
+}
+
+if ($settings["style"] -eq 1) {
     $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
-    $defaultBackColor = $darkGray
+    $defaultBackColor = $catRed
     $defaultForeColor = $white
     $defaultBoxBackColor = $lightGray
     $defaultBoxForeColor = $gray
     $defaultListForeColor = $black
-} elseif ($style -eq 2) { # Default style config
+} elseif ($settings["style"] -eq 2) { # Default style config
     $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
     $defaultBackColor = $catDark
     $defaultForeColor = $white
     $defaultBoxBackColor = $catLightYellow
     $defaultBoxForeColor = $gray
     $defaultListForeColor = $black
+} else { # Default style config
+    $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
+    $defaultBackColor = $darkGray
+    $defaultForeColor = $white
+    $defaultBoxBackColor = $lightGray
+    $defaultBoxForeColor = $gray
+    $defaultListForeColor = $black
 }
-
-# Program specific variables
-$Version = "24.11.22"
-$iconPath = Join-Path $PSScriptRoot "icon2.ico"
-$icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
-$renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
-$companyName = "KSU"
-$scriptDirectory = Split-Path -Parent $PSCommandPath
 
 function Set-FormState {
     param (
@@ -155,163 +236,172 @@ function Set-FormState {
 
 $formStartY = 30
 
-# Create a form for selecting Online, Offline, or Cancel
-$modeSelectionForm = New-Object System.Windows.Forms.Form
-$modeSelectionForm.Text = "Dawson's ADRenamer"
-$modeSelectionForm.Size = New-Object System.Drawing.Size(290,130)
-$modeSelectionForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
-$modeSelectionForm.MaximizeBox = $false
-$modeSelectionForm.StartPosition = "CenterScreen"
-$modeSelectionForm.Icon = $icon
+if ($settings["ask"] -eq $true) {
+    # Create a form for selecting Online, Offline, or Cancel
+    $modeSelectionForm = New-Object System.Windows.Forms.Form
+    $modeSelectionForm.Text = "Dawson's ADRenamer"
+    $modeSelectionForm.Size = New-Object System.Drawing.Size(290, 130)
+    $modeSelectionForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $modeSelectionForm.MaximizeBox = $false
+    $modeSelectionForm.StartPosition = "CenterScreen"
+    $modeSelectionForm.Icon = $icon
 
-$modeSelectionForm.BackColor = $defaultBackColor
-$modeSelectionForm.ForeColor = $defaultForeColor
-$modeSelectionForm.Font = $defaultFont
+    $modeSelectionForm.BackColor = $defaultBackColor
+    $modeSelectionForm.ForeColor = $defaultForeColor
+    $modeSelectionForm.Font = $defaultFont
 
-$labelMode = New-Object System.Windows.Forms.Label
-#$labelMode.Text = "Do you want to use ADRenamer in Online or Offline mode?"
-$labelMode.Text = "Select ADRenamer Mode"
-$labelMode.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-$labelMode.Size = New-Object System.Drawing.Size(280,30)
-$labelMode.Location = New-Object System.Drawing.Point(0,10)
-$modeSelectionForm.Controls.Add($labelMode)
+    $labelMode = New-Object System.Windows.Forms.Label
+    #$labelMode.Text = "Do you want to use ADRenamer in Online or Offline mode?"
+    $labelMode.Text = "Select ADRenamer Mode"
+    $labelMode.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $labelMode.Size = New-Object System.Drawing.Size(280, 30)
+    $labelMode.Location = New-Object System.Drawing.Point(0, 10)
+    $modeSelectionForm.Controls.Add($labelMode)
 
-$global:formClosedByButton = $false
+    $global:formClosedByButton = $false
 
-$buttonOnline = New-Object System.Windows.Forms.Button
-$buttonOnline.Text = "Online"
-$buttonOnline.Location = New-Object System.Drawing.Point(10,50)
-$buttonOnline.Size = New-Object System.Drawing.Size(75,30)
-$buttonOnline.BackColor = $catBlue
-$buttonOnline.Add_Click({
-    $global:choice = "Online"
-    $global:formClosedByButton = $true
-    $modeSelectionForm.Close()
-})
-$modeSelectionForm.Controls.Add($buttonOnline)
+    $buttonOnline = New-Object System.Windows.Forms.Button
+    $buttonOnline.Text = "Online"
+    $buttonOnline.Location = New-Object System.Drawing.Point(10, 50)
+    $buttonOnline.Size = New-Object System.Drawing.Size(75, 30)
+    $buttonOnline.BackColor = $catBlue
+    $buttonOnline.Add_Click({
+        $global:choice = "Online"
+        $global:formClosedByButton = $true
+        $modeSelectionForm.Close()
+    })
+    $modeSelectionForm.Controls.Add($buttonOnline)
 
-$buttonOffline = New-Object System.Windows.Forms.Button
-$buttonOffline.Text = "Offline"
-$buttonOffline.Location = New-Object System.Drawing.Point(100,50)
-$buttonOffline.Size = New-Object System.Drawing.Size(75,30)
-$buttonOffline.BackColor = $defaultBoxBackColor
-$buttonOffline.ForeColor = $defaultListForeColor
-$buttonOffline.Add_Click({
-    $global:choice = "Offline"
-    $global:formClosedByButton = $true
-    $modeSelectionForm.Close()
-})
-$modeSelectionForm.Controls.Add($buttonOffline)
+    $buttonOffline = New-Object System.Windows.Forms.Button
+    $buttonOffline.Text = "Offline"
+    $buttonOffline.Location = New-Object System.Drawing.Point(100, 50)
+    $buttonOffline.Size = New-Object System.Drawing.Size(75, 30)
+    $buttonOffline.BackColor = $defaultBoxBackColor
+    $buttonOffline.ForeColor = $defaultListForeColor
+    $buttonOffline.Add_Click({
+        $global:choice = "Offline"
+        $global:formClosedByButton = $true
+        $modeSelectionForm.Close()
+    })
+    $modeSelectionForm.Controls.Add($buttonOffline)
 
-$buttonCancel = New-Object System.Windows.Forms.Button
-$buttonCancel.Text = "Cancel"
-$buttonCancel.Location = New-Object System.Drawing.Point(190,50)
-$buttonCancel.Size = New-Object System.Drawing.Size(75,30)
-$buttonCancel.BackColor = $catRed
-$buttonCancel.Add_Click({
-    $global:choice = "Cancel"
-    $modeSelectionForm.Close()
-})
-$modeSelectionForm.Controls.Add($buttonCancel)
+    $buttonCancel = New-Object System.Windows.Forms.Button
+    $buttonCancel.Text = "Cancel"
+    $buttonCancel.Location = New-Object System.Drawing.Point(190, 50)
+    $buttonCancel.Size = New-Object System.Drawing.Size(75, 30)
+    $buttonCancel.BackColor = $catRed
+    $buttonCancel.Add_Click({
+        $global:choice = "Cancel"
+        $modeSelectionForm.Close()
+    })
+    $modeSelectionForm.Controls.Add($buttonCancel)
 
-$modeSelectionForm.Add_FormClosing({
-    param($sender, $e)
-    if ($e.CloseReason -eq [System.Windows.Forms.CloseReason]::UserClosing -and -not $global:formClosedByButton) {
-        # Terminate the entire script because the form is closing due to the user pressing 'X'
-        [Environment]::Exit(0)
+    $modeSelectionForm.Add_FormClosing({
+        param($sender, $e)
+        if ($e.CloseReason -eq [System.Windows.Forms.CloseReason]::UserClosing -and -not $global:formClosedByButton)
+        {
+            # Terminate the entire script because the form is closing due to the user pressing 'X'
+            [Environment]::Exit(0)
+        }
+    })
+
+    $modeSelectionForm.ShowDialog() | Out-Null
+
+    # Create a form for showing a message with Yes, No, Cancel options
+    $invalidRenameForm = New-Object System.Windows.Forms.Form
+    $invalidRenameForm.Text = ""
+    $invalidRenameForm.Size = New-Object System.Drawing.Size(385, 295)
+    $invalidRenameForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog  # Small border for dragging
+    $invalidRenameForm.ControlBox = $false  # Removes the Close (X) button and title bar controls
+    $invalidRenameForm.MaximizeBox = $false
+    $invalidRenameForm.StartPosition = "CenterScreen"
+
+    $invalidRenameForm.BackColor = $defaultBackColor
+    $invalidRenameForm.ForeColor = $defaultForeColor
+    $invalidRenameForm.Font = $defaultFont
+    $invalidRenameForm.Icon = $icon
+
+    $invalidRenameLabel = New-Object System.Windows.Forms.Label
+    $invalidRenameLabel.Text = "The below invalid renames will not be completed"
+    $invalidRenameLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $invalidRenameLabel.Location = New-Object System.Drawing.Point(10, 5)
+    $invalidRenameLabel.Size = New-Object System.Drawing.Size(359, 20)
+    $invalidRenameForm.Controls.Add($invalidRenameLabel)
+
+    # Create a ListBox for invalid names
+    $listBoxInvalidNames = New-Object System.Windows.Forms.ListBox
+    $listBoxInvalidNames.Size = New-Object System.Drawing.Size(359, 180)
+    $listBoxInvalidNames.Location = New-Object System.Drawing.Point(10, 30)
+    $listBoxInvalidNames.SelectionMode = [System.Windows.Forms.SelectionMode]::MultiExtended
+    $listBoxInvalidNames.BackColor = $defaultBoxBackColor
+    $listBoxInvalidNames.ForeColor = $defaultListForeColor
+    $invalidRenameForm.Controls.Add($listBoxInvalidNames)
+
+    # Define a method to refresh the ListBox contents
+    function RefreshInvalidNamesListBox
+    {
+        # Clear the current items
+        $listBoxInvalidNames.Items.Clear()
+
+        # Repopulate the ListBox with the current items in $script:invalidNamesList
+        foreach ($invalidName in $script:invalidNamesList)
+        {
+            $listBoxInvalidNames.Items.Add($invalidName)
+        }
     }
-})
 
-$modeSelectionForm.ShowDialog() | Out-Null
+    # Global variable to track the choice
+    $global:formResult = $null
 
-# Create a form for showing a message with Yes, No, Cancel options
-$invalidRenameForm = New-Object System.Windows.Forms.Form
-$invalidRenameForm.Text = ""
-$invalidRenameForm.Size = New-Object System.Drawing.Size(385, 295)
-$invalidRenameForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog  # Small border for dragging
-$invalidRenameForm.ControlBox = $false  # Removes the Close (X) button and title bar controls
-$invalidRenameForm.MaximizeBox = $false
-$invalidRenameForm.StartPosition = "CenterScreen"
+    $buttonOpenGuide = New-Object System.Windows.Forms.Button
+    $buttonOpenGuide.Text = "Open $companyName Renaming Guidelines"
+    $buttonOpenGuide.Location = New-Object System.Drawing.Point(10, 220)
+    $buttonOpenGuide.Size = New-Object System.Drawing.Size(113, 60)
+    $buttonOpenGuide.BackColor = $catPurple
+    $buttonOpenGuide.Add_Click({
+        $global:formResult = "Yes"
+        $invalidRenameForm.Close()
+    })
+    $invalidRenameForm.Controls.Add($buttonOpenGuide)
 
-$invalidRenameForm.BackColor = $defaultBackColor
-$invalidRenameForm.ForeColor = $defaultForeColor
-$invalidRenameForm.Font = $defaultFont
-$invalidRenameForm.Icon = $icon
+    $buttonContinue = New-Object System.Windows.Forms.Button
+    $buttonContinue.Text = "Continue"
+    $buttonContinue.Location = New-Object System.Drawing.Point(133, 220)
+    $buttonContinue.Size = New-Object System.Drawing.Size(113, 60)
+    $buttonContinue.BackColor = $catBlue
+    $buttonContinue.Add_Click({
+        $global:formResult = "No"
+        $invalidRenameForm.Close()
+    })
+    $invalidRenameForm.Controls.Add($buttonContinue)
 
-$invalidRenameLabel = New-Object System.Windows.Forms.Label
-$invalidRenameLabel.Text = "The below invalid renames will not be completed"
-$invalidRenameLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-$invalidRenameLabel.Location = New-Object System.Drawing.Point(10, 5)
-$invalidRenameLabel.Size = New-Object System.Drawing.Size(359, 20)
-$invalidRenameForm.Controls.Add($invalidRenameLabel)
+    $buttonCancel = New-Object System.Windows.Forms.Button
+    $buttonCancel.Text = "Cancel Rename Operation"
+    $buttonCancel.Location = New-Object System.Drawing.Point(256, 220)
+    $buttonCancel.Size = New-Object System.Drawing.Size(113, 60)
+    $buttonCancel.BackColor = $catRed
+    $buttonCancel.Add_Click({
+        $global:formResult = "Cancel"
+        $invalidRenameForm.Close()
+    })
+    $invalidRenameForm.Controls.Add($buttonCancel)
 
-# Create a ListBox for invalid names
-$listBoxInvalidNames = New-Object System.Windows.Forms.ListBox
-$listBoxInvalidNames.Size = New-Object System.Drawing.Size(359, 180)
-$listBoxInvalidNames.Location = New-Object System.Drawing.Point(10,30)
-$listBoxInvalidNames.SelectionMode = [System.Windows.Forms.SelectionMode]::MultiExtended
-$listBoxInvalidNames.BackColor = $defaultBoxBackColor
-$listBoxInvalidNames.ForeColor = $defaultListForeColor
-$invalidRenameForm.Controls.Add($listBoxInvalidNames)
-
-# Define a method to refresh the ListBox contents
-function RefreshInvalidNamesListBox {
-    # Clear the current items
-    $listBoxInvalidNames.Items.Clear()
-
-    # Repopulate the ListBox with the current items in $script:invalidNamesList
-    foreach ($invalidName in $script:invalidNamesList) {
-        $listBoxInvalidNames.Items.Add($invalidName)
+    # Set the $online variable based on the selection or exit if canceled
+    switch ($global:choice)
+    {
+        "Online" {
+            $online = $true
+        }
+        "Offline" {
+            $online = $false
+        }
+        "Cancel" {
+            exit
+        }
     }
 }
-
-# Global variable to track the choice
-$global:formResult = $null
-
-$buttonOpenGuide = New-Object System.Windows.Forms.Button
-$buttonOpenGuide.Text = "Open $companyName Renaming Guidelines"
-$buttonOpenGuide.Location = New-Object System.Drawing.Point(10, 220)
-$buttonOpenGuide.Size = New-Object System.Drawing.Size(113, 60)
-$buttonOpenGuide.BackColor = $catPurple
-$buttonOpenGuide.Add_Click({
-    $global:formResult = "Yes"
-    $invalidRenameForm.Close()
-})
-$invalidRenameForm.Controls.Add($buttonOpenGuide)
-
-$buttonContinue = New-Object System.Windows.Forms.Button
-$buttonContinue.Text = "Continue"
-$buttonContinue.Location = New-Object System.Drawing.Point(133, 220)
-$buttonContinue.Size = New-Object System.Drawing.Size(113, 60)
-$buttonContinue.BackColor = $catBlue
-$buttonContinue.Add_Click({
-    $global:formResult = "No"
-    $invalidRenameForm.Close()
-})
-$invalidRenameForm.Controls.Add($buttonContinue)
-
-$buttonCancel = New-Object System.Windows.Forms.Button
-$buttonCancel.Text = "Cancel Rename Operation"
-$buttonCancel.Location = New-Object System.Drawing.Point(256, 220)
-$buttonCancel.Size = New-Object System.Drawing.Size(113, 60)
-$buttonCancel.BackColor = $catRed
-$buttonCancel.Add_Click({
-    $global:formResult = "Cancel"
-    $invalidRenameForm.Close()
-})
-$invalidRenameForm.Controls.Add($buttonCancel)
-
-# Set the $online variable based on the selection or exit if canceled
-switch ($global:choice) {
-    "Online" {
-        $online = $true
-    }
-    "Offline" {
-        $online = $false
-    }
-    "Cancel" {
-        exit
-    }
+else {
+    $online = $settings["online"]
 }
 
 if (-not $online) {
@@ -1342,6 +1432,13 @@ $menuStrip.BackColor = $defaultListForeColor
 $menuStrip.ForeColor = $defaultForeColor
 $menuStrip.Font = $defaultFont
 $menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
+
+$settingsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$settingsMenu.Text = "Settings"
+
+#$settingsMenu.DropDownItems.Add($viewResults)
+#$settingsMenu.DropDownItems.Add($viewLogs)
+$menuStrip.Items.Add($settingsMenu)
 
 # Create the "View" tab
 $viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
