@@ -76,8 +76,6 @@ $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
 $companyName = "KSU"
 
-$style = 1
-
 function Load-Settings {
     $settings = @{}  # Initialize an empty hashtable
     if (Test-Path $settingsFilePath) {
@@ -116,7 +114,6 @@ function Load-Settings {
     return $settings
 }
 
-
 function Save-Settings {
     if ($settings -and $settings.Count -gt 0) {
         Write-Host "Saving settings to: $settingsFilePath" -ForegroundColor Green
@@ -131,52 +128,39 @@ function Save-Settings {
     }
 }
 
+function Apply-Style {
+    param (
+        [hashtable]$settings
+    )
+
+    if ($settings["style"] -eq 1) {
+        $global:defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
+        $global:defaultBackColor = $global:catRed
+        $global:defaultForeColor = $global:white
+        $global:defaultBoxBackColor = $global:catLightYellow
+        $global:defaultBoxForeColor = $global:gray
+        $global:defaultListForeColor = $global:catBlue
+    } elseif ($settings["style"] -eq 2) { # Default style config
+        $global:defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
+        $global:defaultBackColor = $global:catDark
+        $global:defaultForeColor = $global:white
+        $global:defaultBoxBackColor = $global:catLightYellow
+        $global:defaultBoxForeColor = $global:gray
+        $global:defaultListForeColor = $global:black
+    } else { # Default style config
+        $global:defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
+        $global:defaultBackColor = $global:darkGray
+        $global:defaultForeColor = $global:white
+        $global:defaultBoxBackColor = $global:lightGray
+        $global:defaultBoxForeColor = $global:gray
+        $global:defaultListForeColor = $global:black
+    }
+
+    Write-Host "Style applied: $($settings["style"])"
+}
+
 $settings = Load-Settings
-
-#$settings["style"] = 3
-#Save-Settings
-
-# Access and display individual settings
-if ($settings.ContainsKey("style")) {
-    Write-Host "Style: $($settings["style"])" -ForegroundColor Green
-} else {
-    Write-Host "Style setting not found." -ForegroundColor Yellow
-}
-
-if ($settings.ContainsKey("online")) {
-    Write-Host "Online: $($settings["online"])" -ForegroundColor Green
-} else {
-    Write-Host "Online setting not found." -ForegroundColor Yellow
-}
-
-if ($settings.ContainsKey("ask")) {
-    Write-Host "ask: $($settings["ask"])" -ForegroundColor Green
-} else {
-    Write-Host "ask setting not found." -ForegroundColor Yellow
-}
-
-if ($settings["style"] -eq 1) {
-    $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
-    $defaultBackColor = $catRed
-    $defaultForeColor = $white
-    $defaultBoxBackColor = $lightGray
-    $defaultBoxForeColor = $gray
-    $defaultListForeColor = $black
-} elseif ($settings["style"] -eq 2) { # Default style config
-    $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
-    $defaultBackColor = $catDark
-    $defaultForeColor = $white
-    $defaultBoxBackColor = $catLightYellow
-    $defaultBoxForeColor = $gray
-    $defaultListForeColor = $black
-} else { # Default style config
-    $defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
-    $defaultBackColor = $darkGray
-    $defaultForeColor = $white
-    $defaultBoxBackColor = $lightGray
-    $defaultBoxForeColor = $gray
-    $defaultListForeColor = $black
-}
+Apply-Style -settings $settings
 
 function Set-FormState {
     param (
@@ -1445,9 +1429,12 @@ $settingsMenu.Add_Click({
     $settingsForm = New-Object System.Windows.Forms.Form
     $settingsForm.Text = "Edit Settings"
     $settingsForm.Size = New-Object System.Drawing.Size(400, 250)
+    $settingsForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $settingsForm.MaximizeBox = $false
     $settingsForm.StartPosition = "CenterScreen"
     $settingsForm.BackColor = $defaultBackColor
     $settingsForm.ForeColor = $defaultForeColor
+    $settingsForm.Font = $defaultFont
 
     # Default options for each variable
     $styleOptions = @("default", "dark", "light")
@@ -1498,9 +1485,8 @@ $settingsMenu.Add_Click({
     foreach ($key in $settings.Keys) {
         # Label
         $label = New-Object System.Windows.Forms.Label
-        $label.Text = $key
         $label.Location = New-Object System.Drawing.Point(20, $yPosition)
-        $label.Size = New-Object System.Drawing.Size(100, 20)
+        $label.Size = New-Object System.Drawing.Size(100, 30)
         $settingsForm.Controls.Add($label)
 
         # Dropdown (ComboBox)
@@ -1512,15 +1498,18 @@ $settingsMenu.Add_Click({
         # Populate dropdown with appropriate options and set current selection
         switch ($key) {
             "style" {
+                $label.Text = "Style"
                 $dropdown.Items.AddRange($styleOptions)
                 $currentStyle = $styleReverseMap[[int]$settings[$key]]  # Map value to text
                 $dropdown.SelectedItem = $currentStyle
             }
             "online" {
+                $label.Text = "Online"
                 $dropdown.Items.AddRange($onlineOptions)
                 $dropdown.SelectedItem = $settings[$key]
             }
-            "ask" {
+            "Ask" {
+                $label.Text = "Ask Mode on Startup"
                 $dropdown.Items.AddRange($askOptions)
                 $dropdown.SelectedItem = $settings[$key]
             }
@@ -1558,8 +1547,20 @@ $settingsMenu.Add_Click({
         # Save the updated settings back to the file
         #$settings | ForEach-Object { "$($_.Key)=$($_.Value)" } | Set-Content $settingsFilePath
         Save-Settings
+        Apply-Style -settings $settings
+
         [System.Windows.Forms.MessageBox]::Show("Settings saved successfully.", "Settings")
         $settingsForm.Close()
+
+        #Chang the currently loaded values that arent dynamically loaded on open
+        $form.BackColor = $defaultBackColor
+        $form.ForeColor = $defaultForeColor
+        $form.Font = $defaultFont
+        $menuStrip.BackColor = $defaultListForeColor
+        $menuStrip.ForeColor = $defaultForeColor
+        $colorPanel3.BackColor = $defaultBackColor
+        $colorPanel2.BackColor = $defaultBackColor
+        $colorPanel.BackColor = $defaultBackColor
     })
 
     $settingsForm.Controls.Add($saveButton)
