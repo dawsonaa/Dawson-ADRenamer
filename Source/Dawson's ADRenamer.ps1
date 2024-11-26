@@ -133,6 +133,9 @@ function Save-Settings {
 
 $settings = Load-Settings
 
+#$settings["style"] = 3
+#Save-Settings
+
 # Access and display individual settings
 if ($settings.ContainsKey("style")) {
     Write-Host "Style: $($settings["style"])" -ForegroundColor Green
@@ -1435,6 +1438,135 @@ $menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
 
 $settingsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $settingsMenu.Text = "Settings"
+
+# Event: Click on "Settings" to open settings editor
+$settingsMenu.Add_Click({
+    # Create the "Settings" form
+    $settingsForm = New-Object System.Windows.Forms.Form
+    $settingsForm.Text = "Edit Settings"
+    $settingsForm.Size = New-Object System.Drawing.Size(400, 250)
+    $settingsForm.StartPosition = "CenterScreen"
+    $settingsForm.BackColor = $defaultBackColor
+    $settingsForm.ForeColor = $defaultForeColor
+
+    # Default options for each variable
+    $styleOptions = @("default", "dark", "light")
+    $onlineOptions = @("true", "false")
+    $askOptions = @("true", "false")
+
+    # Mapping for style options
+    $styleValueMap = @{
+        "default" = 3
+        "dark" = 2
+        "light" = 1
+    }
+    $styleReverseMap = @{
+        3 = "default"
+        2 = "dark"
+        1 = "light"
+    }
+
+    # Initialize a hashtable to store the current settings
+    $settings = @{}
+
+    # Load settings from the file
+    $settingsFilePath = Join-Path $scriptDirectory "settings.txt"
+    if (Test-Path $settingsFilePath) {
+        $settingsLines = Get-Content $settingsFilePath
+        foreach ($line in $settingsLines) {
+            if (-not [string]::IsNullOrWhiteSpace($line) -and -not $line.Trim().StartsWith("#")) {
+                $parts = $line -split '=', 2
+                if ($parts.Length -eq 2) {
+                    $key = $parts[0].Trim()
+                    $value = $parts[1].Trim()
+                    $settings[$key] = $value
+                }
+            }
+        }
+    } else {
+        [System.Windows.Forms.MessageBox]::Show("Settings file not found. Creating a default settings file.", "Settings")
+        $settings["style"] = 3  # Default to "default"
+        $settings["online"] = "false"
+        $settings["ask"] = "false"
+        $settings | ForEach-Object { "$($_.Key)=$($_.Value)" } | Set-Content $settingsFilePath
+    }
+
+    # Create labels and dropdowns for each setting
+    $yPosition = 20
+    $dropdowns = @{}
+
+    foreach ($key in $settings.Keys) {
+        # Label
+        $label = New-Object System.Windows.Forms.Label
+        $label.Text = $key
+        $label.Location = New-Object System.Drawing.Point(20, $yPosition)
+        $label.Size = New-Object System.Drawing.Size(100, 20)
+        $settingsForm.Controls.Add($label)
+
+        # Dropdown (ComboBox)
+        $dropdown = New-Object System.Windows.Forms.ComboBox
+        $dropdown.Location = New-Object System.Drawing.Point(130, $yPosition)
+        $dropdown.Size = New-Object System.Drawing.Size(200, 20)
+        $dropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+
+        # Populate dropdown with appropriate options and set current selection
+        switch ($key) {
+            "style" {
+                $dropdown.Items.AddRange($styleOptions)
+                $currentStyle = $styleReverseMap[[int]$settings[$key]]  # Map value to text
+                $dropdown.SelectedItem = $currentStyle
+            }
+            "online" {
+                $dropdown.Items.AddRange($onlineOptions)
+                $dropdown.SelectedItem = $settings[$key]
+            }
+            "ask" {
+                $dropdown.Items.AddRange($askOptions)
+                $dropdown.SelectedItem = $settings[$key]
+            }
+        }
+
+        # Store the dropdown for later access
+        $dropdowns[$key] = $dropdown
+        $settingsForm.Controls.Add($dropdown)
+
+        $yPosition += 40
+    }
+
+    # Save Button
+    $saveButton = New-Object System.Windows.Forms.Button
+    $saveButton.Text = "Save"
+    $saveButton.Location = New-Object System.Drawing.Point(150, $yPosition)
+    $saveButton.Size = New-Object System.Drawing.Size(100, 30)
+    $saveButton.BackColor = $defaultListForeColor
+    $saveButton.ForeColor = $defaultForeColor
+    $saveButton.Font = $defaultFont
+    $saveButton.Add_Click({
+        # Update the settings from the dropdown selections
+        foreach ($key in $dropdowns.Keys) {
+            switch ($key) {
+                "style" {
+                    $selectedStyle = $dropdowns[$key].SelectedItem
+                    $settings[$key] = $styleValueMap[$selectedStyle]  # Map text to value
+                }
+                default {
+                    $settings[$key] = $dropdowns[$key].SelectedItem
+                }
+            }
+        }
+
+        # Save the updated settings back to the file
+        #$settings | ForEach-Object { "$($_.Key)=$($_.Value)" } | Set-Content $settingsFilePath
+        Save-Settings
+        [System.Windows.Forms.MessageBox]::Show("Settings saved successfully.", "Settings")
+        $settingsForm.Close()
+    })
+
+    $settingsForm.Controls.Add($saveButton)
+
+    $settingsForm.ShowDialog()
+})
+
 
 #$settingsMenu.DropDownItems.Add($viewResults)
 #$settingsMenu.DropDownItems.Add($viewLogs)
