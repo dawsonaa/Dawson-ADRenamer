@@ -1707,15 +1707,23 @@ $viewResults.Add_Click({
         $resultsListBox.Items.Add($_.Name)
     }
 
-    # Event: Double-click on a file to open it in Excel
+    # Event: Double-click on a file to bring up the "Open With" dialog
     $resultsListBox.Add_MouseDoubleClick({
         $selectedFile = $resultsListBox.SelectedItem
         if ($selectedFile) {
             $filePath = Join-Path $resultsFolder $selectedFile
-            Write-Host "Opening file: $filePath"
-            Start-Process -FilePath $filePath
+            Write-Host "Selected file: $filePath"
+
+            # Show the "Open With" dialog
+            $shell = New-Object -ComObject Shell.Application
+            $folder = $shell.Namespace((Get-Item $resultsFolder).FullName)
+            $item = $folder.ParseName($selectedFile)
+            $item.InvokeVerb("openas")
+        } else {
+            Write-Host "No file selected."
         }
     })
+
 
     # Add the ListBox to the Results form
     $resultsForm.Controls.Add($resultsListBox)
