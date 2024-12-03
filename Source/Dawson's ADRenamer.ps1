@@ -1639,16 +1639,76 @@ $viewLogs.Add_Click({
 
     # Textbox for search input
     $searchTextBox = New-Object System.Windows.Forms.TextBox
-    $searchTextBox.Width = 200
-    $searchTextBox.Dock = [System.Windows.Forms.DockStyle]::Left
+    $searchTextBox.Text = "Search"
+    $searchTextBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
+    #$searchTextBox.Width = 200
+    $searchTextBox.Dock = [System.Windows.Forms.DockStyle]::Top
     $searchTextBox.Margin = [System.Windows.Forms.Padding]::Empty
+    $searchTextBox.ForeColor = $defaultBoxForeColor
+    $searchTextBox.BackColor = $defaultBoxBackColor
 
-    # Button to perform search
-    $searchButton = New-Object System.Windows.Forms.Button
-    $searchButton.Text = "Search"
-    $searchButton.Width = 75
-    $searchButton.Dock = [System.Windows.Forms.DockStyle]::Left
-    $searchButton.Margin = [System.Windows.Forms.Padding]::Empty
+    $searchTextBox.add_KeyDown({
+        param($s, $e)
+        if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
+            $searchTextBox.SelectAll()
+            $e.SuppressKeyPress = $true
+            $e.Handled = $true
+        }
+    })
+
+    # Clear placeholder text when the text box gains focus
+    $searchTextBox.Add_Enter({
+        if ($this.Text -eq "Search") {
+            $this.Text = ''
+            $this.ForeColor = [System.Drawing.Color]::Black
+            $this.BackColor = [System.Drawing.Color]::White
+        }
+    })
+
+    # Restore placeholder text when the text box loses focus and is empty
+    $searchTextBox.Add_Leave({
+        if ($this.Text -eq '') {
+            $this.Text = "Search"
+            $this.ForeColor = $defaultBoxForeColor
+            $this.BackColor = $defaultBoxBackColor
+        }
+    })
+
+    $searchTextBox.Add_Keydown({
+        param($s, $e)
+        if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter)
+        {
+            $e.SuppressKeyPress = $true  # Prevent sound on enter press
+            $e.Handled = $true
+
+            if ($selectedFile = $logsListBox.SelectedItem)
+            {
+                $filePath = Join-Path $logsFolder $selectedFile
+                $logsContent = Get-Content -Path $filePath
+                $searchTerm = $searchTextBox.Text
+                if (-not $searchTerm)
+                {
+                    $logsTextBox.Lines = $logsContent
+                    return
+                }
+
+                # Perform the search and highlight results
+                $matchingLines = $logsContent -match $searchTerm
+                if (!$matchingLines)
+                {
+                    $logsTextBox.Text = "No results for $searchTerm"
+                }
+                else
+                {
+                    $logsTextBox.Text = ($matchingLines -join "`r`n")
+                }
+            }
+            else
+            {
+                Write-Host "No log.txt selected"
+            }
+        }
+    })
 
     # Textbox to display the content of a selected file
     $logsTextBox = New-Object System.Windows.Forms.TextBox
@@ -1663,9 +1723,17 @@ $viewLogs.Add_Click({
         return
     }
 
+    $first = 0
     # Add .txt file names to the listbox
     Get-ChildItem -Path $logsFolder -Filter "*.txt" | ForEach-Object {
         $logsListBox.Items.Add($_.Name)
+    if ($first -eq 0){
+        $logsListBox.SelectedItem = $_.Name
+        $logsTextBox.Lines = Get-Content -Path (Join-Path $logsFolder $logsListBox.SelectedItem)
+        $logsTextBox.SelectionStart = 0
+        $logsTextBox.SelectionLength = 0
+        $first = 1
+    }
     }
 
     # Event: Double-click on a file to view its content
@@ -1678,32 +1746,6 @@ $viewLogs.Add_Click({
         }
     })
 
-    # Event: Search the term in the currently displayed file
-    $searchButton.Add_Click({
-        $searchTerm = $searchTextBox.Text
-        if (-not $searchTerm) {
-            [System.Windows.Forms.MessageBox]::Show("Please enter a search term.")
-            return
-        }
-
-        $currentLines = $logsTextBox.Lines
-        if (-not $currentLines) {
-            [System.Windows.Forms.MessageBox]::Show("No file selected or no content to search.")
-            return
-        }
-
-        # Perform the search and highlight results
-        $matchingLines = $currentLines -match $searchTerm
-        if ($matchingLines) {
-            $logsTextBox.Text = ($matchingLines -join "`r`n")
-            [System.Windows.Forms.MessageBox]::Show("Found matches for the term: $searchTerm.")
-        } else {
-            [System.Windows.Forms.MessageBox]::Show("No matches found for the term: $searchTerm.")
-        }
-    })
-
-    # Add controls to the search panel
-    $searchPanel.Controls.Add($searchButton)
     $searchPanel.Controls.Add($searchTextBox)
 
     # Add controls to the logs form
