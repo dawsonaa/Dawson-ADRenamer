@@ -79,12 +79,12 @@ $companyName = "KSU"
 function Load-Settings {
     $settings = @{}  # Initialize an empty hashtable
     if (Test-Path $settingsFilePath) {
-        Write-Host "Settings file found: $settingsFilePath" -ForegroundColor Green
+        # Write-Host "Settings file found: $settingsFilePath" -ForegroundColor Green # debug
         $lines = Get-Content $settingsFilePath
         foreach ($line in $lines) {
             # Skip empty lines and comments
             if (-not [string]::IsNullOrWhiteSpace($line) -and -not $line.Trim().StartsWith("#")) {
-                Write-Host "Processing line: $line" -ForegroundColor Cyan
+                # Write-Host "Processing line: $line" -ForegroundColor Cyan # debug
 
                 # Split the line into key and value
                 $parts = $line -split '=', 2
@@ -101,13 +101,11 @@ function Load-Settings {
 
                     # Add the key-value pair to the settings hashtable
                     $settings[$key] = $value
-                    Write-Host "Set `$settings['$key'] = $value" -ForegroundColor Green
-                } else {
-                    Write-Host "Invalid line format, skipping: $line" -ForegroundColor Yellow
-                }
+                    # Write-Host "Set `$settings['$key'] = $value" -ForegroundColor Green # debug
+                } # else { Write-Host "Invalid line format, skipping: $line" -ForegroundColor Yellow } # debug
             }
         }
-        Write-Host "Settings loaded successfully." -ForegroundColor Green
+        # Write-Host "Settings loaded successfully." -ForegroundColor Green # debug
     } else {
         Write-Host "Settings file not found. Using default values." -ForegroundColor Yellow
     }
@@ -116,7 +114,7 @@ function Load-Settings {
 
 function Save-Settings {
     if ($settings -and $settings.Count -gt 0) {
-        Write-Host "Saving settings to: $settingsFilePath" -ForegroundColor Green
+        # Write-Host "Saving settings to: $settingsFilePath" -ForegroundColor Green # debug
         $lines = @()
         foreach ($key in $settings.Keys) {
             $lines += "$key=$($settings[$key])"
@@ -155,12 +153,11 @@ function Apply-Style {
         $global:defaultBoxForeColor = $global:gray
         $global:defaultListForeColor = $global:black
     }
-
-    Write-Host "Style applied: $($settings["style"])"
+    # Write-Host "Style applied: $($settings["style"])" # debug
 }
 
 $settings = Load-Settings
-Apply-Style -settings $settings
+Apply-Style -settings $settings | Out-Null
 
 function Set-FormState {
     param (
@@ -1422,7 +1419,6 @@ $menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
 
 $settingsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $settingsMenu.Text = "Settings"
-
 # Event: Click on "Settings" to open settings editor
 $settingsMenu.Add_Click({
     # Create the "Settings" form
@@ -1472,9 +1468,9 @@ $settingsMenu.Add_Click({
         }
     } else {
         [System.Windows.Forms.MessageBox]::Show("Settings file not found. Creating a default settings file.", "Settings")
-        $settings["style"] = 3  # Default to "default"
         $settings["online"] = "false"
         $settings["ask"] = "false"
+        $settings["style"] = 3  # Default to "default"
         $settings | ForEach-Object { "$($_.Key)=$($_.Value)" } | Set-Content $settingsFilePath
     }
 
@@ -1540,7 +1536,6 @@ $settingsMenu.Add_Click({
 
         $yPosition += 40
     }
-
     # Save Button
     $saveButton = New-Object System.Windows.Forms.Button
     $saveButton.Text = "Save"
@@ -1612,11 +1607,9 @@ $settingsMenu.Add_Click({
     $settingsForm.ShowDialog()
 })
 
-
 #$settingsMenu.DropDownItems.Add($viewResults)
 #$settingsMenu.DropDownItems.Add($viewLogs)
-$menuStrip.Items.Add($settingsMenu)
-
+$menuStrip.Items.Add($settingsMenu) | Out-Null
 # Create the "View" tab
 $viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $viewMenu.Text = "View"
@@ -1638,6 +1631,24 @@ $viewLogs.Add_Click({
     $logsListBox = New-Object System.Windows.Forms.ListBox
     $logsListBox.Dock = [System.Windows.Forms.DockStyle]::Left
     $logsListBox.Width = 200
+
+    # Panel for search controls
+    $searchPanel = New-Object System.Windows.Forms.Panel
+    $searchPanel.Dock = [System.Windows.Forms.DockStyle]::Top
+    $searchPanel.Height = 30
+
+    # Textbox for search input
+    $searchTextBox = New-Object System.Windows.Forms.TextBox
+    $searchTextBox.Width = 200
+    $searchTextBox.Dock = [System.Windows.Forms.DockStyle]::Left
+    $searchTextBox.Margin = [System.Windows.Forms.Padding]::Empty
+
+    # Button to perform search
+    $searchButton = New-Object System.Windows.Forms.Button
+    $searchButton.Text = "Search"
+    $searchButton.Width = 75
+    $searchButton.Dock = [System.Windows.Forms.DockStyle]::Left
+    $searchButton.Margin = [System.Windows.Forms.Padding]::Empty
 
     # Textbox to display the content of a selected file
     $logsTextBox = New-Object System.Windows.Forms.TextBox
@@ -1667,12 +1678,42 @@ $viewLogs.Add_Click({
         }
     })
 
+    # Event: Search the term in the currently displayed file
+    $searchButton.Add_Click({
+        $searchTerm = $searchTextBox.Text
+        if (-not $searchTerm) {
+            [System.Windows.Forms.MessageBox]::Show("Please enter a search term.")
+            return
+        }
+
+        $currentLines = $logsTextBox.Lines
+        if (-not $currentLines) {
+            [System.Windows.Forms.MessageBox]::Show("No file selected or no content to search.")
+            return
+        }
+
+        # Perform the search and highlight results
+        $matchingLines = $currentLines -match $searchTerm
+        if ($matchingLines) {
+            $logsTextBox.Text = ($matchingLines -join "`r`n")
+            [System.Windows.Forms.MessageBox]::Show("Found matches for the term: $searchTerm.")
+        } else {
+            [System.Windows.Forms.MessageBox]::Show("No matches found for the term: $searchTerm.")
+        }
+    })
+
+    # Add controls to the search panel
+    $searchPanel.Controls.Add($searchButton)
+    $searchPanel.Controls.Add($searchTextBox)
+
     # Add controls to the logs form
     $logsForm.Controls.Add($logsTextBox)
+    $logsForm.Controls.Add($searchPanel)
     $logsForm.Controls.Add($logsListBox)
 
     $logsForm.ShowDialog()
 })
+
 
 $viewResults = New-Object System.Windows.Forms.ToolStripMenuItem
 $viewResults.Text = "Results"
@@ -1727,18 +1768,17 @@ $viewResults.Add_Click({
 
     # Add the ListBox to the Results form
     $resultsForm.Controls.Add($resultsListBox)
-
     $resultsForm.ShowDialog()
 })
 
 # Add the Results option to the "View" tab
-$viewMenu.DropDownItems.Add($viewResults)
+$viewMenu.DropDownItems.Add($viewResults) | Out-Null
 
 # Add the Logs option to the "View" tab
-$viewMenu.DropDownItems.Add($viewLogs)
+$viewMenu.DropDownItems.Add($viewLogs) | Out-Null
 
 # Add the "View" tab to the MenuStrip
-$menuStrip.Items.Add($viewMenu)
+$menuStrip.Items.Add($viewMenu) | Out-Null
 
 # Attach the MenuStrip to the main form
 $form.MainMenuStrip = $menuStrip
@@ -3581,5 +3621,3 @@ $form.Controls.Add($applyRenameButton)
 LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox | Out-Null
 
 $form.ShowDialog()
-
-
