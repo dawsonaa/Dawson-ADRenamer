@@ -1393,7 +1393,7 @@ function LoadAndFilterComputers {
 # Create main form
 $form = New-Object System.Windows.Forms.Form
 $form.Opacity = 1
-$form.Size = New-Object System.Drawing.Size(830, 510) # 785, 520
+$form.Size = New-Object System.Drawing.Size(830, 515) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
