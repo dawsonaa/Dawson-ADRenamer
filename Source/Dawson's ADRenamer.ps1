@@ -1411,8 +1411,52 @@ else {
     $form.Text = "ADRenamer - Offline"
 }
 
+# Function to create and add a separator ("|") to the given MenuStrip
+function Add-MenuItemSeparator {
+    param (
+        [System.Windows.Forms.MenuStrip]$menuStrip
+    )
+
+    # Create a non-interactive separator
+    $separator = New-Object System.Windows.Forms.ToolStripMenuItem
+    $separator.Text = "I"
+    $separator.Enabled = $false # Disable interaction
+
+    # Disable highlight by overriding the MouseHover event
+    $separator.Add_MouseHover({
+        # Do nothing on hover
+    })
+
+    $menuStrip.Items.Add($separator) | Out-Null
+}
+
+# Define the custom renderer class in C#
+$rendererCode = @"
+using System.Drawing;
+using System.Windows.Forms;
+
+public class CustomMenuStripRenderer : ToolStripProfessionalRenderer
+{
+    protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+    {
+        // Skip rendering the background for separators
+        if (e.Item.Text != "|")
+        {
+            base.OnRenderMenuItemBackground(e);
+        }
+    }
+}
+"@
+
+# Add the custom renderer class using Add-Type
+Add-Type -TypeDefinition $rendererCode -Language CSharp -ReferencedAssemblies @(
+    "System.Windows.Forms",
+    "System.Drawing"
+)
+
 # Create a MenuStrip
 $menuStrip = New-Object System.Windows.Forms.MenuStrip
+$menuStrip.Renderer = New-Object CustomMenuStripRenderer
 $menuStrip.BackColor = $defaultBackColor
 $menuStrip.ForeColor = $defaultForeColor
 $menuStrip.Font = $defaultFont
@@ -1606,7 +1650,6 @@ $settingsMenu.Add_Click({
 
     $settingsForm.ShowDialog()
 })
-$menuStrip.Items.Add($settingsMenu) | Out-Null
 
 $LoadOUMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $LoadOUMenu.Text = "Load OU"
@@ -1618,8 +1661,6 @@ $LoadOUMenu.Add_Click({
 
     LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
 })
-
-$menuStrip.Items.Add($LoadOUMenu) | Out-Null
 
 # Create the "View" tab
 $viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1796,7 +1837,7 @@ $viewResults.Add_Click({
     $csvFiles = Get-ChildItem -Path $resultsFolder -Filter "*.csv"
     Write-Host "Files Found: $($csvFiles.Count)"
     $csvFiles | ForEach-Object {
-        Write-Host "Adding file: $($_.Name)"
+        # Write-Host "Adding file: $($_.Name)" # debug
         $resultsListBox.Items.Add($_.Name)
     }
 
@@ -1829,10 +1870,14 @@ $viewMenu.DropDownItems.Add($viewResults) | Out-Null
 # Add the Logs option to the "View" tab
 $viewMenu.DropDownItems.Add($viewLogs) | Out-Null
 
+$menuStrip.Items.Add($settingsMenu) | Out-Null
+Add-MenuItemSeparator -menuStrip $menuStrip
+
 # Add the "View" tab to the MenuStrip
 $menuStrip.Items.Add($viewMenu) | Out-Null
+Add-MenuItemSeparator -menuStrip $menuStrip
 
-
+$menuStrip.Items.Add($LoadOUMenu) | Out-Null
 
 # Attach the MenuStrip to the main form
 $form.MainMenuStrip = $menuStrip
