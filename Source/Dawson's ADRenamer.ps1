@@ -1704,13 +1704,12 @@ $viewLogs.Add_Click({
     # Panel for search controls
     $searchPanel = New-Object System.Windows.Forms.Panel
     $searchPanel.Dock = [System.Windows.Forms.DockStyle]::Top
-    $searchPanel.Height = 30
+    $searchPanel.Height = 20
 
     # Textbox for search input
     $searchTextBox = New-Object System.Windows.Forms.TextBox
     $searchTextBox.Text = "Search"
     $searchTextBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
-    #$searchTextBox.Width = 200
     $searchTextBox.Dock = [System.Windows.Forms.DockStyle]::Top
     $searchTextBox.Margin = [System.Windows.Forms.Padding]::Empty
     $searchTextBox.ForeColor = $defaultBoxForeColor
