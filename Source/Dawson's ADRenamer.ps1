@@ -138,7 +138,7 @@ function Apply-Style {
         $global:defaultForeColor = $global:black
         $global:defaultBoxBackColor = $global:lightGray
         $global:defaultBoxForeColor = $global:gray
-        $global:defaultListForeColor = $global:catBlue
+        $global:defaultListForeColor = $global:black
     } elseif ($settings["style"] -eq 2) { # dark
         $global:defaultFont = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
         $global:defaultBackColor = $global:catDark
@@ -1393,7 +1393,7 @@ function LoadAndFilterComputers {
 # Create main form
 $form = New-Object System.Windows.Forms.Form
 $form.Opacity = 1
-$form.Size = New-Object System.Drawing.Size(830, 515) # 785, 520
+$form.Size = New-Object System.Drawing.Size(835, 485) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
@@ -1603,8 +1603,8 @@ $settingsMenu.Add_Click({
     $saveButton.Text = "Save"
     $saveButton.Location = New-Object System.Drawing.Point(150, $yPosition)
     $saveButton.Size = New-Object System.Drawing.Size(100, 30)
-    $saveButton.BackColor = $defaultListForeColor
-    $saveButton.ForeColor = $defaultForeColor
+    $saveButton.BackColor = $catBlue
+    $saveButton.ForeColor = $white
     $saveButton.Font = $defaultFont
     $saveButton.Add_Click({
         # Update the settings from the dropdown selections
@@ -1632,7 +1632,7 @@ $settingsMenu.Add_Click({
         $form.BackColor = $defaultBackColor
         $form.ForeColor = $defaultForeColor
         $form.Font = $defaultFont
-        $menuStrip.BackColor = $defaultListForeColor
+        $menuStrip.BackColor = $defaultBackColor
         $menuStrip.ForeColor = $defaultForeColor
         $computerCheckedListBox.BackColor = $defaultBoxBackColor
         $computerCheckedListBox.ForeColor = $defaultListForeColor
@@ -1887,6 +1887,7 @@ $viewMenu.DropDownItems.Add($viewResults) | Out-Null
 # Add the Logs option to the "View" tab
 $viewMenu.DropDownItems.Add($viewLogs) | Out-Null
 
+Add-MenuItemSeparator -menuStrip $menuStrip
 $menuStrip.Items.Add($settingsMenu) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
 
@@ -1895,6 +1896,7 @@ $menuStrip.Items.Add($viewMenu) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
 
 $menuStrip.Items.Add($LoadOUMenu) | Out-Null
+Add-MenuItemSeparator -menuStrip $menuStrip
 
 # Attach the MenuStrip to the main form
 $form.MainMenuStrip = $menuStrip
@@ -1909,30 +1911,33 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(700,(420 + $formStartY))
+$versionLabel.Location = New-Object System.Drawing.Point(705,(408 + $formStartY))
 $versionLabel.AutoSize = $true
 $versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
+$versionLabel.Font = $defaultFont
 
 # Add click event handler to open the URL
 $versionLabel.Add_Click({
         Start-Process "https://github.com/dawsonaa/Dawson-ADRenamer"
     })
 
-$form.Controls.Add($versionLabel)
+#$form.Controls.Add($versionLabel)
 
 # Create label to display author information
 $authorLabel = New-Object System.Windows.Forms.Label
 $authorLabel.Text = "Author: Dawson Adams (dawsonaa@ksu.edu)"
-$authorLabel.Location = New-Object System.Drawing.Point(10, (420 + $formStartY))
+$authorLabel.Location = New-Object System.Drawing.Point(5, (408 + $formStartY))
 $authorLabel.AutoSize = $true
+#$authorLabel.Size = New-Object System.Drawing.Size(400, 20)
 $authorLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
+$authorLabel.Font = $defaultFont
 
 # Add click event handler to open Microsoft Teams chat with the specified email
 $authorLabel.Add_Click({
         Start-Process "msteams://teams.microsoft.com/l/chat/0/0?users=dawsonaa@ksu.edu"
     })
 
-$form.Controls.Add($authorLabel)
+#$form.Controls.Add($authorLabel)
 
 # Define the size for the list boxes
 $listBoxWidth = 250
@@ -2794,6 +2799,7 @@ $searchBox.ForeColor = $defaultBoxForeColor
 $searchBox.BackColor = $defaultBoxBackColor
 $searchBox.Text = "Search"
 $searchBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
+$searchBox.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
 $searchBox.add_KeyDown({
         param($s, $e)
         if ($e.Control -and $e.KeyCode -eq [System.Windows.Forms.Keys]::A) {
@@ -2911,6 +2917,7 @@ function New-CustomTextBox {
     $textBox.MaxLength = [Math]::Min(15, $maxLength)
     $textBox.BorderStyle = [System.Windows.Forms.BorderStyle]::Fixed3D
     $textBox.Tag = $defaultText  # Store the default text in the Tag property
+    $textBox.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
 
     $textBox.add_KeyDown({
             param($s, $e)
@@ -2989,14 +2996,14 @@ $form.add_MouseDown({
         SetReadOnlyIfNotFocused $part3Input
     })
 
-$textBoxSize = New-Object System.Drawing.Size(150, 20)
+$textBoxSize = New-Object System.Drawing.Size(166, 20)
 $gap = 35 # set space between bottom buttons
 
 # Calculate the total width occupied by the text boxes and their distances
 $totalWidth = (4 * $textBoxSize.Width) + (3 * $gap)
 
 # Determine the starting X-coordinate to center the group of text boxes
-$startX = [Math]::Max((($form.ClientSize.Width - $totalWidth) / 2) - 12, 0)
+$startX = 10
 
 $script:part0DefaultText = "X-O-O-O"
 $script:part1DefaultText = "O-X-O-O"
@@ -3004,16 +3011,16 @@ $script:part2DefaultText = "O-O-X-O"
 $script:part3DefaultText = "O-O-O-X"
 
 # Create and add the text boxes, setting their X-coordinates based on the starting point
-$part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y (390 + $formStartY) -size $textBoxSize -maxLength 15
+$part0Input = New-CustomTextBox -name "part0Input" -defaultText $script:part0DefaultText -x $startX -y (385 + $formStartY) -size $textBoxSize -maxLength 15
 $form.Controls.Add($part0Input)
 
-$part1Input = New-CustomTextBox -name "part1Input" -defaultText $script:part1DefaultText -x ($startX + $textBoxSize.Width + $gap) -y (390 + $formStartY) -size $textBoxSize -maxLength 20
+$part1Input = New-CustomTextBox -name "part1Input" -defaultText $script:part1DefaultText -x ($startX + $textBoxSize.Width + $gap) -y (385 + $formStartY) -size $textBoxSize -maxLength 15
 $form.Controls.Add($part1Input)
 
-$part2Input = New-CustomTextBox -name "part2Input" -defaultText $script:part2DefaultText -x ($startX + 2 * ($textBoxSize.Width + $gap)) -y (390 + $formStartY) -size $textBoxSize -maxLength 20
+$part2Input = New-CustomTextBox -name "part2Input" -defaultText $script:part2DefaultText -x ($startX + 2 * ($textBoxSize.Width + $gap)) -y (385 + $formStartY) -size $textBoxSize -maxLength 15
 $form.Controls.Add($part2Input)
 
-$part3Input = New-CustomTextBox -name "part3Input" -defaultText $script:part3DefaultText -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y (390 + $formStartY) -size $textBoxSize -maxLength 20
+$part3Input = New-CustomTextBox -name "part3Input" -defaultText $script:part3DefaultText -x ($startX + 3 * ($textBoxSize.Width + $gap)) -y (385 + $formStartY) -size $textBoxSize -maxLength 15
 $form.Controls.Add($part3Input)
 
 $part0Input.Add_TextChanged({
