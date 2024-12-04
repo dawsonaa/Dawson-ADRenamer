@@ -71,7 +71,7 @@ $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 $scriptDirectory = Split-Path -Parent $PSCommandPath
 $settingsFilePath = Join-Path $scriptDirectory "settings.txt"
 $logsFilePath = Join-Path $scriptDirectory "LOGS"
-$Version = "24.12.03"
+$Version = "24.12.04"
 $iconPath = Join-Path $PSScriptRoot "icon2.ico"
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
@@ -1403,10 +1403,10 @@ $form.Font = $defaultFont
 
 # Make sure user knows what mode they are in
 if ($online) {
-    $form.Text = "ADRenamer - Online"
+    $form.Text = "ADRenamer $Version - Online"
 }
 else {
-    $form.Text = "ADRenamer - Offline"
+    $form.Text = "ADRenamer $Version - Offline"
 }
 
 # Function to create and add a separator ("|") to the given MenuStrip
@@ -1481,9 +1481,11 @@ $fontStyle = [System.Drawing.FontStyle]::Bold -bor [System.Drawing.FontStyle]::I
 $menuStrip.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
 $menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
 
+$fileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$fileMenu.Text = "File"
+
 $settingsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $settingsMenu.Text = "Settings"
-# Event: Click on "Settings" to open settings editor
 $settingsMenu.Add_Click({
     # Create the "Settings" form
     $settingsForm = New-Object System.Windows.Forms.Form
@@ -1660,9 +1662,6 @@ $settingsMenu.Add_Click({
         $colorPanel3.BackColor = $defaultBackColor
         $colorPanel2.BackColor = $defaultBackColor
         $colorPanel.BackColor = $defaultBackColor
-
-        $authorLabel.ForeColor = $defaultForeColor
-        $versionLabel.ForeColor = $defaultForeColor
     })
 
     $settingsForm.Controls.Add($saveButton)
@@ -1670,11 +1669,21 @@ $settingsMenu.Add_Click({
     $settingsForm.ShowDialog()
 })
 
-# Create the "View" tab
+$githubMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$githubMenu.Text = "Github Repository"
+$githubMenu.Add_Click({
+    Start-Process "https://github.com/dawsonaa/Dawson-ADRenamer"
+})
+
+$downloadMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$downloadMenu.Text = "Download newest installer"
+$downloadMenu.Add_Click({
+    Start-Process "https://github.com/dawsonaa/Dawson-ADRenamer/raw/refs/heads/main/DawsonADRenamerInstaller.exe"
+})
+
 $viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $viewMenu.Text = "View"
 
-# Add "Logs" to the "View" tab
 $viewLogs = New-Object System.Windows.Forms.ToolStripMenuItem
 $viewLogs.Text = "Logs"
 $viewLogs.Add_Click({
@@ -1882,30 +1891,33 @@ $loadOU.Add_Click({
     LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
 })
 
-$aboutMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$aboutMenu.Text = "About"
-$aboutMenu.Add_Click({
-
+$contactMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$contactMenu.Text = "Contact Author: Dawson Adams (dawsonaa@ksu.edu)"
+$contactMenu.Add_Click({
+    Start-Process "msteams://teams.microsoft.com/l/chat/0/0?users=dawsonaa@ksu.edu"
 })
+
+$fileMenu.DropDownItems.Add($settingsMenu) | Out-Null
+$fileMenu.DropDownItems.Add($downloadMenu) | Out-Null
+$fileMenu.DropDownItems.Add($githubMenu) | Out-Null
 
 $viewMenu.DropDownItems.Add($viewResults) | Out-Null
 $viewMenu.DropDownItems.Add($viewLogs) | Out-Null
 
-Add-MenuItemSeparator -menuStrip $menuStrip
-$menuStrip.Items.Add($settingsMenu) | Out-Null
+$menuStrip.Items.Add($fileMenu) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
 $menuStrip.Items.Add($viewMenu) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
 $menuStrip.Items.Add($loadOU) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
 
-for ($i = 0; $i -lt 13; $i++){
+
+for ($i = 0; $i -lt 3; $i++){
     Add-MenuItemSeparator -menuStrip $menuStrip -character " "
 }
-Add-MenuItemSeparator -menuStrip $menuStrip
-$aboutMenu.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]$fontStyle)
-$menuStrip.Items.Add($aboutMenu) | Out-Null
-Add-MenuItemSeparator -menuStrip $menuStrip
+#Add-MenuItemSeparator -menuStrip $menuStrip
+$contactMenu.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]$fontStyle)
+$menuStrip.Items.Add($contactMenu) | Out-Null
 
 # Attach the MenuStrip to the main form
 $form.MainMenuStrip = $menuStrip
@@ -1916,37 +1928,6 @@ $script:invalidNamesList = @()
 $script:validNamesList = @()
 $script:customNamesList = @() 
 $script:ouPath = 'DC=users,DC=campus'
-
-# Create label to display current script version
-$versionLabel = New-Object System.Windows.Forms.Label
-$versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(705,(408 + $formStartY))
-$versionLabel.AutoSize = $true
-$versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
-$versionLabel.Font = $defaultFont
-
-# Add click event handler to open the URL
-$versionLabel.Add_Click({
-        Start-Process "https://github.com/dawsonaa/Dawson-ADRenamer"
-    })
-
-#$form.Controls.Add($versionLabel)
-
-# Create label to display author information
-$authorLabel = New-Object System.Windows.Forms.Label
-$authorLabel.Text = "Author: Dawson Adams (dawsonaa@ksu.edu)"
-$authorLabel.Location = New-Object System.Drawing.Point(5, (408 + $formStartY))
-$authorLabel.AutoSize = $true
-#$authorLabel.Size = New-Object System.Drawing.Size(400, 20)
-$authorLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
-$authorLabel.Font = $defaultFont
-
-# Add click event handler to open Microsoft Teams chat with the specified email
-$authorLabel.Add_Click({
-        Start-Process "msteams://teams.microsoft.com/l/chat/0/0?users=dawsonaa@ksu.edu"
-    })
-
-#$form.Controls.Add($authorLabel)
 
 # Define the size for the list boxes
 $listBoxWidth = 250
