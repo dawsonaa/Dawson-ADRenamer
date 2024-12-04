@@ -1,5 +1,10 @@
 ﻿# Dawson's ADRenamer
 
+## Support
+For assistance, please contact Dawson Adams (dawsonaa@ksu.edu).
+
+All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
+
 ## Overview
 This script is a comprehensive tool for renaming Active Directory (AD) computer objects. It includes functionalities to load and filter AD computer objects, rename them based on specified criteria, handle restarts, and log the operations performed. Additionally, it manages the script and log files' organization, ensuring they are stored in a consistent folder structure.
 
@@ -87,8 +92,3 @@ This script is a comprehensive tool for renaming Active Directory (AD) computer 
 
 ## Troubleshooting
 - **Permissions Issues**: Ensure you run the script with administrative privileges if you encounter any permission-related errors.
-
-## Support
-For further assistance, please contact Dawson Adams (dawsonaa@ksu.edu).
-
-# All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
