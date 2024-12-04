@@ -826,9 +826,7 @@ function ProcessCommittedChanges {
         Write-Host "AttemptedNames: $($change.AttemptedNames -join ', ')"
         Write-Host "Duplicate: $($change.Duplicate -join ', ')"
     }
-
-    # Update the colors in the selectedCheckedListBox and colorPanel
-    UpdateColors #>
+ #>
 }
 
 # Function to format usernames into email addresses
@@ -1414,12 +1412,13 @@ else {
 # Function to create and add a separator ("|") to the given MenuStrip
 function Add-MenuItemSeparator {
     param (
-        [System.Windows.Forms.MenuStrip]$menuStrip
+        [System.Windows.Forms.MenuStrip]$menuStrip,
+        [string]$character = "I"
     )
 
     # Create a non-interactive separator
     $separator = New-Object System.Windows.Forms.ToolStripMenuItem
-    $separator.Text = "I"
+    $separator.Text = $character
     $separator.Enabled = $false # Disable interaction
 
     # Disable highlight by overriding the MouseHover event
@@ -1440,7 +1439,7 @@ public class CustomMenuStripRenderer : ToolStripProfessionalRenderer
     protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
     {
         // Skip rendering the background entirely for the separator (text = "I")
-        if (e.Item.Text == "I")
+        if (e.Item.Text == "I" || e.Item.Text == " ")
         {
             return; // Do nothing
         }
@@ -1476,7 +1475,10 @@ $menuStrip = New-Object System.Windows.Forms.MenuStrip
 $menuStrip.Renderer = New-Object CustomMenuStripRenderer
 $menuStrip.BackColor = $defaultBackColor
 $menuStrip.ForeColor = $defaultForeColor
-$menuStrip.Font = $defaultFont
+$fontStyle = [System.Drawing.FontStyle]::Bold -bor [System.Drawing.FontStyle]::Italic
+
+# Create a font with Bold and Italic styles
+$menuStrip.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
 $menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
 
 $settingsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1668,17 +1670,6 @@ $settingsMenu.Add_Click({
     $settingsForm.ShowDialog()
 })
 
-$LoadOUMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$LoadOUMenu.Text = "Load OU"
-$LoadOUMenu.Add_Click({
-    $computerCheckedListBox.Items.Clear()
-    $selectedCheckedListBox.Items.Clear()
-    $newNamesListBox.Items.Clear()
-    $script:checkedItems.Clear()
-
-    LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
-})
-
 # Create the "View" tab
 $viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $viewMenu.Text = "View"
@@ -1795,13 +1786,13 @@ $viewLogs.Add_Click({
     # Add .txt file names to the listbox
     Get-ChildItem -Path $logsFilePath -Filter "*.txt" | ForEach-Object {
         $logsListBox.Items.Add($_.Name)
-    if ($first -eq 0){
-        $logsListBox.SelectedItem = $_.Name
-        $logsTextBox.Lines = Get-Content -Path (Join-Path $logsFilePath $logsListBox.SelectedItem)
-        $logsTextBox.SelectionStart = 0
-        $logsTextBox.SelectionLength = 0
-        $first = 1
-    }
+        if ($first -eq 0){
+            $logsListBox.SelectedItem = $_.Name
+            $logsTextBox.Lines = Get-Content -Path (Join-Path $logsFilePath $logsListBox.SelectedItem)
+            $logsTextBox.SelectionStart = 0
+            $logsTextBox.SelectionLength = 0
+            $first = 1
+        }
     }
 
     # Event: Double-click on a file to view its content
@@ -1823,7 +1814,6 @@ $viewLogs.Add_Click({
 
     $logsForm.ShowDialog()
 })
-
 
 $viewResults = New-Object System.Windows.Forms.ToolStripMenuItem
 $viewResults.Text = "Results"
@@ -1881,21 +1871,40 @@ $viewResults.Add_Click({
     $resultsForm.ShowDialog()
 })
 
-# Add the Results option to the "View" tab
-$viewMenu.DropDownItems.Add($viewResults) | Out-Null
+$loadOU = New-Object System.Windows.Forms.ToolStripMenuItem
+$loadOU.Text = "Load OU"
+$loadOU.Add_Click({
+    $computerCheckedListBox.Items.Clear()
+    $selectedCheckedListBox.Items.Clear()
+    $newNamesListBox.Items.Clear()
+    $script:checkedItems.Clear()
 
-# Add the Logs option to the "View" tab
+    LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
+})
+
+$aboutMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$aboutMenu.Text = "About"
+$aboutMenu.Add_Click({
+
+})
+
+$viewMenu.DropDownItems.Add($viewResults) | Out-Null
 $viewMenu.DropDownItems.Add($viewLogs) | Out-Null
 
 Add-MenuItemSeparator -menuStrip $menuStrip
 $menuStrip.Items.Add($settingsMenu) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
-
-# Add the "View" tab to the MenuStrip
 $menuStrip.Items.Add($viewMenu) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
+$menuStrip.Items.Add($loadOU) | Out-Null
+Add-MenuItemSeparator -menuStrip $menuStrip
 
-$menuStrip.Items.Add($LoadOUMenu) | Out-Null
+for ($i = 0; $i -lt 13; $i++){
+    Add-MenuItemSeparator -menuStrip $menuStrip -character " "
+}
+Add-MenuItemSeparator -menuStrip $menuStrip
+$aboutMenu.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]$fontStyle)
+$menuStrip.Items.Add($aboutMenu) | Out-Null
 Add-MenuItemSeparator -menuStrip $menuStrip
 
 # Attach the MenuStrip to the main form
@@ -2318,14 +2327,6 @@ $selectedCheckedListBox.add_MeasureItem({
         $e.ItemHeight = 20
     })
 
-# Updates color panels with change
-function UpdateColors {
-    $selectedCheckedListBox.Invalidate()
-    $colorPanel3.Invalidate()
-    $colorPanel.Invalidate()
-    $colorPanel2.Invalidate()
-}
-
 <#
 .SYNOPSIS
     Updates the SelectedCheckedListBox with sorted items from the changes list and other checked items.
@@ -2451,7 +2452,7 @@ $selectedCheckedListBox.add_DrawItem({
         }
     })
 
-$colorPanelBack = $catDark
+$colorPanelBack = $defaultBackColor
 
 # Create a Panel to show the colors next to the CheckedListBox
 $colorPanel3 = New-Object System.Windows.Forms.Panel
@@ -3129,6 +3130,7 @@ function New-StyledButton {
 }
 #$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
 $commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 26 -enabled $false
+$commitChangesButton.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
 $commitChangesButton.BackColor = $catPurple
 $commitChangesButton.ForeColor = $defaultForeColor
 
@@ -3168,6 +3170,7 @@ $commitChangesButton.Add_Click({
 $form.Controls.Add($commitChangesButton)
 
 $applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 26 -enabled $false
+$applyRenameButton.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $defaultForeColor
 
