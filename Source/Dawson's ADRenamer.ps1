@@ -1568,7 +1568,7 @@ $settingsMenu.Add_Click({
                 $dropdown.SelectedItem = $currentStyle
             }
             "online" {
-                $label.Text = "Online"
+                $label.Text = "Online on Startup"
                 $dropdown.Items.AddRange($onlineOptions)
                 $dropdown.SelectedItem = $settings[$key]
                 if ($dropdowns["ask"].SelectedItem -eq "true")
