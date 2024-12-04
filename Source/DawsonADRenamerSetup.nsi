@@ -25,6 +25,8 @@ Section "Install Dawson's ADRenamer"
     File "LICENSE"
     File "README.md"
 
+    File "settings.txt"
+
     ; Extract the profile-specific base path from $INSTDIR
     StrCpy $PROFILE_PATH $INSTDIR
     ; Find the length of "Dawson's ADRenamer" (adjust for your actual folder name length)
