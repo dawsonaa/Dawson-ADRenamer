@@ -70,13 +70,14 @@ $catDark = [System.Drawing.Color]::FromArgb(1, 3, 32)
 
 $scriptDirectory = Split-Path -Parent $PSCommandPath
 $settingsFilePath = Join-Path $scriptDirectory "settings.txt"
-$Version = "24.11.22"
+$logsFilePath = Join-Path $scriptDirectory "LOGS"
+$Version = "24.12.03"
 $iconPath = Join-Path $PSScriptRoot "icon2.ico"
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
 $companyName = "KSU"
 
-function Load-Settings {
+function LoadSettings {
     $settings = @{}  # Initialize an empty hashtable
     if (Test-Path $settingsFilePath) {
         # Write-Host "Settings file found: $settingsFilePath" -ForegroundColor Green # debug
@@ -156,7 +157,7 @@ function Apply-Style {
     # Write-Host "Style applied: $($settings["style"])" # debug
 }
 
-$settings = Load-Settings
+$settings = LoadSettings
 Apply-Style -settings $settings | Out-Null
 
 function Set-FormState {
@@ -1683,7 +1684,7 @@ $viewLogs.Add_Click({
 
             if ($selectedFile = $logsListBox.SelectedItem)
             {
-                $filePath = Join-Path $logsFolder $selectedFile
+                $filePath = Join-Path $logsFilePath $selectedFile
                 $logsContent = Get-Content -Path $filePath
                 $searchTerm = $searchTextBox.Text
                 if (-not $searchTerm)
@@ -1717,19 +1718,18 @@ $viewLogs.Add_Click({
     $logsTextBox.Dock = [System.Windows.Forms.DockStyle]::Fill
     $logsTextBox.ReadOnly = $true
 
-    $logsFolder = Join-Path $scriptDirectory "LOGS"
-    if (-Not (Test-Path $logsFolder)) {
+    if (-Not (Test-Path $logsFilePath)) {
         [System.Windows.Forms.MessageBox]::Show("No LOGS folder found in the current directory.")
         return
     }
 
     $first = 0
     # Add .txt file names to the listbox
-    Get-ChildItem -Path $logsFolder -Filter "*.txt" | ForEach-Object {
+    Get-ChildItem -Path $logsFilePath -Filter "*.txt" | ForEach-Object {
         $logsListBox.Items.Add($_.Name)
     if ($first -eq 0){
         $logsListBox.SelectedItem = $_.Name
-        $logsTextBox.Lines = Get-Content -Path (Join-Path $logsFolder $logsListBox.SelectedItem)
+        $logsTextBox.Lines = Get-Content -Path (Join-Path $logsFilePath $logsListBox.SelectedItem)
         $logsTextBox.SelectionStart = 0
         $logsTextBox.SelectionLength = 0
         $first = 1
@@ -1740,7 +1740,7 @@ $viewLogs.Add_Click({
     $logsListBox.Add_MouseDoubleClick({
         $selectedFile = $logsListBox.SelectedItem
         if ($selectedFile) {
-            $filePath = Join-Path $logsFolder $selectedFile
+            $filePath = Join-Path $logsFilePath $selectedFile
             # Read file line by line and set to TextBox
             $logsTextBox.Lines = Get-Content -Path $filePath
         }
