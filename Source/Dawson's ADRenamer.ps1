@@ -77,6 +77,9 @@ $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
 $companyName = "KSU"
 
+$formStartY = 30
+$formButtonsY = 350
+
 function LoadSettings {
     $settings = @{}  # Initialize an empty hashtable
     if (Test-Path $settingsFilePath) {
@@ -218,8 +221,6 @@ function Set-FormState {
         $Form.Enabled = $false
     }
 }
-
-$formStartY = 30
 
 if ($settings["ask"] -eq $true) {
     # Create a form for selecting Online, Offline, or Cancel
@@ -1460,7 +1461,7 @@ $menuStrip.Renderer = New-Object CustomMenuStripRenderer
 $menuStrip.BackColor = $defaultBackColor
 $menuStrip.ForeColor = $defaultForeColor
 $menuStrip.Font = $defaultFont
-$menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
+$menuStrip.Padding = New-Object System.Windows.Forms.Padding(0, 10, 10, 10)
 
 $settingsMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $settingsMenu.Text = "Settings"
@@ -1698,6 +1699,7 @@ $viewLogs.Add_Click({
     $searchTextBox.Margin = [System.Windows.Forms.Padding]::Empty
     $searchTextBox.ForeColor = $defaultBoxForeColor
     $searchTextBox.BackColor = $defaultBoxBackColor
+    $searchTextBox.
 
     $searchTextBox.add_KeyDown({
         param($s, $e)
@@ -1892,7 +1894,7 @@ $script:ouPath = 'DC=users,DC=campus'
 # Create label to display current script version
 $versionLabel = New-Object System.Windows.Forms.Label
 $versionLabel.Text = "Version $Version"
-$versionLabel.Location = New-Object System.Drawing.Point(700,(420 + $formStartY))
+$versionLabel.Location = New-Object System.Drawing.Point(700, (420 + $formStartY))
 $versionLabel.AutoSize = $true
 $versionLabel.Cursor = [System.Windows.Forms.Cursors]::Hand  # Change cursor to hand to indicate it's clickable
 
@@ -2771,7 +2773,7 @@ $colorPanel2.BringToFront()
 
 # Search Text Box with Enter Key Event
 $searchBox = New-Object System.Windows.Forms.TextBox
-$searchBox.Location = New-Object System.Drawing.Point(10,(355 + $formStartY))
+$searchBox.Location = New-Object System.Drawing.Point(10,($formButtonsY + $formStartY))
 $searchBox.Size = New-Object System.Drawing.Size(230, 20)
 $searchBox.ForeColor = $defaultBoxForeColor
 $searchBox.BackColor = $defaultBoxBackColor
@@ -3104,10 +3106,13 @@ function New-StyledButton {
     $button.Text = $text
     $button.Enabled = $enabled
 
+    $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $button.FlatAppearance.BorderSize = 0  # No border
+
     return $button
 }
 #$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
-$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 25 -enabled $false
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y ($formButtonsY + $formStartY) -width $listBoxWidth -height 25 -enabled $false
 $commitChangesButton.BackColor = $catPurple
 $commitChangesButton.ForeColor = $defaultForeColor
 
@@ -3146,7 +3151,7 @@ $commitChangesButton.Add_Click({
 
 $form.Controls.Add($commitChangesButton)
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 25 -enabled $false
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y ($formButtonsY + $formStartY) -width $listBoxWidth -height 25 -enabled $false
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $defaultForeColor
 
