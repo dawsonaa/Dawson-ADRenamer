@@ -1413,7 +1413,7 @@ else {
 
 # Create a MenuStrip
 $menuStrip = New-Object System.Windows.Forms.MenuStrip
-$menuStrip.BackColor = $defaultListForeColor
+$menuStrip.BackColor = $defaultBackColor
 $menuStrip.ForeColor = $defaultForeColor
 $menuStrip.Font = $defaultFont
 $menuStrip.Padding = New-Object System.Windows.Forms.Padding(5, 5, 5, 5)
@@ -1591,7 +1591,6 @@ $settingsMenu.Add_Click({
         $part3Input.BackColor = $defaultBoxBackColor
         $part3Input.ForeColor = $defaultBoxForeColor
 
-        $loadButton.ForeColor = $defaultForeColor
         $commitChangesButton.ForeColor = $defaultForeColor
         $applyRenameButton.ForeColor = $defaultForeColor
 
@@ -1607,10 +1606,21 @@ $settingsMenu.Add_Click({
 
     $settingsForm.ShowDialog()
 })
-
-#$settingsMenu.DropDownItems.Add($viewResults)
-#$settingsMenu.DropDownItems.Add($viewLogs)
 $menuStrip.Items.Add($settingsMenu) | Out-Null
+
+$LoadOUMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$LoadOUMenu.Text = "Load OU"
+$LoadOUMenu.Add_Click({
+    $computerCheckedListBox.Items.Clear()
+    $selectedCheckedListBox.Items.Clear()
+    $newNamesListBox.Items.Clear()
+    $script:checkedItems.Clear()
+
+    LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
+})
+
+$menuStrip.Items.Add($LoadOUMenu) | Out-Null
+
 # Create the "View" tab
 $viewMenu = New-Object System.Windows.Forms.ToolStripMenuItem
 $viewMenu.Text = "View"
@@ -1821,6 +1831,8 @@ $viewMenu.DropDownItems.Add($viewLogs) | Out-Null
 
 # Add the "View" tab to the MenuStrip
 $menuStrip.Items.Add($viewMenu) | Out-Null
+
+
 
 # Attach the MenuStrip to the main form
 $form.MainMenuStrip = $menuStrip
@@ -2715,7 +2727,7 @@ $colorPanel2.BringToFront()
 # Search Text Box with Enter Key Event
 $searchBox = New-Object System.Windows.Forms.TextBox
 $searchBox.Location = New-Object System.Drawing.Point(10,(355 + $formStartY))
-$searchBox.Size = New-Object System.Drawing.Size(133, 20)
+$searchBox.Size = New-Object System.Drawing.Size(230, 20)
 $searchBox.ForeColor = $defaultBoxForeColor
 $searchBox.BackColor = $defaultBoxBackColor
 $searchBox.Text = "Search"
@@ -3088,39 +3100,6 @@ $commitChangesButton.Add_Click({
     })
 
 $form.Controls.Add($commitChangesButton)
-
-# Add button to refresh or select a new OU to manage
-$loadButton = New-StyledButton -text "Load OU" -x 148 -y (355 + $formStartY) -width 94 -height 25 -enabled $true
-$loadButton.BackColor = $catBlue
-$loadButton.ForeColor = $defaultForeColor
-$loadButton.Enabled = $online
-
-<#
-.SYNOPSIS
-    Refreshes the computer lists and clears the current selections.
-
-.DESCRIPTION
-    This event handler function is triggered when the refresh button is clicked. It performs the following steps:
-    - Clears the items in the computerCheckedListBox, selectedCheckedListBox, and newNamesListBox.
-    - Clears the script-wide checkedItems hashtable.
-    - Calls the LoadAndFilterComputers function to reload and filter the computers, updating the computerCheckedListBox with the refreshed data.
-
-.PARAMETER None
-    This event handler does not take any parameters.
-
-.NOTES
-    - The function ensures that all current selections and items are cleared before reloading the computer list.
-    - The LoadAndFilterComputers function is responsible for repopulating the computerCheckedListBox with the updated data.
-#>
-$loadButton.Add_Click({
-        $computerCheckedListBox.Items.Clear()
-        $selectedCheckedListBox.Items.Clear()
-        $newNamesListBox.Items.Clear()
-        $script:checkedItems.Clear()
-
-        LoadAndFilterComputers -computerCheckedListBox $computerCheckedListBox
-    })
-$form.Controls.Add($loadButton)
 
 $applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 25 -enabled $false
 $applyRenameButton.BackColor = $catRed
