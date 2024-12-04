@@ -1393,7 +1393,7 @@ function LoadAndFilterComputers {
 # Create main form
 $form = New-Object System.Windows.Forms.Form
 $form.Opacity = 1
-$form.Size = New-Object System.Drawing.Size(835, 485) # 785, 520
+$form.Size = New-Object System.Drawing.Size(805, 490) # 785, 520
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
@@ -2999,9 +2999,6 @@ $form.add_MouseDown({
 $textBoxSize = New-Object System.Drawing.Size(166, 20)
 $gap = 35 # set space between bottom buttons
 
-# Calculate the total width occupied by the text boxes and their distances
-$totalWidth = (4 * $textBoxSize.Width) + (3 * $gap)
-
 # Determine the starting X-coordinate to center the group of text boxes
 $startX = 10
 
@@ -3131,7 +3128,7 @@ function New-StyledButton {
     return $button
 }
 #$commitChangesButton = New-StyledButton -text "Commit Changes" -x 360 -y 10 -width 150 -height 25 -enabled $false
-$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 25 -enabled $false
+$commitChangesButton = New-StyledButton -text "Commit Changes" -x 260 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 26 -enabled $false
 $commitChangesButton.BackColor = $catPurple
 $commitChangesButton.ForeColor = $defaultForeColor
 
@@ -3170,7 +3167,7 @@ $commitChangesButton.Add_Click({
 
 $form.Controls.Add($commitChangesButton)
 
-$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 25 -enabled $false
+$applyRenameButton = New-StyledButton -text "Apply Rename" -x 530 -y (355 + $formStartY) -width ($listBoxWidth + 2) -height 26 -enabled $false
 $applyRenameButton.BackColor = $catRed
 $applyRenameButton.ForeColor = $defaultForeColor
 
