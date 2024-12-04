@@ -1439,10 +1439,27 @@ public class CustomMenuStripRenderer : ToolStripProfessionalRenderer
 {
     protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
     {
-        // Skip rendering the background for separators
-        if (e.Item.Text != "|")
+        // Skip rendering the background entirely for the separator (text = "I")
+        if (e.Item.Text == "I")
         {
-            base.OnRenderMenuItemBackground(e);
+            return; // Do nothing
+        }
+
+        // Render other items as usual
+        base.OnRenderMenuItemBackground(e);
+    }
+
+    protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+    {
+        // Custom text rendering for separator
+        if (e.Item.Text == "I")
+        {
+            e.TextColor = Color.Gray; // Set a custom color for the separator text
+            e.Graphics.DrawString(e.Text, e.TextFont, Brushes.Gray, e.TextRectangle);
+        }
+        else
+        {
+            base.OnRenderItemText(e);
         }
     }
 }
