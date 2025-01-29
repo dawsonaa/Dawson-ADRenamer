@@ -1,9 +1,8 @@
-﻿# Dawson's ADRenamer
+﻿# Dawson's ADRenamer 24.12.04
 
 ## Support
-For assistance, please contact Dawson Adams (dawsonaa@ksu.edu).
-
-All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
+   - For assistance, please contact Dawson Adams (dawsonaa@ksu.edu).
+   - All Campuses Device Naming Scheme KB: https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163
 
 ## Overview
 This script is a comprehensive tool for renaming Active Directory (AD) computer objects. It includes functionalities to load and filter AD computer objects, rename them based on specified criteria, handle restarts, and log the operations performed. Additionally, it manages the script and log files' organization, ensuring they are stored in a consistent folder structure.
@@ -87,8 +86,5 @@ This script is a comprehensive tool for renaming Active Directory (AD) computer 
 - Support Ctrl+A for select all functionality in text boxes (KeyDown event handler for text boxes).
 
 ## Log Management
-- **Log Files Location**: Logs are stored in a folder named "Dawson's ADRenamer Logs" within the script's parent folder.
+- **Log Files Location**: Logs are stored in a folder named "LOGS" within the script's parent folder.
 - **Log File Naming**: Logs are named with a timestamp for easy identification, e.g., "ADRenamer_Results_YY-MM-DD_HH-MMtt.csv".
-
-## Troubleshooting
-- **Permissions Issues**: Ensure you run the script with administrative privileges if you encounter any permission-related errors.
