@@ -22,8 +22,8 @@ Section "Install Dawson's ADRenamer"
     ; Put your PowerShell script in the install directory
     File "Dawson's ADRenamer.ps1"
 
-    File "LICENSE"
-    File "README.md"
+    File "..\LICENSE"
+    File "..\README.md"
 
     File "settings.txt"
 
