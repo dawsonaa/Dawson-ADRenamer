@@ -3,7 +3,7 @@
 ## By Dawson Adams (dawsonaa@ksu.edu) at Kansas State university </span>
 
 ## Overview
-Dawson's ADRenamer is a comprehensive tool for renaming Active Directory (AD) computer objects. It includes functionalities to load and filter AD computer objects, rename them based on specified criteria, handle restarts, and log the operations performed. Additionally, it manages the script and log files' organization, ensuring they are stored in a consistent folder structure.
+PowerShell script for renaming Active Directory (AD) computer objects. It allows users to load and filter AD computer objects, rename them based on specified criteria, handle restarts, and log operations performed. It also supports email generation, color-coded terminal output, and integration with Power Automate for uploading logs to SharePoint.
 
 ## Main GUI
 <img src="images/MainGUI.png" alt="Main GUI Screenshot">
