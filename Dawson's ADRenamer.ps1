@@ -72,7 +72,7 @@ $scriptDirectory = Split-Path -Parent $PSCommandPath
 $settingsFilePath = Join-Path $scriptDirectory "settings.txt"
 $logsFilePath = Join-Path $scriptDirectory "LOGS"
 $Version = "24.12.04"
-$iconPath = Join-Path $PSScriptRoot "icon2.ico"
+$iconPath = Join-Path $PSScriptRoot "icon.ico"
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 $renameGuideURL = "https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163"
 $companyName = "KSU"

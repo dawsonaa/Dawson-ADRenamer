@@ -1,11 +1,27 @@
-﻿# Dawson's ADRenamer
+﻿# <img src="icon.ico" alt="Icon" height="32" style="vertical-align: middle;"> <span style="vertical-align: middle;"> Dawson's ADRenamer </span>  <img src="icon.ico" alt="Icon" height="32" style="vertical-align: middle;">
 
 ## Overview
 Dawson's ADRenamer is a comprehensive tool for renaming Active Directory (AD) computer objects. It includes functionalities to load and filter AD computer objects, rename them based on specified criteria, handle restarts, and log the operations performed. Additionally, it manages the script and log files' organization, ensuring they are stored in a consistent folder structure.
 
-## Prerequisites
-- Administrative privileges to run PowerShell scripts and interact with Active Directory.
-- Ensure the necessary permissions to create shortcuts in the Start Menu and on the Public Desktop.
+## Main GUI
+<img src="images/MainGUI.png" alt="Main GUI Screenshot">
+
+## Terminal
+<img src="images/Terminal.png" alt="Terminal Screenshot">
+
+## Select OU
+<img src="images/SelectOU.png" alt="Select OU Screenshot">
+
+## Email Generation GUI
+<img src="images/EmailGUI.png" alt="Email Generation GUI Screenshot"> 
+
+<img src="images/ExampleEmail.png" alt="Example Email Screenshot" style="width: 577px;">
+
+## Logs Viewer
+<img src="images/LogsViewer.png" alt="Logs Viewer Screenshot">
+
+## Results CSV
+<img src="images/ResultsCSV.png" alt="Results CSV Screenshot">
 
 ## Installation
 1. **Download the Installer**: Download `DawsonADRenamerInstaller.exe` and run it (requires admin privileges).
@@ -70,7 +86,7 @@ Dawson's ADRenamer is a comprehensive tool for renaming Active Directory (AD) co
 ### Department to String Conversion
 - Convert department names to strings based on OU location, with truncation logic for specific naming patterns.
 
-## Log Management
+### Log Management
 - **Log Files Location**: Logs are stored in a folder named `Dawson's ADRenamer Logs` within the script's parent folder.
 - **Log File Naming**: Logs are named with a timestamp for easy identification, e.g., `ADRenamer_Results_YY-MM-DD_HH-MMtt.csv`.
 
