@@ -37,65 +37,30 @@ Dawson's ADRenamer is a comprehensive tool for renaming Active Directory (AD) co
 
 ## Features
 
-### Loading and Filtering
-- Load and filter AD computer objects based on the last logon date.
+### Active Directory Management
+- Load and filter AD computer objects by last logon date.
+- Search and filter computers by Organizational Unit (OU).
+- Populate and expand a TreeView with OUs from Active Directory.
 
-### Display and Selection
-- Display a list of computers for selection.
-- Allow users to specify new names for selected computers.
-- Validate new names against specified naming conventions.
-- Ensure new computer names are unique using a hash set.
-
-### Renaming and Logging
-- Rename AD computer objects and log successful and failed renames.
-- Check if computers are online before renaming.
-- Check if users are logged on and handle restarts.
-- Display progress and results of the renaming process.
-- Track and display total time taken for operations.
-- Display and handle invalid rename guidelines.
-
-### Search and Filter
-- Implement search functionality for filtering computers.
-- Select and set Organizational Unit (OU) for filtering.
-- Populate a TreeView with Organizational Units from Active Directory.
-- Handle OU selection and expand nodes to show child OUs.
-
-### Bulk Selection and Removal
-- Remove selected devices from the list.
-- Remove all devices from the list.
-
-### Operation Summaries
-- Display rename and restart operation summaries.
-- Display the list of logged on users.
+### Computer Renaming
+- Rename AD computer objects and log results.
+- Validate and ensure unique computer names.
+- Check computer status (online/offline) and handle user restarts.
 
 ### Email Drafts
-- Automatically generate email drafts for users of logged on devices.
-- Allow users to specify a support link that is included in email drafts.
-- Create an email draft for each selected device with the specified support link.
-- Remove selected items from the list using the right-click context menu.
-- Display a form for users to select devices and create email drafts.
+- Generate email drafts for logged-on users with a customizable support link.
+- Create drafts for selected devices and remove items via context menu.
 
 ### Logging and Export
-- Create `RESULTS` and `LOGS` folders if they do not exist in the script directory.
-- Export CSV file with renaming results to the `RESULTS` folder.
-- Export log content to a .txt file in the `LOGS` folder.
-- Include a timestamp in the CSV file name for better organization.
+- Export renaming results to timestamped CSV files in a `RESULTS` folder.
+- Save logs to a `LOGS` folder with timestamped .txt files.
+- Automatically create `RESULTS` and `LOGS` folders if missing.
 
 ### Power Automate Integration
 - Convert CSV and log files to Base64 format.
-- Send HTTP POST request to trigger a Power Automate flow to upload the CSV and log files to SharePoint.
-
-### Department to String Conversion
-- Convert department names to strings based on OU location, with truncation logic for specific naming patterns.
-
-### Log Management
-- **Log Files Location**: Logs are stored in a folder named `Dawson's ADRenamer Logs` within the script's parent folder.
-- **Log File Naming**: Logs are named with a timestamp for easy identification, e.g., `ADRenamer_Results_YY-MM-DD_HH-MMtt.csv`.
+- Trigger Power Automate flows to upload files to SharePoint.
 
 ## Support
 For assistance, please contact Dawson Adams at [dawsonaa@ksu.edu](mailto:dawsonaa@ksu.edu).
 
 All Campuses Device Naming Scheme KB: [https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163](https://support.ksu.edu/TDClient/30/Portal/KB/ArticleDet?ID=1163)
-
-## Troubleshooting
-- **Permissions Issues**: Ensure you run the script with administrative privileges if you encounter any permission-related errors.
