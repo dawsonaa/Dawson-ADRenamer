@@ -1,6 +1,6 @@
 ﻿# <img src="icon.ico" alt="Icon" height="32" style="vertical-align: middle;"> <span style="vertical-align: middle;"> Dawson's ADRenamer </span>  <img src="icon.ico" alt="Icon" height="32" style="vertical-align: middle;">
 
-## By Dawson Adams (dawsonaa@ksu.edu) at Kansas State university </span>
+## By Dawson Adams (dawsonaa@ksu.edu) at Kansas State University </span>
 
 ## Overview
 PowerShell script for renaming Active Directory (AD) computer objects. It allows users to load and filter AD computer objects, rename them based on specified criteria, handle restarts, and log operations performed. It also supports email generation, color-coded terminal output, and integration with Power Automate for uploading logs to SharePoint.
