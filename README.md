@@ -1,5 +1,7 @@
 ﻿# <img src="icon.ico" alt="Icon" height="32" style="vertical-align: middle;"> <span style="vertical-align: middle;"> Dawson's ADRenamer </span>  <img src="icon.ico" alt="Icon" height="32" style="vertical-align: middle;">
 
+## By Dawson Adams (dawsonaa@ksu.edu) at Kansas State university </span>
+
 ## Overview
 Dawson's ADRenamer is a comprehensive tool for renaming Active Directory (AD) computer objects. It includes functionalities to load and filter AD computer objects, rename them based on specified criteria, handle restarts, and log the operations performed. Additionally, it manages the script and log files' organization, ensuring they are stored in a consistent folder structure.
 
