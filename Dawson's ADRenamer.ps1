@@ -921,9 +921,7 @@ function Select-OU {
     $ouForm.Font = $defaultFont
     $ouForm.Add_FormClosing({
             param($s, $e)
-            if ($ouForm.DialogResult -eq [System.Windows.Forms.DialogResult]::None) {
                 [Environment]::Exit(0)
-            }
         })
 
     $treeView = New-Object System.Windows.Forms.TreeView
@@ -1192,6 +1190,7 @@ public class CustomMenuStripRenderer : ToolStripProfessionalRenderer
             base.OnRenderItemText(e);
         }
     }
+    public void doNothing() {} // hush the compiler
 }
 "@
 
