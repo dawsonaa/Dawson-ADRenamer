@@ -311,7 +311,10 @@ else {
     $online = $settings["online"]
 }
 
-if (-not $online) {
+if ($online) {
+    Import-Module ActiveDirectory
+}
+else {
     function Add-DummyComputers {
         param (
             [int]$numberOfDevices = 10
@@ -367,9 +370,6 @@ if (-not $online) {
     }
 
     $username = "dawsonaa" # OFFLINE
-}
-else {
-    Import-Module ActiveDirectory
 }
 
 Add-Type @"
