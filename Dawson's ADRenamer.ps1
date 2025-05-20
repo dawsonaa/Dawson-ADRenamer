@@ -1,5 +1,5 @@
 #### Dawson's ADRenamer
-<##> $Version = "24.12.04"
+<##> $Version = "25.05.20"
 #### Author: Dawson Adams (dawsonaa@ksu.edu, https://github.com/dawsonaa)
 #### Kansas State University
 Add-Type -AssemblyName System.Windows.Forms
@@ -1738,8 +1738,8 @@ $menuItemUnselectAll.Add_Click({
     }
 })
 
-$contextMenu.MenuItems.Add($menuItemSelectAll)
-$contextMenu.MenuItems.Add($menuItemUnselectAll)
+$contextMenu.MenuItems.Add($menuItemSelectAll) | Out-Null
+$contextMenu.MenuItems.Add($menuItemUnselectAll) | Out-Null
 
 $computerCheckedListBox.ContextMenu = $contextMenu
 
@@ -2296,8 +2296,8 @@ $menuUnselectAll.Add_Click({
     Write-Host "All items unselected"
 })
 
-$contextMenu.Items.Add($menuSelectAll)
-$contextMenu.Items.Add($menuUnselectAll)
+$contextMenu.Items.Add($menuSelectAll) | Out-Null
+$contextMenu.Items.Add($menuUnselectAll) | Out-Null
 
 $contextMenu.add_Opening({
     $allSelected = $true
