@@ -15,7 +15,6 @@ Section "Install Dawson's ADRenamer"
 
     File "..\Dawson's ADRenamer.ps1"
     File "..\icon.ico"
-    File "..\LICENSE"
     File "..\README.md"
     File "..\settings.txt"
 
