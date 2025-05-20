@@ -1718,6 +1718,47 @@ $computerCheckedListBox.ForeColor = $defaultListForeColor
 
 $script:computerCtrlA = 1
 
+$contextMenu = New-Object System.Windows.Forms.ContextMenu
+
+$menuItemSelectAll = New-Object System.Windows.Forms.MenuItem "Select All"
+$menuItemSelectAll.Add_Click({
+    for ($i = 0; $i -lt $computerCheckedListBox.Items.Count; $i++) {
+        $computerCheckedListBox.SetItemChecked($i, $true)
+        $currentItem = $computerCheckedListBox.Items[$i]
+        $script:checkedItems[$currentItem] = $true
+    }
+})
+
+$menuItemUnselectAll = New-Object System.Windows.Forms.MenuItem "Unselect All"
+$menuItemUnselectAll.Add_Click({
+    for ($i = 0; $i -lt $computerCheckedListBox.Items.Count; $i++) {
+        $computerCheckedListBox.SetItemChecked($i, $false)
+        $currentItem = $computerCheckedListBox.Items[$i]
+        $script:checkedItems.Remove($currentItem)
+    }
+})
+
+$contextMenu.MenuItems.Add($menuItemSelectAll)
+$contextMenu.MenuItems.Add($menuItemUnselectAll)
+
+$computerCheckedListBox.ContextMenu = $contextMenu
+
+$computerCheckedListBox.Add_MouseDown({
+    $allSelected = $true
+    $allUnselected = $true
+
+    for ($i = 0; $i -lt $computerCheckedListBox.Items.Count; $i++) {
+        if ($computerCheckedListBox.GetItemChecked($i)) {
+            $allUnselected = $false
+        } else {
+            $allSelected = $false
+        }
+    }
+
+    $menuItemSelectAll.Enabled = -not $allSelected
+    $menuItemUnselectAll.Enabled = -not $allUnselected
+})
+
 $computerCheckedListBox.Add_KeyDown({
         param($s, $e)
 
@@ -2233,26 +2274,61 @@ $menuRemoveAll.Add_Click({
         Write-Host "All devices removed from the list"
     })
 
+$menuSelectAll = [System.Windows.Forms.ToolStripMenuItem]::new()
+$menuSelectAll.Text = "Select All"
+$menuSelectAll.Add_Click({
+    for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+        $selectedCheckedListBox.SetItemChecked($i, $true)
+        $item = $selectedCheckedListBox.Items[$i]
+        $script:checkedItems[$item] = $true
+    }
+    Write-Host "All items selected"
+})
+
+$menuUnselectAll = [System.Windows.Forms.ToolStripMenuItem]::new()
+$menuUnselectAll.Text = "Unselect All"
+$menuUnselectAll.Add_Click({
+    for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+        $selectedCheckedListBox.SetItemChecked($i, $false)
+        $item = $selectedCheckedListBox.Items[$i]
+        $script:checkedItems.Remove($item)
+    }
+    Write-Host "All items unselected"
+})
+
+$contextMenu.Items.Add($menuSelectAll)
+$contextMenu.Items.Add($menuUnselectAll)
+
 $contextMenu.add_Opening({
-        $selectedItems = @($selectedCheckedListBox.CheckedItems)
-        $itemsInBox = @($selectedCheckedListBox.Items)
+    $allSelected = $true
+    $allUnselected = $true
 
-        if ($itemsInBox.Count -gt 0) {
-            $menuRemoveAll.Enabled = $true
+    for ($i = 0; $i -lt $selectedCheckedListBox.Items.Count; $i++) {
+        if ($selectedCheckedListBox.GetItemChecked($i)) {
+            $allUnselected = $false
+        } else {
+            $allSelected = $false
         }
-        else {
-            $menuRemoveAll.Enabled = $false
-        }
+    }
 
-        if ($selectedItems.Count -gt 0) {
-            $menuRemove.Enabled = $true
+    $menuSelectAll.Enabled = -not $allSelected
+    $menuUnselectAll.Enabled = -not $allUnselected
 
- 
-        }
-        else {
-            $menuRemove.Enabled = $false
-        }
-    })
+    $selectedItems = @($selectedCheckedListBox.CheckedItems)
+    $itemsInBox = @($selectedCheckedListBox.Items)
+
+    if ($itemsInBox.Count -gt 0) {
+        $menuRemoveAll.Enabled = $true
+    } else {
+        $menuRemoveAll.Enabled = $false
+    }
+
+    if ($selectedItems.Count -gt 0) {
+        $menuRemove.Enabled = $true
+    } else {
+        $menuRemove.Enabled = $false
+    }
+})
 
 $selectedCheckedListBox.add_KeyDown({
         param ($s, $e)
